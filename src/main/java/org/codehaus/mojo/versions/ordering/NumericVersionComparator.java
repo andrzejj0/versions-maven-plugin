@@ -36,6 +36,14 @@ import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 public class NumericVersionComparator
     extends AbstractVersionComparator
 {
+    /**
+     * {@inheritDoc}
+     */
+    public String getId()
+    {
+        return "numeric";
+    }
+
     private static final BigInteger BIG_INTEGER_ZERO = new BigInteger( "0" );
 
     private static final BigInteger BIG_INTEGER_ONE = new BigInteger( "1" );

@@ -30,6 +30,13 @@ public interface VersionComparator
     extends Comparator<ArtifactVersion>
 {
     /**
+     * Returns the id of the version comparator
+     *
+     * @since 2.12.0
+     */
+    String getId();
+
+    /**
      * Returns the number of segments specified or specifiable in the supplied artifact version.
      *
      * @param artifactVersion The artifact version to count the segments of.

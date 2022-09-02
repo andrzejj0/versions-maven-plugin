@@ -39,6 +39,7 @@ import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.codehaus.mojo.versions.Property;
 import org.codehaus.mojo.versions.ordering.VersionComparator;
+import org.codehaus.mojo.versions.ordering.VersionComparators;
 
 /**
  * Manages a property that is associated with one or more artifacts.
@@ -64,7 +65,7 @@ public class PropertyVersions
      */
     private final SortedSet<ArtifactVersion> versions;
 
-    private final PropertyVersions.PropertyVersionComparator comparator;
+    private final VersionComparator comparator;
 
     PropertyVersions( String profileId, String name, VersionsHelper helper, Set<ArtifactAssociation> associations )
         throws ArtifactMetadataRetrievalException
@@ -73,7 +74,7 @@ public class PropertyVersions
         this.name = name;
         this.helper = helper;
         this.associations = new TreeSet<>( associations );
-        this.comparator = new PropertyVersionComparator();
+        this.comparator = VersionComparators.getVersionComparator( "property" );
         this.versions = resolveAssociatedVersions( helper, associations, comparator );
 
     }
@@ -430,6 +431,15 @@ public class PropertyVersions
     private final class PropertyVersionComparator
         implements VersionComparator
     {
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public String getId()
+        {
+            return "property";
+        }
+
         public int compare( ArtifactVersion v1, ArtifactVersion v2 )
         {
             return innerCompare( v1, v2 );

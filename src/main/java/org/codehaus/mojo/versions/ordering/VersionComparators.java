@@ -19,6 +19,8 @@ package org.codehaus.mojo.versions.ordering;
  * under the License.
  */
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,6 +39,12 @@ public final class VersionComparators
 {
     private static final Pattern SNAPSHOT_PATTERN = Pattern.compile( "(-((\\d{8}\\.\\d{6})-(\\d+))|(SNAPSHOT))$" );
 
+    private static final List<VersionComparator> COMPARATORS =
+            Arrays.asList( new MavenVersionComparator(), new NumericVersionComparator(),
+                    new MercuryVersionComparator() );
+
+    private static final VersionComparator MAVEN_COMPARATOR = COMPARATORS.get( 0 );
+
     private VersionComparators()
     {
         throw new IllegalAccessError( "Utility classes should never be instantiated" );
@@ -45,21 +53,14 @@ public final class VersionComparators
     /**
      * Returns the version comparator to use.
      *
-     * @param comparisonMethod the comparison method.
-     * @return the version comparator to use.
+     * @param versionComparatorId id of the version comparator to retrieve (the comparison method)
+     * @return the version comparator to use or null if the given comparator does not exist
      * @since 1.0-alpha-1
      */
-    public static VersionComparator getVersionComparator( String comparisonMethod )
+    public static VersionComparator getVersionComparator( String versionComparatorId )
     {
-        if ( "numeric".equalsIgnoreCase( comparisonMethod ) )
-        {
-            return new NumericVersionComparator();
-        }
-        else if ( "mercury".equalsIgnoreCase( comparisonMethod ) )
-        {
-            return new MercuryVersionComparator();
-        }
-        return new MavenVersionComparator();
+        return COMPARATORS.stream().filter( c -> c.getId().equals( versionComparatorId ) ).findAny()
+                .orElse( null );
     }
 
     public static String alphaNumIncrement( String token )

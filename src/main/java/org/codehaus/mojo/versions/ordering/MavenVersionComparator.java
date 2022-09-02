@@ -32,6 +32,13 @@ import org.codehaus.plexus.util.StringUtils;
 public class MavenVersionComparator
     extends AbstractVersionComparator
 {
+    /**
+     * {@inheritDoc}
+     */
+    public String getId()
+    {
+        return "maven";
+    }
 
     /**
      * {@inheritDoc}

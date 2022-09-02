@@ -40,6 +40,14 @@ public class MercuryVersionComparator
     /**
      * {@inheritDoc}
      */
+    public String getId()
+    {
+        return "mercury";
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public int compare( ArtifactVersion o1, ArtifactVersion o2 )
     {
         return new ComparableVersion( o1.toString() ).compareTo( new ComparableVersion( o2.toString() ) );
