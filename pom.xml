@@ -99,7 +99,7 @@
     <mojo.java.target>1.8</mojo.java.target>
     <maven.compiler.source>${mojo.java.target}</maven.compiler.source>
     <junitBomVersion>5.8.2</junitBomVersion>
-    <mavenVersion>3.0.5</mavenVersion>
+    <mavenVersion>3.6.3</mavenVersion>
     <wagonVersion>3.4.3</wagonVersion>
     <doxiaVersion>1.11.1</doxiaVersion>
     <doxia-sitetoolsVersion>1.11.1</doxia-sitetoolsVersion>
@@ -127,7 +127,7 @@
       <version>3.6.4</version>
       <scope>provided</scope>
     </dependency>
-  
+
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-artifact</artifactId>
@@ -144,7 +144,7 @@
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-compat</artifactId>
       <version>${mavenVersion}</version>
-      <scope>provided</scope>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
@@ -270,6 +270,11 @@
   <build>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.10.1</version>
+        </plugin>
         <plugin>
           <groupId>org.codehaus.modello</groupId>
           <artifactId>modello-maven-plugin</artifactId>
