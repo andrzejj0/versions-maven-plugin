@@ -385,7 +385,7 @@ public abstract class AbstractVersionDetails
     {
         try
         {
-            return updateScope.getOldestUpdate( this, currentVersion, includeSnapshots );
+            return getOldestVersion( restrictionFor( currentVersion, updateScope.getSegment() ), includeSnapshots );
         }
         catch ( InvalidSegmentException e )
         {
@@ -398,7 +398,7 @@ public abstract class AbstractVersionDetails
     {
         try
         {
-            return updateScope.getNewestUpdate( this, currentVersion, includeSnapshots );
+            return getNewestVersion( restrictionFor( currentVersion, updateScope.getSegment() ), includeSnapshots );
         }
         catch ( InvalidSegmentException e )
         {
@@ -411,7 +411,7 @@ public abstract class AbstractVersionDetails
     {
         try
         {
-            return updateScope.getAllUpdates( this, currentVersion, includeSnapshots );
+            return getVersions( restrictionFor( currentVersion, updateScope.getSegment() ), includeSnapshots );
         }
         catch ( InvalidSegmentException e )
         {
@@ -608,4 +608,25 @@ public abstract class AbstractVersionDetails
         return ( includeLower || lower != 0 ) && ( includeUpper || upper != 0 );
     }
 
+    /**
+     * Helper method to get the artifact boundaries for computing updates
+     *
+     * @param currentVersion The current version.
+     * @param segment 0-based segment to restrict the search
+     * @return {@linkplain Restriction} object based on the arguments
+     * @throws InvalidSegmentException if {@code segment} ∉ [0, segmentCount)
+     */
+    protected Restriction restrictionFor( ArtifactVersion currentVersion, Integer segment )
+            throws InvalidSegmentException
+    {
+        VersionComparator versionComparator = getVersionComparator();
+        ArtifactVersion lowerBound = segment != null && segment < Segment.SUBINCREMENTAL.getValue()
+                ? versionComparator.incrementSegment( currentVersion, segment )
+                : currentVersion;
+        ArtifactVersion upperBound = segment != null && segment > Segment.MAJOR.getValue()
+                ? versionComparator.incrementSegment( currentVersion, segment - 1 )
+                : null;
+        return new Restriction( lowerBound, lowerBound != currentVersion,
+                upperBound, false );
+    }
 }

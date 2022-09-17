@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.maven.artifact.versioning.ArtifactVersion;
-import org.apache.maven.artifact.versioning.Restriction;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.ordering.VersionComparator;
 
@@ -53,6 +52,14 @@ public class UpdateScope implements Comparable<UpdateScope>, Serializable
      * </p>
      */
     private final int ordinal;
+
+    /**
+     * 0-based segment number with 0 being the major segment; must belong to [0, segmentCount)
+     */
+    public Integer getSegment()
+    {
+        return segment;
+    }
 
     /**
      * 0-based segment number with 0 being the major segment; must belong to [0, segmentCount)
@@ -96,72 +103,6 @@ public class UpdateScope implements Comparable<UpdateScope>, Serializable
      * @since 1.0-beta-1
      */
     public static final UpdateScope ANY = new UpdateScope( "ANY", 4, null );
-
-    /**
-     * Helper method to get the artifact boundaries for computing updates
-     * @param versionDetails The versions to select from.
-     * @param currentVersion The current version.
-     * @return {@linkplain Restriction} object based on the {@linkplain #segment} and the arguments
-     * @throws InvalidSegmentException if {@code segment} ∉ [0, segmentCount)
-     */
-    private Restriction restrictionFor( VersionDetails versionDetails, ArtifactVersion currentVersion )
-            throws InvalidSegmentException
-    {
-        VersionComparator versionComparator = versionDetails.getVersionComparator();
-        ArtifactVersion lowerBound = segment != null && segment < SUBINCREMENTAL.segment
-                ? versionComparator.incrementSegment( currentVersion, segment )
-                : currentVersion;
-        ArtifactVersion upperBound = segment != null && segment > MAJOR.segment
-                ? versionComparator.incrementSegment( currentVersion, segment - 1 )
-                : null;
-        return new Restriction( lowerBound, lowerBound != currentVersion,
-                upperBound, false );
-    }
-
-    /**
-     * Returns the next version after the specified current version within this scope.
-     *
-     * @param versionDetails The versions to select from.
-     * @param currentVersion The current version.
-     * @param includeSnapshots Whether to include snapshots.
-     * @return The next version within this scope or <code>null</code> if there is no version within this scope.
-     * @throws InvalidSegmentException if {@code segment} ∉ [0, segmentCount)
-     */
-    public ArtifactVersion getOldestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                     boolean includeSnapshots ) throws InvalidSegmentException
-    {
-        return versionDetails.getOldestVersion( restrictionFor( versionDetails, currentVersion ), includeSnapshots );
-    }
-
-    /**
-     * Returns the newest version after the specified current version within this scope.
-     *
-     * @param versionDetails The versions to select from.
-     * @param currentVersion The current version.
-     * @param includeSnapshots Whether to include snapshots.
-     * @return The newest version within this scope or <code>null</code> if there is no version within this scope.
-     * @throws InvalidSegmentException if {@code segment} ∉ [0, segmentCount)
-     */
-    public ArtifactVersion getNewestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                     boolean includeSnapshots ) throws InvalidSegmentException
-    {
-        return versionDetails.getNewestVersion( restrictionFor( versionDetails, currentVersion ), includeSnapshots );
-    }
-
-    /**
-     * Returns all versions newer than the specified current version within this scope.
-     *
-     * @param versionDetails The versions to select from.
-     * @param currentVersion The current version.
-     * @param includeSnapshots Whether to include snapshots.
-     * @return All newer versions within this scope.
-     * @throws InvalidSegmentException if {@code segment} ∉ [0, segmentCount)
-     */
-    public ArtifactVersion[] getAllUpdates( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                     boolean includeSnapshots ) throws InvalidSegmentException
-    {
-        return versionDetails.getVersions( restrictionFor( versionDetails, currentVersion ), includeSnapshots );
-    }
 
     /**
      * Returns the name of this enum constant, exactly as declared in its enum declaration.
