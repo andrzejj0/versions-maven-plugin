@@ -389,19 +389,40 @@ public abstract class AbstractVersionDetails
     public final ArtifactVersion getOldestUpdate( ArtifactVersion currentVersion, UpdateScope updateScope,
                                                   boolean includeSnapshots )
     {
-        return updateScope.getOldestUpdate( this, currentVersion, includeSnapshots );
+        try
+        {
+            return updateScope.getOldestUpdate( this, currentVersion, includeSnapshots );
+        }
+        catch ( InvalidSegmentException e )
+        {
+            return null;
+        }
     }
 
     public final ArtifactVersion getNewestUpdate( ArtifactVersion currentVersion, UpdateScope updateScope,
                                                   boolean includeSnapshots )
     {
-        return updateScope.getNewestUpdate( this, currentVersion, includeSnapshots );
+        try
+        {
+            return updateScope.getNewestUpdate( this, currentVersion, includeSnapshots );
+        }
+        catch ( InvalidSegmentException e )
+        {
+            return null;
+        }
     }
 
     public final ArtifactVersion[] getAllUpdates( ArtifactVersion currentVersion, UpdateScope updateScope,
                                                   boolean includeSnapshots )
     {
-        return updateScope.getAllUpdates( this, currentVersion, includeSnapshots );
+        try
+        {
+            return updateScope.getAllUpdates( this, currentVersion, includeSnapshots );
+        }
+        catch ( InvalidSegmentException e )
+        {
+            return null;
+        }
     }
 
     public ArtifactVersion getOldestUpdate( ArtifactVersion currentVersion, VersionRange versionRange,
@@ -590,11 +611,7 @@ public abstract class AbstractVersionDetails
         {
             return false;
         }
-        if ( ( !includeLower && lower == 0 ) || ( !includeUpper && upper == 0 ) )
-        {
-            return false;
-        }
-        return true;
+        return ( includeLower || lower != 0 ) && ( includeUpper || upper != 0 );
     }
 
 }

@@ -37,81 +37,34 @@ import org.codehaus.mojo.versions.ordering.VersionComparator;
  * todo: convert this class to a Java 1.5 enum once we move to Java 1.5
  * @since 1.0-beta-1
  */
-public abstract class UpdateScope
-    implements Comparable<UpdateScope>, Serializable
+public class UpdateScope implements Comparable<UpdateScope>, Serializable
 {
+    /**
+     * The name of this constant, as declared in the declaration. Most programmers should use the {@link #toString}
+     * method rather than accessing this field.
+     */
+    private final String name;
+
+    /**
+     * The ordinal of this enumeration constant (its position in the enum declaration, where the initial constant is
+     * assigned an ordinal of zero).
+     * <p>
+     * Most programmers will have no use for this field.
+     * </p>
+     */
+    private final int ordinal;
+
+    /**
+     * 0-based segment number with 0 being the major segment; must belong to [0, segmentCount)
+     */
+    private final Integer segment;
 
     /**
      * Versions which are less than an incremental update.
      *
      * @since 1.0-beta-1
      */
-    public static final UpdateScope SUBINCREMENTAL = new UpdateScope( "SUBINCREMENTAL", 0 )
-    {
-        /** {@inheritDoc} */
-        public ArtifactVersion getOldestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                boolean includeSnapshots )
-        {
-            VersionComparator versionComparator = versionDetails.getVersionComparator();
-            try
-            {
-                if ( versionComparator.getSegmentCount( currentVersion ) < 3 )
-                {
-                    return null;
-                }
-                ArtifactVersion upperBound = versionComparator.incrementSegment( currentVersion, 2 );
-                Restriction restriction = new Restriction( currentVersion, false, upperBound, false );
-                return versionDetails.getOldestVersion( restriction, includeSnapshots );
-            }
-            catch ( InvalidSegmentException e )
-            {
-                throw new RuntimeException( e );
-            }
-        }
-
-        /** {@inheritDoc} */
-        public ArtifactVersion getNewestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                boolean includeSnapshots )
-        {
-            VersionComparator versionComparator = versionDetails.getVersionComparator();
-            try
-            {
-                if ( versionComparator.getSegmentCount( currentVersion ) < 3 )
-                {
-                    return null;
-                }
-                ArtifactVersion upperBound = versionComparator.incrementSegment( currentVersion, 2 );
-                Restriction restriction = new Restriction( currentVersion, false, upperBound, false );
-                return versionDetails.getNewestVersion( restriction, includeSnapshots );
-            }
-            catch ( InvalidSegmentException e )
-            {
-                throw new RuntimeException( e );
-            }
-        }
-
-        /** {@inheritDoc} */
-        public ArtifactVersion[] getAllUpdates( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                boolean includeSnapshots )
-        {
-            VersionComparator versionComparator = versionDetails.getVersionComparator();
-            try
-            {
-                if ( versionComparator.getSegmentCount( currentVersion ) < 3 )
-                {
-                    return null;
-                }
-                ArtifactVersion upperBound = versionComparator.incrementSegment( currentVersion, 2 );
-                Restriction restriction = new Restriction( currentVersion, false, upperBound, false );
-                return versionDetails.getVersions( restriction, includeSnapshots );
-            }
-            catch ( InvalidSegmentException e )
-            {
-                throw new RuntimeException( e );
-            }
-        }
-
-    };
+    public static final UpdateScope SUBINCREMENTAL = new UpdateScope( "SUBINCREMENTAL", 0, 3 );
 
     /**
      * Incremental version updates, that is the third segment of the version number, for example <code>1.0.0.15</code>
@@ -119,75 +72,7 @@ public abstract class UpdateScope
      *
      * @since 1.0-beta-1
      */
-    public static final UpdateScope INCREMENTAL = new UpdateScope( "INCREMENTAL", 1 )
-    {
-        /** {@inheritDoc} */
-        public ArtifactVersion getOldestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                boolean includeSnapshots )
-        {
-            VersionComparator versionComparator = versionDetails.getVersionComparator();
-            try
-            {
-                if ( versionComparator.getSegmentCount( currentVersion ) < 3 )
-                {
-                    return null;
-                }
-                ArtifactVersion lowerBound = versionComparator.incrementSegment( currentVersion, 2 );
-                ArtifactVersion upperBound = versionComparator.incrementSegment( currentVersion, 1 );
-                Restriction restriction = new Restriction( lowerBound, true, upperBound, false );
-                return versionDetails.getOldestVersion( restriction, includeSnapshots );
-            }
-            catch ( InvalidSegmentException e )
-            {
-                throw new RuntimeException( e );
-            }
-        }
-
-        /** {@inheritDoc} */
-        public ArtifactVersion getNewestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                boolean includeSnapshots )
-        {
-            VersionComparator versionComparator = versionDetails.getVersionComparator();
-            try
-            {
-                if ( versionComparator.getSegmentCount( currentVersion ) < 3 )
-                {
-                    return null;
-                }
-                ArtifactVersion lowerBound = versionComparator.incrementSegment( currentVersion, 2 );
-                ArtifactVersion upperBound = versionComparator.incrementSegment( currentVersion, 1 );
-                Restriction restriction = new Restriction( lowerBound, true, upperBound, false );
-                return versionDetails.getNewestVersion( restriction, includeSnapshots );
-            }
-            catch ( InvalidSegmentException e )
-            {
-                throw new RuntimeException( e );
-            }
-        }
-
-        /** {@inheritDoc} */
-        public ArtifactVersion[] getAllUpdates( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                boolean includeSnapshots )
-        {
-            VersionComparator versionComparator = versionDetails.getVersionComparator();
-            try
-            {
-                if ( versionComparator.getSegmentCount( currentVersion ) < 3 )
-                {
-                    return null;
-                }
-                ArtifactVersion lowerBound = versionComparator.incrementSegment( currentVersion, 2 );
-                ArtifactVersion upperBound = versionComparator.incrementSegment( currentVersion, 1 );
-                Restriction restriction = new Restriction( lowerBound, true, upperBound, false );
-                return versionDetails.getVersions( restriction, includeSnapshots );
-            }
-            catch ( InvalidSegmentException e )
-            {
-                throw new RuntimeException( e );
-            }
-        }
-
-    };
+    public static final UpdateScope INCREMENTAL = new UpdateScope( "INCREMENTAL", 1, 2 );
 
     /**
      * Minor version updates, that is the second segment of the version number, for example <code>1.0.0.15</code> to
@@ -195,75 +80,7 @@ public abstract class UpdateScope
      *
      * @since 1.0-beta-1
      */
-    public static final UpdateScope MINOR = new UpdateScope( "MINOR", 2 )
-    {
-        /** {@inheritDoc} */
-        public ArtifactVersion getOldestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                boolean includeSnapshots )
-        {
-            VersionComparator versionComparator = versionDetails.getVersionComparator();
-            try
-            {
-                if ( versionComparator.getSegmentCount( currentVersion ) < 2 )
-                {
-                    return null;
-                }
-                ArtifactVersion lowerBound = versionComparator.incrementSegment( currentVersion, 1 );
-                ArtifactVersion upperBound = versionComparator.incrementSegment( currentVersion, 0 );
-                Restriction restriction = new Restriction( lowerBound, true, upperBound, false );
-                return versionDetails.getOldestVersion( restriction, includeSnapshots );
-            }
-            catch ( InvalidSegmentException e )
-            {
-                throw new RuntimeException( e );
-            }
-        }
-
-        /** {@inheritDoc} */
-        public ArtifactVersion getNewestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                boolean includeSnapshots )
-        {
-            VersionComparator versionComparator = versionDetails.getVersionComparator();
-            try
-            {
-                if ( versionComparator.getSegmentCount( currentVersion ) < 2 )
-                {
-                    return null;
-                }
-                ArtifactVersion lowerBound = versionComparator.incrementSegment( currentVersion, 1 );
-                ArtifactVersion upperBound = versionComparator.incrementSegment( currentVersion, 0 );
-                Restriction restriction = new Restriction( lowerBound, true, upperBound, false );
-                return versionDetails.getNewestVersion( restriction, includeSnapshots );
-            }
-            catch ( InvalidSegmentException e )
-            {
-                throw new RuntimeException( e );
-            }
-        }
-
-        /** {@inheritDoc} */
-        public ArtifactVersion[] getAllUpdates( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                boolean includeSnapshots )
-        {
-            VersionComparator versionComparator = versionDetails.getVersionComparator();
-            try
-            {
-                if ( versionComparator.getSegmentCount( currentVersion ) < 2 )
-                {
-                    return null;
-                }
-                ArtifactVersion lowerBound = versionComparator.incrementSegment( currentVersion, 1 );
-                ArtifactVersion upperBound = versionComparator.incrementSegment( currentVersion, 0 );
-                Restriction restriction = new Restriction( lowerBound, true, upperBound, false );
-                return versionDetails.getVersions( restriction, includeSnapshots );
-            }
-            catch ( InvalidSegmentException e )
-            {
-                throw new RuntimeException( e );
-            }
-        }
-
-    };
+    public static final UpdateScope MINOR = new UpdateScope( "MINOR", 2, 1 );
 
     /**
      * Major version updates, that is the first segment of the version number, for example <code>1.0.0.15</code> to
@@ -271,105 +88,35 @@ public abstract class UpdateScope
      *
      * @since 1.0-beta-1
      */
-    public static final UpdateScope MAJOR = new UpdateScope( "MAJOR", 3 )
-    {
-        /** {@inheritDoc} */
-        public ArtifactVersion getOldestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                boolean includeSnapshots )
-        {
-            VersionComparator versionComparator = versionDetails.getVersionComparator();
-            try
-            {
-                if ( versionComparator.getSegmentCount( currentVersion ) < 1 )
-                {
-                    return null;
-                }
-                ArtifactVersion lowerBound = versionComparator.incrementSegment( currentVersion, 0 );
-                Restriction restriction = new Restriction( lowerBound, true, null, false );
-                return versionDetails.getOldestVersion( restriction, includeSnapshots );
-            }
-            catch ( InvalidSegmentException e )
-            {
-                throw new RuntimeException( e );
-            }
-        }
-
-        /** {@inheritDoc} */
-        public ArtifactVersion getNewestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                boolean includeSnapshots )
-        {
-            VersionComparator versionComparator = versionDetails.getVersionComparator();
-            try
-            {
-                if ( versionComparator.getSegmentCount( currentVersion ) < 1 )
-                {
-                    return null;
-                }
-                ArtifactVersion lowerBound = versionComparator.incrementSegment( currentVersion, 0 );
-                Restriction restriction = new Restriction( lowerBound, true, null, false );
-                return versionDetails.getNewestVersion( restriction, includeSnapshots );
-            }
-            catch ( InvalidSegmentException e )
-            {
-                throw new RuntimeException( e );
-            }
-        }
-
-        /** {@inheritDoc} */
-        public ArtifactVersion[] getAllUpdates( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                boolean includeSnapshots )
-        {
-            VersionComparator versionComparator = versionDetails.getVersionComparator();
-            try
-            {
-                if ( versionComparator.getSegmentCount( currentVersion ) < 1 )
-                {
-                    return null;
-                }
-                ArtifactVersion lowerBound = versionComparator.incrementSegment( currentVersion, 0 );
-                Restriction restriction = new Restriction( lowerBound, true, null, false );
-                return versionDetails.getVersions( restriction, includeSnapshots );
-            }
-            catch ( InvalidSegmentException e )
-            {
-                throw new RuntimeException( e );
-            }
-        }
-
-    };
+    public static final UpdateScope MAJOR = new UpdateScope( "MAJOR", 3,  0 );
 
     /**
      * Any version updates.
      *
      * @since 1.0-beta-1
      */
-    public static final UpdateScope ANY = new UpdateScope( "ANY", 4 )
+    public static final UpdateScope ANY = new UpdateScope( "ANY", 4, null );
+
+    /**
+     * Helper method to get the artifact boundaries for computing updates
+     * @param versionDetails The versions to select from.
+     * @param currentVersion The current version.
+     * @return {@linkplain Restriction} object based on the {@linkplain #segment} and the arguments
+     * @throws InvalidSegmentException if {@code segment} ∉ [0, segmentCount)
+     */
+    private Restriction restrictionFor( VersionDetails versionDetails, ArtifactVersion currentVersion )
+            throws InvalidSegmentException
     {
-        /** {@inheritDoc} */
-        public ArtifactVersion getOldestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                boolean includeSnapshots )
-        {
-            Restriction restriction = new Restriction( currentVersion, false, null, false );
-            return versionDetails.getOldestVersion( restriction, includeSnapshots );
-        }
-
-        /** {@inheritDoc} */
-        public ArtifactVersion getNewestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                boolean includeSnapshots )
-        {
-            Restriction restriction = new Restriction( currentVersion, false, null, false );
-            return versionDetails.getNewestVersion( restriction, includeSnapshots );
-        }
-
-        /** {@inheritDoc} */
-        public ArtifactVersion[] getAllUpdates( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                boolean includeSnapshots )
-        {
-            Restriction restriction = new Restriction( currentVersion, false, null, false );
-            return versionDetails.getVersions( restriction, includeSnapshots );
-        }
-
-    };
+        VersionComparator versionComparator = versionDetails.getVersionComparator();
+        ArtifactVersion lowerBound = segment != null && segment < SUBINCREMENTAL.segment
+                ? versionComparator.incrementSegment( currentVersion, segment )
+                : currentVersion;
+        ArtifactVersion upperBound = segment != null && segment > MAJOR.segment
+                ? versionComparator.incrementSegment( currentVersion, segment - 1 )
+                : null;
+        return new Restriction( lowerBound, lowerBound != currentVersion,
+                upperBound, false );
+    }
 
     /**
      * Returns the next version after the specified current version within this scope.
@@ -378,9 +125,13 @@ public abstract class UpdateScope
      * @param currentVersion The current version.
      * @param includeSnapshots Whether to include snapshots.
      * @return The next version within this scope or <code>null</code> if there is no version within this scope.
+     * @throws InvalidSegmentException if {@code segment} ∉ [0, segmentCount)
      */
-    public abstract ArtifactVersion getOldestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                     boolean includeSnapshots );
+    public ArtifactVersion getOldestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
+                                                     boolean includeSnapshots ) throws InvalidSegmentException
+    {
+        return versionDetails.getOldestVersion( restrictionFor( versionDetails, currentVersion ), includeSnapshots );
+    }
 
     /**
      * Returns the newest version after the specified current version within this scope.
@@ -389,9 +140,13 @@ public abstract class UpdateScope
      * @param currentVersion The current version.
      * @param includeSnapshots Whether to include snapshots.
      * @return The newest version within this scope or <code>null</code> if there is no version within this scope.
+     * @throws InvalidSegmentException if {@code segment} ∉ [0, segmentCount)
      */
-    public abstract ArtifactVersion getNewestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                     boolean includeSnapshots );
+    public ArtifactVersion getNewestUpdate( VersionDetails versionDetails, ArtifactVersion currentVersion,
+                                                     boolean includeSnapshots ) throws InvalidSegmentException
+    {
+        return versionDetails.getNewestVersion( restrictionFor( versionDetails, currentVersion ), includeSnapshots );
+    }
 
     /**
      * Returns all versions newer than the specified current version within this scope.
@@ -400,15 +155,13 @@ public abstract class UpdateScope
      * @param currentVersion The current version.
      * @param includeSnapshots Whether to include snapshots.
      * @return All newer versions within this scope.
+     * @throws InvalidSegmentException if {@code segment} ∉ [0, segmentCount)
      */
-    public abstract ArtifactVersion[] getAllUpdates( VersionDetails versionDetails, ArtifactVersion currentVersion,
-                                                     boolean includeSnapshots );
-
-    /**
-     * The name of this constant, as declared in the declaration. Most programmers should use the {@link #toString}
-     * method rather than accessing this field.
-     */
-    private final String name;
+    public ArtifactVersion[] getAllUpdates( VersionDetails versionDetails, ArtifactVersion currentVersion,
+                                                     boolean includeSnapshots ) throws InvalidSegmentException
+    {
+        return versionDetails.getVersions( restrictionFor( versionDetails, currentVersion ), includeSnapshots );
+    }
 
     /**
      * Returns the name of this enum constant, exactly as declared in its enum declaration.
@@ -426,39 +179,18 @@ public abstract class UpdateScope
     }
 
     /**
-     * The ordinal of this enumeration constant (its position in the enum declaration, where the initial constant is
-     * assigned an ordinal of zero).
-     * <p>
-     * Most programmers will have no use for this field.
-     * </p>
-     */
-    private final int ordinal;
-
-    /**
-     * Returns the ordinal of this enumeration constant (its position in its enum declaration, where the initial
-     * constant is assigned an ordinal of zero).
-     * <p>
-     * Most programmers will have no use for this method.
-     * </p>
-     *
-     * @return the ordinal of this enumeration constant
-     */
-    public final int ordinal()
-    {
-        return ordinal;
-    }
-
-    /**
      * Sole constructor. Programmers cannot invoke this constructor.
      *
      * @param name - The name of this enum constant, which is the identifier used to declare it.
      * @param ordinal - The ordinal of this enumeration constant (its position in the enum declaration, where the
      *            initial constant is assigned an ordinal of zero).
+     * @param segment 0-based segment number
      */
-    private UpdateScope( String name, int ordinal )
+    private UpdateScope( String name, int ordinal, Integer segment )
     {
         this.name = name;
         this.ordinal = ordinal;
+        this.segment = segment;
     }
 
     /**
@@ -467,22 +199,6 @@ public abstract class UpdateScope
     public String toString()
     {
         return name;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public boolean equals( Object o )
-    {
-        return this == o;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public int hashCode()
-    {
-        return super.hashCode();
     }
 
     /**
@@ -610,15 +326,6 @@ public abstract class UpdateScope
         map.put( MAJOR.name(), MAJOR );
         map.put( ANY.name(), ANY );
         LEVEL_CONSTANTS = map;
-    }
-
-    /**
-     * enum classes cannot have finalize methods.
-     */
-    protected final void finalize()
-        throws Throwable
-    {
-        super.finalize();
     }
 
     /**
