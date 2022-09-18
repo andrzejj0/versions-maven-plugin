@@ -57,6 +57,7 @@ import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
+import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Plugin;
@@ -1171,5 +1172,26 @@ public class DefaultVersionsHelper
         {
             return s == null || s.trim().isEmpty();
         }
+    }
+
+    /**
+     * Finds the latest version of the specified artifact that matches the version range.
+     *
+     * @param artifact              artifact to look the versions for
+     * @param versionRange          requested version range constraint
+     * @param allowSnapshots        whether to consider snapshots
+     * @param usePluginRepositories whether to use plugin repositories
+     * @return The latest version of the specified artifact that matches the specified version range or
+     * <code>null</code> if no matching version could be found.
+     * @throws ArtifactMetadataRetrievalException if artifact metadata could not be found
+     * @since 2.13.0
+     */
+    public ArtifactVersion findLatestVersion( Artifact artifact, VersionRange versionRange,
+                                              boolean allowSnapshots, boolean usePluginRepositories,
+                                              boolean allowDowngrade )
+            throws ArtifactMetadataRetrievalException
+    {
+        final ArtifactVersions artifactVersions = lookupArtifactVersions( artifact, usePluginRepositories );
+        return artifactVersions.getNewestVersion( versionRange, null, allowSnapshots, allowDowngrade );
     }
 }

@@ -53,7 +53,6 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.repository.RepositorySystem;
 import org.apache.maven.settings.Settings;
-import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.DefaultVersionsHelper;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.PropertyVersions;
@@ -362,14 +361,13 @@ public abstract class AbstractVersionsUpdaterMojo
      * @throws MojoExecutionException             if something goes wrong.
      * @since 1.0-alpha-1
      */
-    protected ArtifactVersion findLatestVersion( Artifact artifact, VersionRange versionRange,
-                                                 Boolean allowingSnapshots, boolean usePluginRepositories,
-                                                 boolean allowDowngrade )
-        throws ArtifactMetadataRetrievalException, MojoExecutionException
+    public ArtifactVersion findLatestVersion( Artifact artifact, VersionRange versionRange,
+                                              Boolean allowingSnapshots, boolean usePluginRepositories,
+                                              boolean allowDowngrade )
+            throws ArtifactMetadataRetrievalException, MojoExecutionException
     {
-        boolean includeSnapshots = allowingSnapshots != null ? allowingSnapshots : this.allowSnapshots;
-        final ArtifactVersions artifactVersions = getHelper().lookupArtifactVersions( artifact, usePluginRepositories );
-        return artifactVersions.getNewestVersion( versionRange, null, includeSnapshots, allowDowngrade );
+        return getHelper().findLatestVersion( artifact, versionRange, allowSnapshots, usePluginRepositories,
+                allowDowngrade );
     }
 
     /**
