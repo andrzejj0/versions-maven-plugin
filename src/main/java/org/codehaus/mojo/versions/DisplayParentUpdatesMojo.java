@@ -101,7 +101,8 @@ public class DisplayParentUpdatesMojo
         ArtifactVersion artifactVersion;
         try
         {
-            artifactVersion = findLatestVersion( artifact, versionRange, null, false );
+            artifactVersion = getHelper().findLatestVersion( artifact, versionRange, allowSnapshots,
+                    false, false );
         }
         catch ( ArtifactMetadataRetrievalException e )
         {

@@ -42,7 +42,6 @@ import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
-import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecution;
@@ -327,48 +326,6 @@ public abstract class AbstractVersionsUpdaterMojo
     }
 
     // -------------------------- OTHER METHODS --------------------------
-
-    /**
-     * Finds the latest version of the specified artifact that matches the version range.
-     *
-     * @param artifact              The artifact.
-     * @param versionRange          The version range.
-     * @param allowingSnapshots     <code>null</code> for no override, otherwise the local override to apply.
-     * @param usePluginRepositories Use plugin repositories
-     * @return The latest version of the specified artifact that matches the specified version range or
-     * <code>null</code> if no matching version could be found.
-     * @throws ArtifactMetadataRetrievalException If the artifact metadata could not be found.
-     * @throws MojoExecutionException             if something goes wrong.
-     * @since 1.0-alpha-1
-     */
-    protected ArtifactVersion findLatestVersion( Artifact artifact, VersionRange versionRange,
-                                                 Boolean allowingSnapshots, boolean usePluginRepositories )
-            throws ArtifactMetadataRetrievalException, MojoExecutionException
-    {
-        return findLatestVersion( artifact, versionRange, allowingSnapshots, usePluginRepositories, false );
-    }
-
-    /**
-     * Finds the latest version of the specified artifact that matches the version range.
-     *
-     * @param artifact              The artifact.
-     * @param versionRange          The version range.
-     * @param allowingSnapshots     <code>null</code> for no override, otherwise the local override to apply.
-     * @param usePluginRepositories Use plugin repositories
-     * @return The latest version of the specified artifact that matches the specified version range or
-     * <code>null</code> if no matching version could be found.
-     * @throws ArtifactMetadataRetrievalException If the artifact metadata could not be found.
-     * @throws MojoExecutionException             if something goes wrong.
-     * @since 1.0-alpha-1
-     */
-    public ArtifactVersion findLatestVersion( Artifact artifact, VersionRange versionRange,
-                                              Boolean allowingSnapshots, boolean usePluginRepositories,
-                                              boolean allowDowngrade )
-            throws ArtifactMetadataRetrievalException, MojoExecutionException
-    {
-        return getHelper().findLatestVersion( artifact, versionRange, allowSnapshots, usePluginRepositories,
-                allowDowngrade );
-    }
 
     /**
      * Gets the property value that is defined in the pom. This is an extension point to allow updating a file external

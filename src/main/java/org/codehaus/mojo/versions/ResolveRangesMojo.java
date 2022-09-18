@@ -195,7 +195,8 @@ public class ResolveRangesMojo
                 if ( artifactVersion == null )
                 {
                     ArtifactVersion latestVersion =
-                        findLatestVersion( artifact, artifact.getVersionRange(), allowSnapshots, false );
+                            getHelper().findLatestVersion( artifact, artifact.getVersionRange(), allowSnapshots,
+                                    false, false );
 
                     if ( latestVersion != null )
                     {
@@ -261,8 +262,8 @@ public class ResolveRangesMojo
                     if ( artifactVersion == null )
                     {
                         ArtifactVersion latestVersion =
-                            findLatestVersion( artifact, artifact.getVersionRange(), allowSnapshots, false );
-
+                                getHelper().findLatestVersion( artifact, artifact.getVersionRange(), allowSnapshots,
+                                        false, false );
                         if ( latestVersion != null )
                         {
                             artifactVersion = latestVersion.toString();

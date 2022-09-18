@@ -132,8 +132,8 @@ public class UpdateParentMojoTest
                 new DefaultArtifact( "default-group", "unknown-artifact", "1.0.1-SNAPSHOT", SCOPE_COMPILE, "pom",
                         "default", null );
         assertThat(
-                mojo.findLatestVersion( artifact, VersionRange.createFromVersionSpec( "1.0.1-SNAPSHOT" ), null, false ),
-                is( nullValue() ) );
+                mojo.getHelper().findLatestVersion( artifact, VersionRange.createFromVersionSpec( "1.0.1-SNAPSHOT" ),
+                        false, false, false ), is( nullValue() ) );
 
         try ( MockedStatic<PomHelper> pomHelper = mockStatic( PomHelper.class ) )
         {

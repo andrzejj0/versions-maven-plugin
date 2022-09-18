@@ -186,7 +186,7 @@ public class UpdateParentMojo extends AbstractVersionsUpdaterMojo
                     VersionRange.createFromVersionSpec( "[" + targetVersionRange.getRecommendedVersion() + ",)" ) );
         }
 
-        ArtifactVersion artifactVersion = findLatestVersion( artifact, targetVersionRange, null,
+        ArtifactVersion artifactVersion = getHelper().findLatestVersion( artifact, targetVersionRange, allowSnapshots,
                 false, allowDowngrade );
         if ( !shouldApplyUpdate( artifact, getProject().getParent().getVersion(), artifactVersion, forceUpdate ) )
         {
