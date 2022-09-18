@@ -192,7 +192,8 @@ public class UseLatestSnapshotsMojo
                 }
                 try
                 {
-                    ArtifactVersion upperBound = unchangedSegment.get().value() >= MAJOR.value()
+                    ArtifactVersion upperBound = unchangedSegment.isPresent()
+                            && unchangedSegment.get().value() >= MAJOR.value()
                             ? versionComparator.incrementSegment( lowerBound, unchangedSegment.get() )
                             : null;
                     getLog().info( "Upper bound: " + ( upperBound == null ? "none" : upperBound.toString() ) );

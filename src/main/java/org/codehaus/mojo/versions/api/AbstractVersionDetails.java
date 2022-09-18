@@ -482,32 +482,31 @@ public abstract class AbstractVersionDetails
 
         StringBuilder newVersion = new StringBuilder();
         newVersion.append( version.getMajorVersion() );
-        if ( segmentCount > 0 )
+        switch ( segmentCount )
         {
-            newVersion.append( "." )
-                    .append( unchangedSegment.get().value() >= MINOR.value()
-                            ? version.getMinorVersion() : 0 );
-        }
-        if ( segmentCount > 1 )
-        {
-            newVersion.append( "." )
-                    .append( unchangedSegment.get().value() >= INCREMENTAL.value()
-                            ? version.getIncrementalVersion() : 0 );
-        }
-        if ( segmentCount > 2 )
-        {
-            if ( version.getQualifier() != null )
-            {
-                newVersion.append( "-" )
-                        .append( unchangedSegment.get().value() >= SUBINCREMENTAL.value()
-                                ? version.getQualifier() : "0" );
-            }
-            else
-            {
-                newVersion.append( "-" )
-                        .append( unchangedSegment.get().value() >= SUBINCREMENTAL.value()
-                                ? version.getBuildNumber() : "0" );
-            }
+            case 0:
+                break;
+            case 1:
+                newVersion.append( "." )
+                        .append( unchangedSegment.get().value() >= MINOR.value()
+                                ? version.getMinorVersion() : 0 );
+            case 2:
+                newVersion.append( "." )
+                        .append( unchangedSegment.get().value() >= INCREMENTAL.value()
+                                ? version.getIncrementalVersion() : 0 );
+            default:
+                if ( version.getQualifier() != null )
+                {
+                    newVersion.append( "-" )
+                            .append( unchangedSegment.get().value() >= SUBINCREMENTAL.value()
+                                    ? version.getQualifier() : "0" );
+                }
+                else
+                {
+                    newVersion.append( "-" )
+                            .append( unchangedSegment.get().value() >= SUBINCREMENTAL.value()
+                                    ? version.getBuildNumber() : "0" );
+                }
         }
         return of( newVersion.toString() );
     }
