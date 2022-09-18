@@ -24,6 +24,7 @@ import javax.xml.stream.XMLStreamException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -41,6 +42,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.PomHelper;
+import org.codehaus.mojo.versions.api.Segment;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.ordering.MajorMinorIncrementalFilter;
 import org.codehaus.mojo.versions.rewriting.ModifiedPomXMLEventReader;
@@ -131,7 +133,8 @@ public class UseLatestReleasesMojo
     private void useLatestReleases( ModifiedPomXMLEventReader pom, Collection<Dependency> dependencies )
         throws XMLStreamException, MojoExecutionException, ArtifactMetadataRetrievalException
     {
-        int segment = determineUnchangedSegment( allowMajorUpdates, allowMinorUpdates, allowIncrementalUpdates );
+        Optional<Segment> unchangedSegment = determineUnchangedSegment( allowMajorUpdates, allowMinorUpdates,
+                allowIncrementalUpdates );
         MajorMinorIncrementalFilter majorMinorIncfilter =
             new MajorMinorIncrementalFilter( allowMajorUpdates, allowMinorUpdates, allowIncrementalUpdates );
 
@@ -166,7 +169,7 @@ public class UseLatestReleasesMojo
                 ArtifactVersions versions = getHelper().lookupArtifactVersions( artifact, false );
                 try
                 {
-                    ArtifactVersion[] newer = versions.getNewerVersions( version, segment, false );
+                    ArtifactVersion[] newer = versions.getNewerVersions( version, unchangedSegment, false );
                     newer = filterVersionsWithIncludes( newer, artifact );
 
                     ArtifactVersion[] filteredVersions = majorMinorIncfilter.filter( selectedVersion, newer );

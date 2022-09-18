@@ -23,6 +23,7 @@ import javax.xml.stream.XMLStreamException;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Optional;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
@@ -36,6 +37,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.PomHelper;
+import org.codehaus.mojo.versions.api.Segment;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.ordering.MajorMinorIncrementalFilter;
 import org.codehaus.mojo.versions.rewriting.ModifiedPomXMLEventReader;
@@ -148,7 +150,7 @@ public class UseLatestVersionsMojo
     private void useLatestVersions( ModifiedPomXMLEventReader pom, Collection<Dependency> dependencies )
         throws XMLStreamException, MojoExecutionException, ArtifactMetadataRetrievalException
     {
-        int unchangedSegment = determineUnchangedSegment( allowMajorUpdates, allowMinorUpdates,
+        Optional<Segment> unchangedSegment = determineUnchangedSegment( allowMajorUpdates, allowMinorUpdates,
                 allowIncrementalUpdates );
         MajorMinorIncrementalFilter majorMinorIncfilter =
             new MajorMinorIncrementalFilter( allowMajorUpdates, allowMinorUpdates, allowIncrementalUpdates );

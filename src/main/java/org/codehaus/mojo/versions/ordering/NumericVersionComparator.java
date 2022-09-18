@@ -24,6 +24,7 @@ import java.util.StringTokenizer;
 
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
+import org.codehaus.mojo.versions.api.Segment;
 
 /**
  * A comparator which will compare all segments of a dot separated version string as numbers if possible, i.e. 1.3.34
@@ -163,18 +164,13 @@ public class NumericVersionComparator
      * {@inheritDoc}
      */
     @SuppressWarnings( "checkstyle:MethodLength" )
-    protected ArtifactVersion innerIncrementSegment( ArtifactVersion v, int segment ) throws InvalidSegmentException
+    protected ArtifactVersion innerIncrementSegment( ArtifactVersion v, Segment segment ) throws InvalidSegmentException
     {
-        final int segmentCount = innerGetSegmentCount( v );
-        if ( segment < 0 || segment > segmentCount )
-        {
-            throw new InvalidSegmentException( segment, segmentCount, v );
-        }
         final String version = v.toString();
         StringBuilder buf = new StringBuilder();
         StringTokenizer tok = new StringTokenizer( version, "." );
         boolean first = true;
-        while ( segment >= 0 && tok.hasMoreTokens() )
+        while ( segment.value() >= 0 && tok.hasMoreTokens() )
         {
             if ( first )
             {
@@ -193,7 +189,7 @@ public class NumericVersionComparator
                 p = p.substring( 0, index );
             }
 
-            if ( segment == 0 )
+            if ( segment.value() == 0 )
             {
                 try
                 {
@@ -317,7 +313,7 @@ public class NumericVersionComparator
                 buf.append( '-' );
                 buf.append( q );
             }
-            segment--;
+            segment = Segment.of( segment.value() - 1);
         }
         while ( tok.hasMoreTokens() )
         {
