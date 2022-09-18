@@ -47,12 +47,16 @@ public enum Segment implements Comparable<Segment>
 
     public static Segment of( int index )
     {
-        switch( index )
+        switch ( index )
         {
-            case 0: return MAJOR;
-            case 1: return MINOR;
-            case 2: return INCREMENTAL;
-            case 3: return SUBINCREMENTAL;
+            case 0:
+                return MAJOR;
+            case 1:
+                return MINOR;
+            case 2:
+                return INCREMENTAL;
+            case 3:
+                return SUBINCREMENTAL;
         }
         throw new IllegalArgumentException( "Wrong segment index: " + index );
     }

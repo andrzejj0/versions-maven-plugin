@@ -34,7 +34,7 @@ import org.codehaus.mojo.versions.api.Segment;
  * @deprecated
  */
 public class MercuryVersionComparator
-    extends AbstractVersionComparator
+        extends AbstractVersionComparator
 {
     private static final BigInteger BIG_INTEGER_ONE = new BigInteger( "1" );
 
@@ -70,7 +70,7 @@ public class MercuryVersionComparator
                 result.append( version.substring( index, index + 1 ) );
                 index++;
             }
-            segment = Segment.of( segment.value() - 1);
+            segment = Segment.of( segment.value() - 1 );
         }
         if ( segment.value() == 0 )
         {
@@ -103,7 +103,7 @@ public class MercuryVersionComparator
                         newToken = "ga";
                     }
                     else if ( "final".equalsIgnoreCase( token ) || "ga".equalsIgnoreCase( token )
-                        || "".equalsIgnoreCase( token ) )
+                            || "".equalsIgnoreCase( token ) )
                     {
                         newToken = "sp";
                     }
