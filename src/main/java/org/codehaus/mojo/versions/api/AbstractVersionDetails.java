@@ -485,7 +485,7 @@ public abstract class AbstractVersionDetails
         if ( segmentCount > 0 )
         {
             newVersion.append( "." )
-                    .append( unchangedSegment.get().value() > MINOR.value()
+                    .append( unchangedSegment.get().value() >= MINOR.value()
                             ? version.getMinorVersion() : 0 );
         }
         if ( segmentCount > 1 )
