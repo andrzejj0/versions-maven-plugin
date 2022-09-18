@@ -170,7 +170,7 @@ public class NumericVersionComparator
         StringBuilder buf = new StringBuilder();
         StringTokenizer tok = new StringTokenizer( version, "." );
         boolean first = true;
-        while ( segment.value() >= 0 && tok.hasMoreTokens() )
+        for ( int segmentIdx = segment.value(); segmentIdx >= 0 && tok.hasMoreTokens(); --segmentIdx )
         {
             if ( first )
             {
@@ -189,7 +189,7 @@ public class NumericVersionComparator
                 p = p.substring( 0, index );
             }
 
-            if ( segment.value() == 0 )
+            if ( segmentIdx == 0 )
             {
                 try
                 {
@@ -313,7 +313,6 @@ public class NumericVersionComparator
                 buf.append( '-' );
                 buf.append( q );
             }
-            segment = Segment.of( segment.value() - 1);
         }
         while ( tok.hasMoreTokens() )
         {
