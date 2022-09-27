@@ -37,7 +37,9 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.reporting.MavenReportException;
 import org.apache.maven.repository.RepositorySystem;
 import org.codehaus.mojo.versions.model.RuleSet;
+import org.codehaus.mojo.versions.reporting.PluginUpdatesRenderer;
 import org.codehaus.mojo.versions.utils.MockUtils;
+import org.codehaus.plexus.i18n.I18N;
 import org.junit.Test;
 
 import static org.apache.maven.artifact.Artifact.SCOPE_RUNTIME;
@@ -62,9 +64,11 @@ public class PluginUpdatesReportTest
 {
     private static class TestPluginUpdatesReport extends PluginUpdatesReport
     {
+        static final I18N MOCK_I18N = mockI18N();
         TestPluginUpdatesReport()
         {
-            super( mockI18N(), mockRepositorySystem(), null, mockArtifactMetadataSource(), null );
+            super( MOCK_I18N, mockRepositorySystem(), null, mockArtifactMetadataSource(),
+                    null, new PluginUpdatesRenderer( MOCK_I18N ) );
             siteTool = MockUtils.mockSiteTool();
 
             project = new MavenProject();

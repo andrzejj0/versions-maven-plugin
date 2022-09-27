@@ -24,9 +24,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Set;
 
+import org.apache.maven.artifact.DefaultArtifact;
+import org.apache.maven.artifact.metadata.ArtifactMetadataSource;
 import org.apache.maven.doxia.module.xhtml5.Xhtml5SinkFactory;
 import org.apache.maven.doxia.sink.SinkFactory;
 import org.apache.maven.model.Dependency;
@@ -34,9 +37,13 @@ import org.apache.maven.model.DependencyManagement;
 import org.apache.maven.model.Model;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.reporting.MavenReportException;
+import org.apache.maven.repository.RepositorySystem;
 import org.codehaus.mojo.versions.model.RuleSet;
+import org.codehaus.mojo.versions.reporting.DependencyUpdatesRenderer;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.mojo.versions.utils.MockUtils;
+import org.codehaus.plexus.i18n.I18N;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import static org.apache.maven.artifact.Artifact.SCOPE_COMPILE;
@@ -47,6 +54,9 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anyOf;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Basic tests for {@linkplain DependencyUpdatesReport}.
@@ -57,10 +67,12 @@ public class DependencyUpdatesReportTest
 {
     private static class TestDependencyUpdatesReport extends DependencyUpdatesReport
     {
-        @SuppressWarnings( "deprecation" )
+        private static final I18N MOCK_I18N = mockI18N();
+
         TestDependencyUpdatesReport()
         {
-            super( mockI18N(), MockUtils.mockRepositorySystem(), null, mockArtifactMetadataSource(), null );
+            super( MOCK_I18N, mockRepositorySystem(), null, mockArtifactMetadataSource(),
+                    null, new DependencyUpdatesRenderer( MOCK_I18N ) );
             siteTool = MockUtils.mockSiteTool();
 
             project = new MavenProject();
@@ -72,6 +84,12 @@ public class DependencyUpdatesReportTest
         public TestDependencyUpdatesReport withDependencies( Dependency... dependencies )
         {
             project.setDependencies( Arrays.asList( dependencies ) );
+            return this;
+        }
+
+        public TestDependencyUpdatesReport withArtifactMetadataSource( ArtifactMetadataSource artifactMetadataSource )
+        {
+            this.artifactMetadataSource = artifactMetadataSource;
             return this;
         }
 
@@ -128,11 +146,32 @@ public class DependencyUpdatesReportTest
             this.ignoredVersions = ignoredVersions;
             return this;
         }
+
+        private static RepositorySystem mockRepositorySystem()
+        {
+            RepositorySystem repositorySystem = mock( RepositorySystem.class );
+            when( repositorySystem.createDependencyArtifact( any( Dependency.class ) ) ).thenAnswer(
+                invocation ->
+                {
+                    Dependency dependency = invocation.getArgument( 0 );
+                    return new DefaultArtifact( dependency.getGroupId(), dependency.getArtifactId(),
+                                                dependency.getVersion(), dependency.getScope(), dependency.getType(),
+                                                dependency.getClassifier(), null );
+                } );
+            return repositorySystem;
+        }
     }
 
     private static Dependency dependencyOf( String artifactId )
     {
-        return DependencyBuilder.dependencyWith( "groupA", artifactId, "1.0.0", "default", "pom", SCOPE_COMPILE );
+        return DependencyBuilder.dependencyWith( "groupA", artifactId, "1.0.0",
+                "default", "pom", SCOPE_COMPILE );
+    }
+
+    private static Dependency dependencyOf( String artifactId, String version )
+    {
+        return DependencyBuilder.dependencyWith( "groupA", artifactId, version,
+                "default", "pom", SCOPE_COMPILE );
     }
 
     @Test
@@ -222,5 +261,49 @@ public class DependencyUpdatesReportTest
 
         String output = os.toString().replaceAll( "\n", "" );
         assertThat( output, containsString( "report.noUpdatesAvailable" ) );
+    }
+
+    /**
+     * Dependencies should be rendered in alphabetical order
+     */
+    @Test
+    public void testDependenciesInAlphabeticalOrder() throws IOException, MavenReportException
+    {
+        OutputStream os = new ByteArrayOutputStream();
+        SinkFactory sinkFactory = new Xhtml5SinkFactory();
+        new TestDependencyUpdatesReport()
+                .withArtifactMetadataSource( mockArtifactMetadataSource( new HashMap<String, String[]>()
+                {{
+                    put( "amstrad", new String[] {"1.0.0", "2.0.0"} );
+                    put( "atari", new String[] {"1.0.0", "2.0.0"} );
+                    put( "commodore", new String[] {"1.0.0", "2.0.0"} );
+                    put( "spectrum", new String[] {"1.0.0", "2.0.0"} );
+                }} ) )
+                .withDependencies( dependencyOf( "spectrum" ), dependencyOf( "atari" ),
+                        dependencyOf( "amstrad" ), dependencyOf( "commodore" ) )
+                .generate( sinkFactory.createSink( os ), sinkFactory, Locale.getDefault() );
+
+        String output = os.toString().replaceAll( "\n", "" );
+        assertThat( output, Matchers.stringContainsInOrder( "amstrad", "atari", "commodore", "spectrum" ) );
+    }
+
+    /**
+     * Dependency updates for dependency should override those for dependency management
+     */
+    @Test
+    public void testDependenciesShouldOverrideDependencyManagement() throws IOException, MavenReportException
+    {
+        OutputStream os = new ByteArrayOutputStream();
+        SinkFactory sinkFactory = new Xhtml5SinkFactory();
+        new TestDependencyUpdatesReport()
+                .withProcessDependencyManagement( true )
+                .withProcessDependencyManagementTransitive( true )
+                .withDependencies( dependencyOf( "artifactA", "2.0.0" ),
+                        dependencyOf( "artifactB" ) )
+                .withDependencyManagement( dependencyOf( "artifactA" ) )
+                .generate( sinkFactory.createSink( os ), sinkFactory, Locale.getDefault() );
+
+        String output = os.toString().replaceAll( "\n", "" );
+        assertThat( output, Matchers.stringContainsInOrder( "artifactB" ) );
     }
 }

@@ -1,4 +1,4 @@
-package org.codehaus.mojo.versions;
+package org.codehaus.mojo.versions.reporting;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,18 +19,20 @@ package org.codehaus.mojo.versions;
  * under the License.
  */
 
-import java.util.Locale;
-import java.util.Map;
-import java.util.TreeMap;
+import javax.inject.Inject;
+import javax.inject.Named;
 
+import java.util.Map;
+
+import org.apache.http.annotation.Contract;
 import org.apache.maven.artifact.ArtifactUtils;
-import org.apache.maven.doxia.sink.Sink;
 import org.apache.maven.model.Dependency;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
-import org.codehaus.mojo.versions.utils.DependencyComparator;
+import org.codehaus.mojo.versions.reporting.model.DependencyUpdatesReportModel;
 import org.codehaus.plexus.i18n.I18N;
 
 import static java.util.Optional.of;
+import static org.apache.http.annotation.ThreadingBehavior.UNSAFE;
 import static org.codehaus.mojo.versions.api.Segment.INCREMENTAL;
 import static org.codehaus.mojo.versions.api.Segment.MAJOR;
 import static org.codehaus.mojo.versions.api.Segment.MINOR;
@@ -39,69 +41,46 @@ import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 /**
  * @since 1.0-beta-1
  */
-public class DependencyUpdatesRenderer
-    extends AbstractVersionsReportRenderer
+@Contract( threading = UNSAFE )
+@Named( "dependency-updates-report" )
+public class DependencyUpdatesRenderer extends AbstractVersionsReportRenderer<DependencyUpdatesReportModel>
 {
-
-    private final Map<Dependency, ArtifactVersions> dependencyUpdates;
-
-    private final Map<Dependency, ArtifactVersions> dependencyManagementUpdates;
-
-    public DependencyUpdatesRenderer( Sink sink, I18N i18n, String bundleName, Locale locale,
-                                      Map<Dependency, ArtifactVersions> dependencyUpdates,
-                                      Map<Dependency, ArtifactVersions> dependencyManagementUpdates )
+    @Inject
+    public DependencyUpdatesRenderer( I18N i18n )
     {
-        super( sink, bundleName, i18n, locale );
-        this.dependencyUpdates = dependencyUpdates;
-        this.dependencyManagementUpdates = dependencyManagementUpdates;
+        super( i18n );
     }
 
-    protected void renderBody()
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void renderSummary()
     {
-        Map<Dependency, ArtifactVersions> allUpdates = new TreeMap<>( new DependencyComparator() );
-        allUpdates.putAll( dependencyManagementUpdates );
-        allUpdates.putAll( dependencyUpdates );
-
-        sink.section1();
-        sink.sectionTitle1();
-        sink.text( getText( "report.overview.title" ) );
-        sink.sectionTitle1_();
-        sink.paragraph();
-        sink.text( getText( "report.overview.text" ) );
-        sink.paragraph_();
-
-        renderSummaryTotalsTable( allUpdates );
-
+        renderSummaryTotalsTable();
         renderDependencyManagementSummary();
-
         renderDependencySummary();
+    }
 
-        sink.section1_();
-
-        sink.section1();
-        sink.sectionTitle1();
-        sink.text( getText( "report.detail.title" ) );
-        sink.sectionTitle1_();
-        sink.paragraph();
-        sink.text( getText( "report.detail.text" ) );
-        sink.paragraph_();
-
-        for ( Map.Entry<Dependency, ArtifactVersions> entry : allUpdates.entrySet() )
-        {
-            renderDependencyDetail( entry.getKey(), entry.getValue() );
-        }
-        sink.section1_();
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void renderDetails()
+    {
+        model.getAllUpdates().forEach( this::renderDependencyDetail );
     }
 
     protected void renderDependencySummary()
     {
-        renderSummaryTable( "report.overview.dependency", dependencyUpdates, "report.overview.noDependency" );
+        renderSummaryTable( "report.overview.dependency", model.getArtifactUpdates(),
+                "report.overview.noDependency" );
     }
 
     protected void renderDependencyManagementSummary()
     {
-        renderSummaryTable( "report.overview.dependencyManagement", dependencyManagementUpdates,
-                            "report.overview.noDependencyManagement" );
+        renderSummaryTable( "report.overview.dependencyManagement",
+                model.getArtifactManagementUpdates(), "report.overview.noDependencyManagement" );
     }
 
     protected void renderSummaryTable( String titleKey, Map<Dependency, ArtifactVersions> contents, String emptyKey )
@@ -124,14 +103,14 @@ public class DependencyUpdatesRenderer
         sink.section2_();
     }
 
-    protected void renderSummaryTotalsTable( Map<Dependency, ArtifactVersions> allUpdates )
+    protected void renderSummaryTotalsTable()
     {
         int numInc = 0;
         int numMin = 0;
         int numMaj = 0;
         int numAny = 0;
         int numCur = 0;
-        for ( ArtifactVersions details : allUpdates.values() )
+        for ( ArtifactVersions details : model.getAllUpdates().values() )
         {
             if ( details.getOldestUpdate( of( SUBINCREMENTAL ) ) != null )
             {
@@ -213,14 +192,13 @@ public class DependencyUpdatesRenderer
         sink.table_();
     }
 
-    protected void renderDependencyDetail( Dependency dependency, ArtifactVersions details )
+    protected void renderDependencyDetail( Dependency artifact, ArtifactVersions details )
     {
         sink.section2();
         sink.sectionTitle2();
-        sink.text( ArtifactUtils.versionlessKey( dependency.getGroupId(), dependency.getArtifactId() ) );
+        sink.text( ArtifactUtils.versionlessKey( artifact.getGroupId(), artifact.getArtifactId() ) );
         sink.sectionTitle2_();
-        renderDependencyDetailTable( dependency, details );
+        renderDependencyDetailTable( artifact, details );
         sink.section2_();
     }
-
 }

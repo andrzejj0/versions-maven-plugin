@@ -1,4 +1,4 @@
-package org.codehaus.mojo.versions;
+package org.codehaus.mojo.versions.reporting;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,6 +19,8 @@ package org.codehaus.mojo.versions;
  * under the License.
  */
 
+import javax.inject.Inject;
+
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
@@ -33,10 +35,12 @@ import org.apache.maven.doxia.sink.SinkEventAttributes;
 import org.apache.maven.doxia.sink.impl.SinkEventAttributeSet;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.reporting.AbstractMavenReportRenderer;
+import org.codehaus.mojo.versions.Property;
 import org.codehaus.mojo.versions.api.AbstractVersionDetails;
 import org.codehaus.mojo.versions.api.ArtifactAssociation;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.PropertyVersions;
+import org.codehaus.mojo.versions.api.ReportRenderer;
 import org.codehaus.plexus.i18n.I18N;
 import org.codehaus.plexus.util.StringUtils;
 
@@ -49,12 +53,13 @@ import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 
 /**
  * Base class for report renderers.
+ * @param <T> modelled report object
  *
  * @author Stephen Connolly
  * @since 1.0-beta-1
  */
-public abstract class AbstractVersionsReportRenderer
-    extends AbstractMavenReportRenderer
+public abstract class AbstractVersionsReportRenderer<T>
+    extends AbstractMavenReportRenderer implements ReportRenderer<T>
 {
     /**
      * Internationalization component.
@@ -68,22 +73,41 @@ public abstract class AbstractVersionsReportRenderer
      *
      * @since 1.0-beta-1
      */
-    protected final Locale locale;
+    protected Locale locale;
 
     /**
      * The name of the bundle containing our I18n resources.
      *
      * @since 1.0-beta-1
      */
-    protected final String bundleName;
+    protected String bundleName;
 
-    public AbstractVersionsReportRenderer( org.apache.maven.doxia.sink.Sink sink, String bundleName, I18N i18n,
-                                           Locale locale )
+    /**
+     * Model of the object being rendered
+     *
+     * @since 2.13.0
+     */
+    protected T model;
+
+    /**
+     * Constructor to be called by the dependency injection framework
+     * @param i18n i18n object to be injected
+     */
+    @Inject
+    protected AbstractVersionsReportRenderer( I18N i18n )
     {
-        super( sink );
-        this.bundleName = bundleName;
+        super( null );
         this.i18n = i18n;
+    }
+
+    @Override
+    public void render( Sink sink, Locale locale, String bundleName, T model )
+    {
+        this.sink = sink;
         this.locale = locale;
+        this.bundleName = bundleName;
+        this.model = model;
+        render();
     }
 
     public String getTitle()
@@ -116,94 +140,6 @@ public abstract class AbstractVersionsReportRenderer
     {
         return v1 == v2 || ( v1 != null && v1.equals( v2 ) )
             || ( v1 != null && v2 != null && v1.toString().equals( v2.toString() ) );
-    }
-
-    protected void renderDependencySummaryTableRow( Dependency dependency, ArtifactVersions details )
-    {
-        renderDependencySummaryTableRow( dependency, details, true, true, true );
-    }
-
-    protected void renderDependencySummaryTableRow( Dependency dependency, ArtifactVersions details,
-                                                    boolean includeScope, boolean includeClassifier,
-                                                    boolean includeType )
-    {
-        sink.tableRow();
-        sink.tableCell();
-        ArtifactVersion[] allUpdates = details.getAllUpdates( empty() );
-        if ( allUpdates == null || allUpdates.length == 0 )
-        {
-            renderSuccessIcon();
-        }
-        else
-        {
-            renderWarningIcon();
-        }
-        sink.tableCell_();
-        sink.tableCell();
-        sink.text( dependency.getGroupId() );
-        sink.tableCell_();
-        sink.tableCell();
-        sink.text( dependency.getArtifactId() );
-        sink.tableCell_();
-        sink.tableCell();
-        sink.text( dependency.getVersion() );
-        sink.tableCell_();
-        if ( includeScope )
-        {
-            sink.tableCell();
-            sink.text( dependency.getScope() );
-            sink.tableCell_();
-        }
-        if ( includeClassifier )
-        {
-            sink.tableCell();
-            sink.text( dependency.getClassifier() );
-            sink.tableCell_();
-        }
-        if ( includeType )
-        {
-            sink.tableCell();
-            sink.text( dependency.getType() );
-            sink.tableCell_();
-        }
-
-        sink.tableCell();
-        if ( details.getNewestUpdate( of( SUBINCREMENTAL ) ) != null )
-        {
-            safeBold();
-            sink.text( details.getNewestUpdate( of( SUBINCREMENTAL ) ).toString() );
-            safeBold_();
-        }
-        sink.tableCell_();
-
-        sink.tableCell();
-        if ( details.getNewestUpdate( of( INCREMENTAL ) ) != null )
-        {
-            safeBold();
-            sink.text( details.getNewestUpdate( of( INCREMENTAL ) ).toString() );
-            safeBold_();
-        }
-        sink.tableCell_();
-
-        sink.tableCell();
-        if ( details.getNewestUpdate( of( MINOR ) ) != null )
-        {
-            safeBold();
-            sink.text( details.getNewestUpdate( of( MINOR ) ).toString() );
-            safeBold_();
-        }
-        sink.tableCell_();
-
-        sink.tableCell();
-        if ( details.getNewestUpdate( of( MAJOR ) ) != null )
-        {
-            safeBold();
-            sink.text( details.getNewestUpdate( of( MAJOR ) ).toString() );
-            safeBold_();
-        }
-        sink.tableCell_();
-
-        sink.tableRow_();
     }
 
     protected void safeBold()
@@ -256,12 +192,130 @@ public abstract class AbstractVersionsReportRenderer
         }
     }
 
-    protected void renderDependencySummaryTableHeader()
+    /**
+     * Renders the summary table
+     */
+    protected abstract void renderSummary();
+
+    /**
+     * Renders the details table
+     */
+    protected abstract void renderDetails();
+
+    /**
+     * {@inheritDoc}
+     */
+    protected void renderBody()
     {
-        renderDependencySummaryTableHeader( true, true, true );
+        sink.section1();
+        sink.sectionTitle1();
+        sink.text( getText( "report.overview.title" ) );
+        sink.sectionTitle1_();
+        sink.paragraph();
+        sink.text( getText( "report.overview.text" ) );
+        sink.paragraph_();
+
+        renderSummary();
+
+        sink.section1_();
+
+        sink.section1();
+        sink.sectionTitle1();
+        sink.text( getText( "report.detail.title" ) );
+        sink.sectionTitle1_();
+        sink.paragraph();
+        sink.text( getText( "report.detail.text" ) );
+        sink.paragraph_();
+
+        renderDetails();
+
+        sink.section1_();
     }
 
-    protected void renderDependencySummaryTableHeader( boolean includeScope, boolean includeClassifier,
+    private void renderDependencySummaryTableRow( Dependency artifact, ArtifactVersions artifactVersions,
+                                                  boolean includeScope, boolean includeClassifier,
+                                                  boolean includeType )
+    {
+        sink.tableRow();
+        sink.tableCell();
+        ArtifactVersion[] allUpdates = artifactVersions.getAllUpdates( empty() );
+        if ( allUpdates == null || allUpdates.length == 0 )
+        {
+            renderSuccessIcon();
+        }
+        else
+        {
+            renderWarningIcon();
+        }
+        sink.tableCell_();
+        sink.tableCell();
+        sink.text( artifact.getGroupId() );
+        sink.tableCell_();
+        sink.tableCell();
+        sink.text( artifact.getArtifactId() );
+        sink.tableCell_();
+        sink.tableCell();
+        sink.text( artifact.getVersion() );
+        sink.tableCell_();
+        if ( includeScope )
+        {
+            sink.tableCell();
+            sink.text( artifact.getScope() );
+            sink.tableCell_();
+        }
+        if ( includeClassifier )
+        {
+            sink.tableCell();
+            sink.text( artifact.getClassifier() );
+            sink.tableCell_();
+        }
+        if ( includeType )
+        {
+            sink.tableCell();
+            sink.text( artifact.getType() );
+            sink.tableCell_();
+        }
+
+        sink.tableCell();
+        if ( artifactVersions.getNewestUpdate( of( SUBINCREMENTAL ) ) != null )
+        {
+            safeBold();
+            sink.text( artifactVersions.getNewestUpdate( of( SUBINCREMENTAL ) ).toString() );
+            safeBold_();
+        }
+        sink.tableCell_();
+
+        sink.tableCell();
+        if ( artifactVersions.getNewestUpdate( of( INCREMENTAL ) ) != null )
+        {
+            safeBold();
+            sink.text( artifactVersions.getNewestUpdate( of( INCREMENTAL ) ).toString() );
+            safeBold_();
+        }
+        sink.tableCell_();
+
+        sink.tableCell();
+        if ( artifactVersions.getNewestUpdate( of( MINOR ) ) != null )
+        {
+            safeBold();
+            sink.text( artifactVersions.getNewestUpdate( of( MINOR ) ).toString() );
+            safeBold_();
+        }
+        sink.tableCell_();
+
+        sink.tableCell();
+        if ( artifactVersions.getNewestUpdate( of( MAJOR ) ) != null )
+        {
+            safeBold();
+            sink.text( artifactVersions.getNewestUpdate( of( MAJOR ) ).toString() );
+            safeBold_();
+        }
+        sink.tableCell_();
+
+        sink.tableRow_();
+    }
+
+    private void renderDependencySummaryTableHeader( boolean includeScope, boolean includeClassifier,
                                                        boolean includeType )
     {
         sink.tableRow();
@@ -310,13 +364,13 @@ public abstract class AbstractVersionsReportRenderer
         sink.tableRow_();
     }
 
-    protected void renderDependencyDetailTable( Dependency dependency, ArtifactVersions details )
+    protected void renderDependencyDetailTable( Dependency artifact, ArtifactVersions details )
     {
-        renderDependencyDetailTable( dependency, details, true, true, true );
+        renderDependencyDetailTable( artifact, details, true, true, true );
     }
 
     @SuppressWarnings( "checkstyle:MethodLength" )
-    protected void renderDependencyDetailTable( Dependency dependency, ArtifactVersions details, boolean includeScope,
+    protected void renderDependencyDetailTable( Dependency artifact, ArtifactVersions details, boolean includeScope,
                                                 boolean includeClassifier, boolean includeType )
     {
         final SinkEventAttributes headerAttributes = new SinkEventAttributeSet();
@@ -368,7 +422,7 @@ public abstract class AbstractVersionsReportRenderer
         sink.text( getText( "report.groupId" ) );
         sink.tableHeaderCell_();
         sink.tableCell( cellAttributes );
-        sink.text( dependency.getGroupId() );
+        sink.text( artifact.getGroupId() );
         sink.tableCell_();
         sink.tableRow_();
         sink.tableRow();
@@ -376,7 +430,7 @@ public abstract class AbstractVersionsReportRenderer
         sink.text( getText( "report.artifactId" ) );
         sink.tableHeaderCell_();
         sink.tableCell( cellAttributes );
-        sink.text( dependency.getArtifactId() );
+        sink.text( artifact.getArtifactId() );
         sink.tableCell_();
         sink.tableRow_();
         sink.tableRow();
@@ -384,7 +438,7 @@ public abstract class AbstractVersionsReportRenderer
         sink.text( getText( "report.currentVersion" ) );
         sink.tableHeaderCell_();
         sink.tableCell( cellAttributes );
-        sink.text( dependency.getVersion() );
+        sink.text( artifact.getVersion() );
         sink.tableCell_();
         sink.tableRow_();
         if ( includeScope )
@@ -394,7 +448,7 @@ public abstract class AbstractVersionsReportRenderer
             sink.text( getText( "report.scope" ) );
             sink.tableHeaderCell_();
             sink.tableCell( cellAttributes );
-            sink.text( dependency.getScope() );
+            sink.text( artifact.getScope() );
             sink.tableCell_();
             sink.tableRow_();
         }
@@ -405,7 +459,7 @@ public abstract class AbstractVersionsReportRenderer
             sink.text( getText( "report.classifier" ) );
             sink.tableHeaderCell_();
             sink.tableCell( cellAttributes );
-            sink.text( dependency.getClassifier() );
+            sink.text( artifact.getClassifier() );
             sink.tableCell_();
             sink.tableRow_();
         }
@@ -416,7 +470,7 @@ public abstract class AbstractVersionsReportRenderer
             sink.text( getText( "report.type" ) );
             sink.tableHeaderCell_();
             sink.tableCell( cellAttributes );
-            sink.text( dependency.getType() );
+            sink.text( artifact.getType() );
             sink.tableCell_();
             sink.tableRow_();
         }
@@ -455,9 +509,9 @@ public abstract class AbstractVersionsReportRenderer
         sink.table_();
     }
 
-    protected void renderDependencySummaryTable( Map<Dependency, ArtifactVersions> map )
+    protected void renderDependencySummaryTable( Map<Dependency, ArtifactVersions> artifactVersions )
     {
-        renderDependencySummaryTable( map, true, true, true );
+        renderDependencySummaryTable( artifactVersions, true, true, true );
     }
 
     protected void renderDependencySummaryTable( Map<Dependency, ArtifactVersions> map, boolean includeScope,
@@ -465,11 +519,8 @@ public abstract class AbstractVersionsReportRenderer
     {
         sink.table();
         renderDependencySummaryTableHeader( includeScope, includeClassifier, includeType );
-        for ( Map.Entry<Dependency, ArtifactVersions> entry : map.entrySet() )
-        {
-            renderDependencySummaryTableRow( entry.getKey(), entry.getValue(), includeScope, includeClassifier,
-                                             includeType );
-        }
+        map.forEach( ( key, value ) -> renderDependencySummaryTableRow( key, value, includeScope, includeClassifier,
+                includeType ) );
         renderDependencySummaryTableHeader( includeScope, includeClassifier, includeType );
         sink.table_();
     }
@@ -478,15 +529,12 @@ public abstract class AbstractVersionsReportRenderer
     {
         sink.table();
         renderPropertySummaryTableHeader();
-        for ( Map.Entry<Property, PropertyVersions> entry : map.entrySet() )
-        {
-            renderPropertySummaryTableRow( entry.getKey(), entry.getValue() );
-        }
+        map.forEach( this::renderPropertySummaryTableRow );
         renderPropertySummaryTableHeader();
         sink.table_();
     }
 
-    protected void renderPropertySummaryTableRow( Property property, PropertyVersions versions )
+    private void renderPropertySummaryTableRow( Property property, PropertyVersions versions )
     {
         sink.tableRow();
         sink.tableCell();
@@ -545,7 +593,7 @@ public abstract class AbstractVersionsReportRenderer
         sink.tableRow_();
     }
 
-    protected void renderPropertySummaryTableHeader()
+    private void renderPropertySummaryTableHeader()
     {
         sink.tableRow();
         sink.tableHeaderCell();

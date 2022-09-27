@@ -19,8 +19,6 @@ package org.codehaus.mojo.versions;
  * under the License.
  */
 
-import javax.inject.Inject;
-
 import java.io.File;
 import java.util.List;
 import java.util.Locale;
@@ -47,6 +45,7 @@ import org.apache.maven.repository.RepositorySystem;
 import org.apache.maven.settings.Settings;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.DefaultVersionsHelper;
+import org.codehaus.mojo.versions.api.ReportRenderer;
 import org.codehaus.mojo.versions.api.VersionsHelper;
 import org.codehaus.mojo.versions.model.RuleSet;
 import org.codehaus.plexus.i18n.I18N;
@@ -54,10 +53,11 @@ import org.codehaus.plexus.i18n.I18N;
 /**
  * Base class for all versions reports.
  *
+ * @param <T> modelled report object
  * @author Stephen Connolly
  * @since 1.0-alpha-3
  */
-public abstract class AbstractVersionsReport
+public abstract class AbstractVersionsReport<T>
     extends AbstractMavenReport
 {
     /**
@@ -99,7 +99,7 @@ public abstract class AbstractVersionsReport
     /**
      * @since 1.0-alpha-3
      */
-    private WagonManager wagonManager;
+    private final WagonManager wagonManager;
 
     /**
      * @since 1.0-alpha-3
@@ -188,17 +188,25 @@ public abstract class AbstractVersionsReport
     @Parameter( property = "maven.version.ignore" )
     protected Set<String> ignoredVersions;
 
+    /**
+     * Renderer for the report, to be injected
+     *
+     * @since 2.13.0
+     */
+    protected ReportRenderer<T> renderer;
+
     // --------------------- GETTER / SETTER METHODS ---------------------
 
-    @Inject
     protected AbstractVersionsReport( I18N i18n, RepositorySystem repositorySystem, ArtifactResolver artifactResolver,
-                                   ArtifactMetadataSource artifactMetadataSource, WagonManager wagonManager )
+                                      ArtifactMetadataSource artifactMetadataSource, WagonManager wagonManager,
+                                      ReportRenderer<T> renderer )
     {
         this.i18n = i18n;
         this.repositorySystem = repositorySystem;
         this.artifactResolver = artifactResolver;
         this.artifactMetadataSource = artifactMetadataSource;
         this.wagonManager = wagonManager;
+        this.renderer = renderer;
     }
 
     public VersionsHelper getHelper()

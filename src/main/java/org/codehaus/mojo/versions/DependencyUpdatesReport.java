@@ -20,6 +20,7 @@ package org.codehaus.mojo.versions;
  */
 
 import javax.inject.Inject;
+import javax.inject.Named;
 
 import java.io.File;
 import java.util.Locale;
@@ -39,6 +40,9 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.reporting.MavenReportException;
 import org.apache.maven.repository.RepositorySystem;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
+import org.codehaus.mojo.versions.api.ReportRenderer;
+import org.codehaus.mojo.versions.reporting.DependencyUpdatesXmlRenderer;
+import org.codehaus.mojo.versions.reporting.model.DependencyUpdatesReportModel;
 import org.codehaus.mojo.versions.utils.DependencyComparator;
 import org.codehaus.plexus.i18n.I18N;
 
@@ -52,8 +56,8 @@ import static org.codehaus.mojo.versions.utils.MiscUtils.filter;
  * @since 1.0-beta-1
  */
 @Mojo( name = "dependency-updates-report",
-       requiresDependencyResolution = ResolutionScope.RUNTIME, threadSafe = true )
-public class DependencyUpdatesReport extends AbstractVersionsReport
+       requiresDependencyResolution = ResolutionScope.RUNTIME, threadSafe = false )
+public class DependencyUpdatesReport extends AbstractVersionsReport<DependencyUpdatesReportModel>
 {
 
     /**
@@ -102,9 +106,11 @@ public class DependencyUpdatesReport extends AbstractVersionsReport
 
     @Inject
     protected DependencyUpdatesReport( I18N i18n, RepositorySystem repositorySystem, ArtifactResolver artifactResolver,
-                                       ArtifactMetadataSource artifactMetadataSource, WagonManager wagonManager )
+                                       ArtifactMetadataSource artifactMetadataSource, WagonManager wagonManager,
+                                       @Named( "dependency-updates-report" )
+                                       ReportRenderer<DependencyUpdatesReportModel> renderer )
     {
-        super( i18n, repositorySystem, artifactResolver, artifactMetadataSource, wagonManager );
+        super( i18n, repositorySystem, artifactResolver, artifactMetadataSource, wagonManager, renderer );
     }
 
     /**
@@ -132,10 +138,10 @@ public class DependencyUpdatesReport extends AbstractVersionsReport
     @SuppressWarnings( "deprecation" )
     protected void doGenerateReport( Locale locale, Sink sink ) throws MavenReportException
     {
-        Set<Dependency> dependencies = new TreeSet<>( new DependencyComparator() );
+        Set<Dependency> dependencies = new TreeSet<>( DependencyComparator.INSTANCE );
         dependencies.addAll( getProject().getDependencies() );
 
-        Set<Dependency> dependencyManagement = new TreeSet<>( new DependencyComparator() );
+        Set<Dependency> dependencyManagement = new TreeSet<>( DependencyComparator.INSTANCE );
 
         if ( processDependencyManagement )
         {
@@ -202,10 +208,8 @@ public class DependencyUpdatesReport extends AbstractVersionsReport
             {
                 if ( "html".equals( format ) )
                 {
-                    DependencyUpdatesRenderer renderer =
-                        new DependencyUpdatesRenderer( sink, getI18n(), getOutputName(), locale, dependencyUpdates,
-                                                       dependencyManagementUpdates );
-                    renderer.render();
+                    renderer.render( sink, locale, getOutputName(),
+                            new DependencyUpdatesReportModel( dependencyUpdates, dependencyManagementUpdates ) );
 
                 }
                 else if ( "xml".equals( format ) )
@@ -254,5 +258,5 @@ public class DependencyUpdatesReport extends AbstractVersionsReport
     {
         return "dependency-updates-report";
     }
-
 }
+

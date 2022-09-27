@@ -1,4 +1,4 @@
-package org.codehaus.mojo.versions;
+package org.codehaus.mojo.versions.reporting;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,13 +19,14 @@ package org.codehaus.mojo.versions;
  * under the License.
  */
 
-import java.util.Locale;
-import java.util.Map;
-import java.util.TreeMap;
+import javax.inject.Inject;
+import javax.inject.Named;
 
-import org.apache.maven.doxia.sink.Sink;
+import java.util.Map;
+
+import org.codehaus.mojo.versions.Property;
 import org.codehaus.mojo.versions.api.PropertyVersions;
-import org.codehaus.mojo.versions.utils.PropertyComparator;
+import org.codehaus.mojo.versions.reporting.model.PropertyUpdatesReportModel;
 import org.codehaus.plexus.i18n.I18N;
 
 import static java.util.Optional.of;
@@ -37,51 +38,33 @@ import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 /**
  * @since 1.0-beta-1
  */
-public class PropertyUpdatesRenderer
-    extends AbstractVersionsReportRenderer
+@Named( "property-updates-report" )
+public class PropertyUpdatesRenderer extends AbstractVersionsReportRenderer<PropertyUpdatesReportModel>
 {
-
-    private final Map<Property, PropertyVersions> propertyUpdates;
-
-    public PropertyUpdatesRenderer( Sink sink, I18N i18n, String bundleName, Locale locale,
-                                    Map<Property, PropertyVersions> propertyUpdates )
+    @Inject
+    protected PropertyUpdatesRenderer( I18N i18n )
     {
-        super( sink, bundleName, i18n, locale );
-        this.propertyUpdates = propertyUpdates;
+        super( i18n );
     }
 
-    protected void renderBody()
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void renderSummary()
     {
-        Map<Property, PropertyVersions> allUpdates = new TreeMap<>( new PropertyComparator() );
-        allUpdates.putAll( propertyUpdates );
+        renderSummaryTotalsTable( model.getAllUpdates() );
+        renderSummaryTable( "report.overview.property", model.getAllUpdates(),
+                "report.overview.noProperty" );
+    }
 
-        sink.section1();
-        sink.sectionTitle1();
-        sink.text( getText( "report.overview.title" ) );
-        sink.sectionTitle1_();
-        sink.paragraph();
-        sink.text( getText( "report.overview.text" ) );
-        sink.paragraph_();
-
-        renderSummaryTotalsTable( allUpdates );
-
-        renderSummaryTable( "report.overview.property", propertyUpdates, "report.overview.noProperty" );
-
-        sink.section1_();
-
-        sink.section1();
-        sink.sectionTitle1();
-        sink.text( getText( "report.detail.title" ) );
-        sink.sectionTitle1_();
-        sink.paragraph();
-        sink.text( getText( "report.detail.text" ) );
-        sink.paragraph_();
-
-        for ( final Map.Entry<Property, PropertyVersions> entry : allUpdates.entrySet() )
-        {
-            renderPropertyDetail( entry.getKey(), entry.getValue() );
-        }
-        sink.section1_();
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void renderDetails()
+    {
+        model.getAllUpdates().forEach( this::renderPropertyDetail );
     }
 
     private void renderSummaryTable( String titleKey, Map<Property, PropertyVersions> contents, String emptyKey )
