@@ -39,11 +39,12 @@ import static org.codehaus.mojo.versions.api.Segment.MINOR;
 import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 
 /**
+ * @param <K> type of the model
  * @since 1.0-beta-1
  */
 @Contract( threading = UNSAFE )
 @Named( "dependency-updates-report" )
-public class DependencyUpdatesRenderer extends AbstractVersionsReportRenderer<DependencyUpdatesReportModel>
+public class DependencyUpdatesRenderer<K extends DependencyUpdatesReportModel> extends AbstractVersionsReportRenderer<K>
 {
     @Inject
     public DependencyUpdatesRenderer( I18N i18n )

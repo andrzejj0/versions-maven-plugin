@@ -19,19 +19,19 @@ package org.codehaus.mojo.versions.reporting.model;
  * under the License.
  */
 
-import java.util.Map;
-
 import org.apache.maven.model.Dependency;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
+
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonMap;
 
 /**
  * Model class for using with the {@linkplain org.codehaus.mojo.versions.api.ReportRenderer} API
  */
-public class DependencyUpdatesReportModel extends AbstractUpdatesReportModel<ArtifactVersions>
+public class ParentUpdatesReportModel extends DependencyUpdatesReportModel
 {
-    public DependencyUpdatesReportModel( Map<Dependency, ArtifactVersions> dependencyUpdates,
-                                         Map<Dependency, ArtifactVersions> dependencyManagementUpdates )
+    public ParentUpdatesReportModel( Dependency parent, ArtifactVersions dependencyUpdates )
     {
-        super( dependencyUpdates, dependencyManagementUpdates, id -> id );
+        super( singletonMap( parent, dependencyUpdates ), emptyMap() );
     }
 }

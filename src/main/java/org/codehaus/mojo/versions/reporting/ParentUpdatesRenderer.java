@@ -1,4 +1,4 @@
-package org.codehaus.mojo.versions.reporting.model;
+package org.codehaus.mojo.versions.reporting;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,19 +19,34 @@ package org.codehaus.mojo.versions.reporting.model;
  * under the License.
  */
 
-import java.util.Map;
+import javax.inject.Inject;
+import javax.inject.Named;
 
-import org.apache.maven.model.Dependency;
-import org.codehaus.mojo.versions.api.ArtifactVersions;
+import org.apache.http.annotation.Contract;
+import org.codehaus.plexus.i18n.I18N;
+
+import static org.apache.http.annotation.ThreadingBehavior.UNSAFE;
 
 /**
- * Model class for using with the {@linkplain org.codehaus.mojo.versions.api.ReportRenderer} API
+ * @since 1.0-beta-1
  */
-public class DependencyUpdatesReportModel extends AbstractUpdatesReportModel<ArtifactVersions>
+@Contract( threading = UNSAFE )
+@Named( "parent-updates-report" )
+public class ParentUpdatesRenderer extends DependencyUpdatesRenderer
 {
-    public DependencyUpdatesReportModel( Map<Dependency, ArtifactVersions> dependencyUpdates,
-                                         Map<Dependency, ArtifactVersions> dependencyManagementUpdates )
+    @Inject
+    public ParentUpdatesRenderer( I18N i18n )
     {
-        super( dependencyUpdates, dependencyManagementUpdates, id -> id );
+        super( i18n );
+    }
+
+    @Override
+    protected void renderSummaryTotalsTable()
+    {
+    }
+
+    @Override
+    protected void renderDependencyManagementSummary()
+    {
     }
 }

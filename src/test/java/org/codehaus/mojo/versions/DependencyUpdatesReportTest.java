@@ -72,7 +72,7 @@ public class DependencyUpdatesReportTest
         TestDependencyUpdatesReport()
         {
             super( MOCK_I18N, mockRepositorySystem(), null, mockArtifactMetadataSource(),
-                    null, new DependencyUpdatesRenderer( MOCK_I18N ) );
+                    null, new DependencyUpdatesRenderer<>( MOCK_I18N ) );
             siteTool = MockUtils.mockSiteTool();
 
             project = new MavenProject();

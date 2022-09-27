@@ -33,6 +33,8 @@ import org.apache.maven.doxia.sink.SinkFactory;
 import org.apache.maven.model.Model;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.reporting.MavenReportException;
+import org.codehaus.mojo.versions.reporting.ParentUpdatesRenderer;
+import org.codehaus.plexus.i18n.I18N;
 import org.junit.Test;
 
 import static org.codehaus.mojo.versions.utils.MockUtils.mockArtifactMetadataSource;
@@ -49,16 +51,17 @@ import static org.hamcrest.Matchers.allOf;
  */
 public class ParentUpdatesReportTest
 {
+    private static final I18N MOCK_I18N = mockI18N();
     @Test
     public void testAllowSnapshots() throws IOException, MavenReportException
     {
         OutputStream os = new ByteArrayOutputStream();
         SinkFactory sinkFactory = new Xhtml5SinkFactory();
-        new ParentUpdatesReport( mockI18N(), mockRepositorySystem(), null,
+        new ParentUpdatesReport( MOCK_I18N, mockRepositorySystem(), null,
                 mockArtifactMetadataSource( new HashMap<String, String[]>()
                 {{
                     put( "default-artifact", new String[] {"1.0.0", "1.0.1", "1.1.0", "2.0.0", "2.0.1-SNAPSHOT"} );
-                }} ), null )
+                }} ), null, new ParentUpdatesRenderer( MOCK_I18N ) )
         {{
             allowSnapshots = true;
             project = new MavenProject( new Model()
