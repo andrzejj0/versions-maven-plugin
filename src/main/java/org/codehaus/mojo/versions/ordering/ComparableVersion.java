@@ -201,7 +201,7 @@ public class ComparableVersion
         {
             int i = QUALIFIERS_LIST.indexOf( qualifier );
 
-            return i == -1 ? QUALIFIERS_LIST.size() + "-" + qualifier : String.valueOf( i );
+            return i == -1 ? "0-" + qualifier : String.valueOf( i );
         }
 
         public int compareTo( Item item )

@@ -18,7 +18,6 @@ package org.codehaus.mojo.versions.ordering;
  * under the License.
  */
 
-import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.junit.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
