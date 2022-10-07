@@ -19,11 +19,16 @@ package org.codehaus.mojo.versions.ordering;
  * under the License.
  */
 
+import java.util.Arrays;
+
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
+import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.Segment;
 import org.junit.Test;
 
+import static java.util.Optional.empty;
 import static org.codehaus.mojo.versions.api.Segment.INCREMENTAL;
 import static org.codehaus.mojo.versions.api.Segment.MAJOR;
 import static org.codehaus.mojo.versions.api.Segment.MINOR;
@@ -31,6 +36,7 @@ import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.core.Is.is;
 
 public class MavenVersionComparatorTest
@@ -103,5 +109,19 @@ public class MavenVersionComparatorTest
         assertThat( artifactVersion.compareTo( new DefaultArtifactVersion( "1.1" ) ), greaterThan( 0 ) );
         assertThat( artifactVersion.compareTo( new DefaultArtifactVersion( "1.1.0-2" ) ), greaterThan( 0 ) );
         assertThat( artifactVersion.compareTo( new DefaultArtifactVersion( "1.1.1-2" ) ), lessThan( 0 ) );
+    }
+
+    @Test
+    public void testIssue744CompareTwoSegmentVersions()
+    {
+        assertThat( instance.compare( new DefaultArtifactVersion( "2.3" ), new DefaultArtifactVersion( "2.3-pfd" ) ),
+                greaterThan( 0 ) );
+    }
+
+    @Test
+    public void testIssue744CompareThreeSegmentVersions()
+    {
+        assertThat( instance.compare( new DefaultArtifactVersion( "2.3.1" ), new DefaultArtifactVersion( "2.3.1-pfd" ) ),
+                greaterThan( 0 ) );
     }
 }

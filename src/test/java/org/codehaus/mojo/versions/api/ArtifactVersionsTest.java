@@ -31,11 +31,13 @@ import org.codehaus.mojo.versions.ordering.MercuryVersionComparator;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 
+import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static org.codehaus.mojo.versions.api.Segment.INCREMENTAL;
 import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -125,5 +127,31 @@ public class ArtifactVersionsTest
 
         assertThat( instance.getNewestUpdate( of( SUBINCREMENTAL ) ).toString(), is( "1.1.0-2" ) );
         assertThat( instance.getOldestUpdate( of( INCREMENTAL ) ).toString(), is( "1.1.1" ) );
+    }
+
+    @Test
+    public void testIssue744CompareTwoSegmentVersions()
+    {
+        ArtifactVersion[] versions = versions( "2.3", "2.3-pfd" );
+        ArtifactVersions instance =
+                new ArtifactVersions( new DefaultArtifact( "default-group", "dummy-api",
+                        "2.3", "foo", "bar",
+                        "jar", null ),
+                        Arrays.asList( versions ), new MavenVersionComparator() );
+
+        assertThat( instance.getNewestUpdate( empty() ), nullValue() );
+    }
+
+    @Test
+    public void testIssue744CompareThreeSegmentVersions()
+    {
+        ArtifactVersion[] versions = versions( "2.3.0", "2.3.0-pfd" );
+        ArtifactVersions instance =
+                new ArtifactVersions( new DefaultArtifact( "default-group", "dummy-api",
+                        "2.3.0", "foo", "bar",
+                        "jar", null ),
+                        Arrays.asList( versions ), new MavenVersionComparator() );
+
+        assertThat( instance.getNewestUpdate( empty() ), nullValue() );
     }
 }
