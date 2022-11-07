@@ -40,6 +40,8 @@ import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.rewriting.ModifiedPomXMLEventReader;
 
+import static java.util.Collections.singletonList;
+
 /**
  * Replaces any version with the latest version.
  *
@@ -82,6 +84,10 @@ public class UseNextVersionsMojo
             if ( getProject().getDependencies() != null && isProcessingDependencies() )
             {
                 useNextVersions( pom, getProject().getDependencies() );
+            }
+            if ( getProject().getParent() != null && isProcessingParent() )
+            {
+                useNextVersions( pom, singletonList( getParentDependency() ) );
             }
         }
         catch ( ArtifactMetadataRetrievalException e )

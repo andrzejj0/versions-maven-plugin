@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.manager.WagonManager;
@@ -50,6 +49,8 @@ import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
 import org.codehaus.mojo.versions.ordering.VersionComparator;
 import org.codehaus.mojo.versions.rewriting.ModifiedPomXMLEventReader;
 import org.codehaus.mojo.versions.utils.SegmentUtils;
+
+import static java.util.Collections.singletonList;
 
 /**
  * Replaces any release versions with the next snapshot version (if it has been deployed).
@@ -89,13 +90,6 @@ public class UseNextSnapshotsMojo
     @Parameter( property = "allowIncrementalUpdates", defaultValue = "true" )
     private boolean allowIncrementalUpdates;
 
-    // ------------------------------ FIELDS ------------------------------
-
-    /**
-     * Pattern to match a snapshot version.
-     */
-    private final Pattern matchSnapshotRegex = Pattern.compile( "^(.+)-((SNAPSHOT)|(\\d{8}\\.\\d{6}-\\d+))$" );
-
     // ------------------------------ METHODS --------------------------
 
     @Inject
@@ -128,6 +122,10 @@ public class UseNextSnapshotsMojo
             {
                 useNextSnapshots( pom, getProject().getDependencies() );
             }
+            if ( getProject().getParent() != null && isProcessingParent() )
+            {
+                useNextSnapshots( pom, singletonList( getParentDependency() ) );
+            }
         }
         catch ( ArtifactMetadataRetrievalException e )
         {
@@ -157,7 +155,7 @@ public class UseNextSnapshotsMojo
             }
 
             String version = dep.getVersion();
-            Matcher versionMatcher = matchSnapshotRegex.matcher( version );
+            Matcher versionMatcher = SNAPSHOT_REGEX.matcher( version );
             if ( !versionMatcher.matches() )
             {
                 getLog().debug( "Looking for next snapshot of " + toString( dep ) );
@@ -189,7 +187,7 @@ public class UseNextSnapshotsMojo
                 for ( ArtifactVersion artifactVersion : newer )
                 {
                     String newVersion = artifactVersion.toString();
-                    if ( matchSnapshotRegex.matcher( newVersion ).matches() )
+                    if ( SNAPSHOT_REGEX.matcher( newVersion ).matches() )
                     {
                         if ( PomHelper.setDependencyVersion( pom, dep.getGroupId(), dep.getArtifactId(), version,
                                 newVersion, getProject().getModel() ) )

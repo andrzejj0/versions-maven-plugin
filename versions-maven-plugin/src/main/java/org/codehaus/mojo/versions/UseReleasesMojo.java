@@ -25,7 +25,6 @@ import javax.xml.stream.XMLStreamException;
 import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.manager.WagonManager;
@@ -72,13 +71,6 @@ public class UseReleasesMojo
      */
     @Parameter( property = "failIfNotReplaced", defaultValue = "false" )
     private boolean failIfNotReplaced;
-
-    // ------------------------------ FIELDS ------------------------------
-
-    /**
-     * Pattern to match a snapshot version.
-     */
-    private final Pattern matchSnapshotRegex = Pattern.compile( "^(.+)-((SNAPSHOT)|(\\d{8}\\.\\d{6}-\\d+))$" );
 
     // ------------------------------ METHODS --------------------------
 
@@ -129,7 +121,7 @@ public class UseReleasesMojo
         throws XMLStreamException, MojoExecutionException, ArtifactMetadataRetrievalException
     {
         String version = project.getVersion();
-        Matcher versionMatcher = matchSnapshotRegex.matcher( version );
+        Matcher versionMatcher = SNAPSHOT_REGEX.matcher( version );
         if ( versionMatcher.matches() )
         {
             String releaseVersion = versionMatcher.group( 1 );
@@ -196,7 +188,7 @@ public class UseReleasesMojo
                     getLog().info( "No matching release of " + toString( project ) + " to update via rangeMatching." );
                     if ( failIfNotReplaced )
                     {
-                        throw new NoSuchElementException( "No matching release of " + toString( project )
+                        throw new MojoExecutionException( "No matching release of " + toString( project )
                                                               + " found for update via rangeMatching." );
                     }
                 }
@@ -228,7 +220,7 @@ public class UseReleasesMojo
                 getLog().info( "Ignoring dependency with no version: " + toString( dep ) );
                 continue;
             }
-            Matcher versionMatcher = matchSnapshotRegex.matcher( version );
+            Matcher versionMatcher = SNAPSHOT_REGEX.matcher( version );
             if ( versionMatcher.matches() )
             {
                 String releaseVersion = versionMatcher.group( 1 );
@@ -284,7 +276,7 @@ public class UseReleasesMojo
             getLog().info( "No matching release of " + toString( dep ) + " to update via rangeMatching." );
             if ( failIfNotReplaced )
             {
-                throw new NoSuchElementException( "No matching release of " + toString( dep )
+                throw new MojoExecutionException( "No matching release of " + toString( dep )
                                                       + " found for update via rangeMatching." );
             }
         }

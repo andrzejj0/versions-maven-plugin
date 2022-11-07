@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.manager.WagonManager;
@@ -50,7 +49,6 @@ import org.codehaus.mojo.versions.api.Segment;
 import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
 import org.codehaus.mojo.versions.ordering.VersionComparator;
 import org.codehaus.mojo.versions.rewriting.ModifiedPomXMLEventReader;
-import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.mojo.versions.utils.SegmentUtils;
 
 import static java.util.Collections.singletonList;
@@ -93,13 +91,6 @@ public class UseLatestSnapshotsMojo
     @Parameter( property = "allowIncrementalUpdates", defaultValue = "true" )
     protected boolean allowIncrementalUpdates;
 
-    // ------------------------------ FIELDS ------------------------------
-
-    /**
-     * Pattern to match a snapshot version.
-     */
-    private final Pattern matchSnapshotRegex = Pattern.compile( "^(.+)-((SNAPSHOT)|(\\d{8}\\.\\d{6}-\\d+))$" );
-
     // ------------------------------ METHODS --------------------------
 
     @Inject
@@ -134,12 +125,7 @@ public class UseLatestSnapshotsMojo
             }
             if ( getProject().getParent() != null && isProcessingParent() )
             {
-                useLatestSnapshots( pom, singletonList( DependencyBuilder.newBuilder()
-                        .withGroupId( getProject().getParent().getGroupId() )
-                        .withArtifactId( getProject().getParent().getArtifactId() )
-                        .withVersion( getProject().getParent().getVersion() )
-                        .withType( "pom" )
-                        .build() ) );
+                useLatestSnapshots( pom, singletonList( getParentDependency() ) );
             }
         }
         catch ( ArtifactMetadataRetrievalException e )
@@ -169,7 +155,7 @@ public class UseLatestSnapshotsMojo
             }
 
             String version = dep.getVersion();
-            Matcher versionMatcher = matchSnapshotRegex.matcher( version );
+            Matcher versionMatcher = SNAPSHOT_REGEX.matcher( version );
             if ( !versionMatcher.matches() )
             {
                 getLog().debug( "Looking for latest snapshot of " + toString( dep ) );
@@ -207,7 +193,7 @@ public class UseLatestSnapshotsMojo
                 for ( ArtifactVersion artifactVersion : newer )
                 {
                     String newVersion = artifactVersion.toString();
-                    if ( matchSnapshotRegex.matcher( newVersion ).matches() )
+                    if ( SNAPSHOT_REGEX.matcher( newVersion ).matches() )
                     {
                         snapshotsOnly.add( artifactVersion );
                     }

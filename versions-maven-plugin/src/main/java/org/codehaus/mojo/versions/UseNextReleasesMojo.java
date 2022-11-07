@@ -42,6 +42,8 @@ import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.rewriting.ModifiedPomXMLEventReader;
 
+import static java.util.Collections.singletonList;
+
 /**
  * Replaces any release versions with the next release version (if it has been released).
  *
@@ -89,6 +91,10 @@ public class UseNextReleasesMojo
         if ( getProject().getDependencies() != null && isProcessingDependencies() )
         {
             useNextReleases( pom, getProject().getDependencies() );
+        }
+        if ( getProject().getParent() != null && isProcessingParent() )
+        {
+            useNextReleases( pom, singletonList( getParentDependency() ) );
         }
     }
 
