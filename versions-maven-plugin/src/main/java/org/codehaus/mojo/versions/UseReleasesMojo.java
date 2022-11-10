@@ -1,36 +1,12 @@
 package org.codehaus.mojo.versions;
 
-import static java.util.Collections.singletonList;
-
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.regex.Matcher;
-
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-
 import javax.inject.Inject;
 import javax.xml.stream.XMLStreamException;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Optional;
+import java.util.regex.Matcher;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.manager.WagonManager;
@@ -49,6 +25,8 @@ import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.rewriting.ModifiedPomXMLEventReader;
 
+import static java.util.Collections.singletonList;
+
 /**
  * Replaces any -SNAPSHOT versions with the corresponding release version (if it has been released).
  *
@@ -61,7 +39,11 @@ public class UseReleasesMojo
 {
 
     /**
-     * Whether to check for releases within the range.
+     * <p>When set to {@code true}, will use the highest found release version matching a string
+     * starting with the current version string without {@code -SNAPSHOT}.</p>
+     * <p>For example, if the current version is {@code 1.1-SNAPSHOT}, will match all versions
+     * starting with {@code 1.1}, i.e. {@code 1.1}, {@code 1.1.1}, {@code 1.1.2}, {@code 1.1.3.1}, etc.,
+     * and will select the highest found version, i.e. {@code 1.1.3.1}.</p>
      *
      * @since 2.3
      */
@@ -157,67 +139,36 @@ public class UseReleasesMojo
                 // Force releaseVersion version because org.apache.maven.artifact.metadata.MavenMetadataSource does not
                 // retrieve release version if provided snapshot version.
                 artifact.setVersion( releaseVersion );
-                ArtifactVersions versions = getHelper().lookupArtifactVersions( artifact, false );
-                if ( !allowRangeMatching ) // standard behaviour
+                Optional<String> targetVersion = findReleaseVersion( pom, dep, version, releaseVersion,
+                        getHelper().lookupArtifactVersions( artifact, false ) );
+                if ( targetVersion.isPresent() )
                 {
-                    noRangeMatching( pom, dep, version, releaseVersion, versions );
+                    updateDependencyVersion( pom, dep, targetVersion.get(), "useReleases" );
                 }
                 else
                 {
-                    rangeMatching( pom, dep, version, releaseVersion, versions );
+                    getLog().info( "No matching release of " + toString( dep ) + " to update." );
+                    if ( failIfNotReplaced )
+                    {
+                        throw new MojoExecutionException( "No matching release of " + toString( dep )
+                                + " found for update" );
+                    }
                 }
             }
         }
     }
 
-    private void rangeMatching( ModifiedPomXMLEventReader pom, Dependency dep, String version, String releaseVersion,
-                                ArtifactVersions versions ) throws XMLStreamException, MojoExecutionException
+    private Optional<String> findReleaseVersion( ModifiedPomXMLEventReader pom, Dependency dep, String version,
+                                                 String releaseVersion, ArtifactVersions versions )
     {
-        String finalVersion = null;
-        for ( ArtifactVersion proposedVersion : versions.getVersions( false ) )
-        {
-            if ( proposedVersion.toString().startsWith( releaseVersion ) )
-            {
-                getLog().debug( "Found matching version for " + toString( dep ) + " to version " + releaseVersion );
-                finalVersion = proposedVersion.toString();
-            }
-        }
-
-        if ( finalVersion != null )
-        {
-            updateDependencyVersion( pom, dep, finalVersion, "useReleases" );
-            if ( PomHelper.setDependencyVersion( pom, dep.getGroupId(), dep.getArtifactId(), version,
-                                                 finalVersion, getProject().getModel() ) )
-            {
-                getLog().info( "Updated " + toString( dep ) + " to version " + finalVersion );
-
-                this.getChangeRecorder().recordUpdate( "useReleases", dep.getGroupId(),
-                                                       dep.getArtifactId(), version, finalVersion );
-            }
-        }
-        else
-        {
-            getLog().info( "No matching release of " + toString( dep ) + " to update via rangeMatching." );
-            if ( failIfNotReplaced )
-            {
-                throw new MojoExecutionException( "No matching release of " + toString( dep )
-                                                      + " found for update via rangeMatching." );
-            }
-        }
+        return !allowRangeMatching
+                ? versions.containsVersion( releaseVersion )
+                    ? Optional.of( releaseVersion )
+                    : Optional.empty()
+                : Arrays.stream( versions.getVersions( false ) )
+                    .sorted( ( v1, v2 ) -> -( v1.compareTo( v2 ) ) )
+                    .filter( v -> v.toString().startsWith( releaseVersion ) )
+                    .findFirst()
+                    .map( ArtifactVersion::toString );
     }
-
-    private void noRangeMatching( ModifiedPomXMLEventReader pom, Dependency dep, String version, String releaseVersion,
-                                  ArtifactVersions versions ) throws XMLStreamException, MojoExecutionException
-    {
-        if ( versions.containsVersion( releaseVersion ) )
-        {
-            
-            updateDependencyVersion( pom, dep, releaseVersion, "useReleases" );
-        }
-        else if ( failIfNotReplaced )
-        {
-            throw new MojoExecutionException( "No matching release of " + toString( dep ) + " found for update." );
-        }
-    }
-
 }
