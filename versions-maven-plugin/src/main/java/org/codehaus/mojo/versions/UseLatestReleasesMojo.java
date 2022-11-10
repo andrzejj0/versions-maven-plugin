@@ -138,7 +138,6 @@ public class UseLatestReleasesMojo
         }
     }
 
-    @SuppressWarnings( "unchecked" )
     private void useLatestReleases( ModifiedPomXMLEventReader pom, Collection<Dependency> dependencies )
             throws XMLStreamException, MojoExecutionException, ArtifactMetadataRetrievalException
     {

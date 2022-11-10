@@ -1,5 +1,15 @@
 package org.codehaus.mojo.versions;
 
+import static java.util.Collections.singletonList;
+
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.regex.Matcher;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -22,10 +32,6 @@ package org.codehaus.mojo.versions;
 import javax.inject.Inject;
 import javax.xml.stream.XMLStreamException;
 
-import java.util.Collection;
-import java.util.NoSuchElementException;
-import java.util.regex.Matcher;
-
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.manager.WagonManager;
 import org.apache.maven.artifact.metadata.ArtifactMetadataRetrievalException;
@@ -37,13 +43,11 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectBuilder;
 import org.apache.maven.repository.RepositorySystem;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.rewriting.ModifiedPomXMLEventReader;
-import org.codehaus.mojo.versions.utils.DependencyBuilder;
 
 /**
  * Replaces any -SNAPSHOT versions with the corresponding release version (if it has been released).
@@ -70,7 +74,7 @@ public class UseReleasesMojo
      * @since 2.3
      */
     @Parameter( property = "failIfNotReplaced", defaultValue = "false" )
-    private boolean failIfNotReplaced;
+    protected boolean failIfNotReplaced;
 
     // ------------------------------ METHODS --------------------------
 
@@ -96,11 +100,6 @@ public class UseReleasesMojo
     {
         try
         {
-            if ( getProject().getParent() != null && isProcessingParent() )
-            {
-                useReleases( pom, getProject().getParent() );
-            }
-
             if ( getProject().getDependencyManagement() != null && isProcessingDependencyManagement() )
             {
                 useReleases( pom, PomHelper.readImportedPOMsFromDependencyManagementSection( pom ) );
@@ -110,90 +109,14 @@ public class UseReleasesMojo
             {
                 useReleases( pom, getProject().getDependencies() );
             }
+            if ( getProject().getParent() != null && isProcessingParent() )
+            {
+                useReleases( pom, singletonList( getParentDependency() ) );
+            }
         }
         catch ( ArtifactMetadataRetrievalException e )
         {
             throw new MojoExecutionException( e.getMessage(), e );
-        }
-    }
-
-    private void useReleases( ModifiedPomXMLEventReader pom, MavenProject project )
-        throws XMLStreamException, MojoExecutionException, ArtifactMetadataRetrievalException
-    {
-        String version = project.getVersion();
-        Matcher versionMatcher = SNAPSHOT_REGEX.matcher( version );
-        if ( versionMatcher.matches() )
-        {
-            String releaseVersion = versionMatcher.group( 1 );
-
-            final MavenProject parent = getProject().getParent();
-
-            Artifact artifact = getHelper().createDependencyArtifact( DependencyBuilder.newBuilder()
-                    .withGroupId( parent.getGroupId() )
-                    .withArtifactId( parent.getArtifactId() )
-                    .withVersion( releaseVersion )
-                    .withType( "pom" )
-                    .build() );
-            if ( !isIncluded( artifact ) )
-            {
-                return;
-            }
-
-            getLog().debug( "Looking for a release of " + toString( project ) );
-            // Force releaseVersion version because org.apache.maven.artifact.metadata.MavenMetadataSource does not
-            // retrieve release version if provided snapshot version.
-            artifact.setVersion( releaseVersion );
-            ArtifactVersions versions = getHelper().lookupArtifactVersions( artifact, false );
-            if ( !allowRangeMatching ) // standard behaviour
-            {
-                if ( versions.containsVersion( releaseVersion ) )
-                {
-                    if ( PomHelper.setProjectParentVersion( pom, releaseVersion ) )
-                    {
-                        getLog().info( "Updated " + toString( project ) + " to version " + releaseVersion );
-                    }
-                }
-                else if ( failIfNotReplaced )
-                {
-                    throw new NoSuchElementException( "No matching release of " + toString( project )
-                                                          + " found for update." );
-                }
-            }
-            else
-            {
-                ArtifactVersion finalVersion = null;
-                for ( ArtifactVersion proposedVersion : versions.getVersions( false ) )
-                {
-                    if ( proposedVersion.toString().startsWith( releaseVersion ) )
-                    {
-                        getLog().debug( "Found matching version for " + toString( project ) + " to version "
-                                            + releaseVersion );
-                        finalVersion = proposedVersion;
-                    }
-                }
-
-                if ( finalVersion != null )
-                {
-                    if ( PomHelper.setProjectParentVersion( pom, finalVersion.toString() ) )
-                    {
-                        getLog().info( "Updated " + toString( project ) + " to version " + finalVersion );
-
-                        this.getChangeRecorder().recordUpdate( "useReleases", parent.getGroupId(),
-                                                               parent.getArtifactId(), version,
-                                                               finalVersion.toString() );
-                    }
-                }
-                else
-                {
-                    getLog().info( "No matching release of " + toString( project ) + " to update via rangeMatching." );
-                    if ( failIfNotReplaced )
-                    {
-                        throw new MojoExecutionException( "No matching release of " + toString( project )
-                                                              + " found for update via rangeMatching." );
-                    }
-                }
-
-            }
         }
     }
 
@@ -250,25 +173,26 @@ public class UseReleasesMojo
     private void rangeMatching( ModifiedPomXMLEventReader pom, Dependency dep, String version, String releaseVersion,
                                 ArtifactVersions versions ) throws XMLStreamException, MojoExecutionException
     {
-        ArtifactVersion finalVersion = null;
+        String finalVersion = null;
         for ( ArtifactVersion proposedVersion : versions.getVersions( false ) )
         {
             if ( proposedVersion.toString().startsWith( releaseVersion ) )
             {
                 getLog().debug( "Found matching version for " + toString( dep ) + " to version " + releaseVersion );
-                finalVersion = proposedVersion;
+                finalVersion = proposedVersion.toString();
             }
         }
 
         if ( finalVersion != null )
         {
+            updateDependencyVersion( pom, dep, finalVersion, "useReleases" );
             if ( PomHelper.setDependencyVersion( pom, dep.getGroupId(), dep.getArtifactId(), version,
-                                                 finalVersion.toString(), getProject().getModel() ) )
+                                                 finalVersion, getProject().getModel() ) )
             {
                 getLog().info( "Updated " + toString( dep ) + " to version " + finalVersion );
 
                 this.getChangeRecorder().recordUpdate( "useReleases", dep.getGroupId(),
-                                                       dep.getArtifactId(), version, finalVersion.toString() );
+                                                       dep.getArtifactId(), version, finalVersion );
             }
         }
         else
@@ -287,18 +211,12 @@ public class UseReleasesMojo
     {
         if ( versions.containsVersion( releaseVersion ) )
         {
-            if ( PomHelper.setDependencyVersion( pom, dep.getGroupId(), dep.getArtifactId(), version, releaseVersion,
-                                                 getProject().getModel() ) )
-            {
-                getLog().info( "Updated " + toString( dep ) + " to version " + releaseVersion );
-
-                this.getChangeRecorder().recordUpdate( "useReleases", dep.getGroupId(),
-                                                       dep.getArtifactId(), version, releaseVersion );
-            }
+            
+            updateDependencyVersion( pom, dep, releaseVersion, "useReleases" );
         }
         else if ( failIfNotReplaced )
         {
-            throw new NoSuchElementException( "No matching release of " + toString( dep ) + " found for update." );
+            throw new MojoExecutionException( "No matching release of " + toString( dep ) + " found for update." );
         }
     }
 
