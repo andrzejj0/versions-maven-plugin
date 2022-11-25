@@ -37,7 +37,6 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.reporting.AbstractMavenReport;
 import org.apache.maven.reporting.MavenReportException;
 import org.apache.maven.repository.RepositorySystem;
-import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.DefaultVersionsHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
@@ -79,7 +78,7 @@ public abstract class AbstractVersionsReport<T>
     protected org.eclipse.aether.RepositorySystem aetherRepositorySystem;
 
     /**
-     * settings.xml's server id for the URL. This is used when wagon needs extra authentication information.
+     * settings.xml's server id for the URL. This is used when there is extra authentication information needed.
      *
      * @since 1.0-alpha-3
      */
@@ -164,24 +163,15 @@ public abstract class AbstractVersionsReport<T>
      */
     protected ReportRendererFactory rendererFactory;
 
-    /**
-     * (injected) map of {@link Wagon} instances
-     *
-     * @since 2.14.0
-     */
-    protected Map<String, Wagon> wagonMap;
-
     // --------------------- GETTER / SETTER METHODS ---------------------
 
     protected AbstractVersionsReport( I18N i18n, RepositorySystem repositorySystem,
                                       org.eclipse.aether.RepositorySystem aetherRepositorySystem,
-                                      Map<String, Wagon> wagonMap,
                                       ReportRendererFactory rendererFactory )
     {
         this.i18n = i18n;
         this.repositorySystem = repositorySystem;
         this.aetherRepositorySystem = aetherRepositorySystem;
-        this.wagonMap = wagonMap;
         this.rendererFactory = rendererFactory;
     }
 
@@ -195,7 +185,6 @@ public abstract class AbstractVersionsReport<T>
                 helper = new DefaultVersionsHelper.Builder()
                         .withRepositorySystem( repositorySystem )
                         .withAetherRepositorySystem( aetherRepositorySystem )
-                        .withWagonMap( wagonMap )
                         .withServerId( serverId )
                         .withRulesUri( rulesUri )
                         .withRuleSet( ruleSet )

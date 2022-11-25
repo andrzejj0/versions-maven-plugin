@@ -21,10 +21,10 @@ package org.codehaus.mojo.versions.api;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.StringReader;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -35,6 +35,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
@@ -61,10 +62,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.repository.RepositorySystem;
-import org.apache.maven.wagon.Wagon;
-import org.apache.maven.wagon.authentication.AuthenticationInfo;
-import org.apache.maven.wagon.observers.Debug;
-import org.apache.maven.wagon.proxy.ProxyInfo;
 import org.codehaus.mojo.versions.model.IgnoreVersion;
 import org.codehaus.mojo.versions.model.Rule;
 import org.codehaus.mojo.versions.model.RuleSet;
@@ -80,17 +77,18 @@ import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluatio
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
-import org.eclipse.aether.repository.AuthenticationContext;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResult;
 import org.eclipse.aether.resolution.VersionRangeRequest;
 import org.eclipse.aether.resolution.VersionRangeResolutionException;
+import org.eclipse.aether.spi.connector.transport.GetTask;
+import org.eclipse.aether.spi.connector.transport.TransporterFactory;
+import org.eclipse.aether.transfer.NoTransporterException;
 
-import static java.util.Collections.singletonList;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
+
 import static org.apache.maven.RepositoryUtils.toArtifact;
 
 /**
@@ -144,6 +142,7 @@ public class DefaultVersionsHelper
      * @since 2.12
      */
     private final Map<String, Rule> artifactBestFitRule = new HashMap<>();
+
     /**
      * Private constructor used by the builder
      */
@@ -689,7 +688,6 @@ public class DefaultVersionsHelper
         private MavenSession mavenSession;
         private MojoExecution mojoExecution;
         private org.eclipse.aether.RepositorySystem aetherRepositorySystem;
-        private Map<String, Wagon> wagonMap;
 
         public Builder()
         {
@@ -766,93 +764,29 @@ public class DefaultVersionsHelper
 
         private static class RulesUri
         {
-            String basePath;
-            String resource;
+            String baseUri;
+            URI fileUri;
 
-            private RulesUri( String basePath, String resource )
+            private RulesUri( String baseUri, URI fileUri )
             {
-                this.basePath = basePath;
-                this.resource = resource;
+                this.baseUri = baseUri;
+                this.fileUri = fileUri;
             }
 
             static RulesUri build( String rulesUri ) throws URISyntaxException
             {
                 int split = rulesUri.lastIndexOf( '/' );
                 return split == -1
-                        ? new RulesUri( rulesUri, "" )
+                        ? new RulesUri( rulesUri, new URI( "" ) )
                         : new RulesUri( rulesUri.substring( 0, split ) + '/',
-                         split + 1 < rulesUri.length()
+                        new URI( split + 1 < rulesUri.length()
                                 ? rulesUri.substring( split + 1 )
-                                : "" ) ;
+                                : "" ) );
             }
         }
 
-        private RemoteRepository remoteRepository( RulesUri uri )
-        {
-            RemoteRepository prototype = new RemoteRepository.Builder( serverId, null, uri.basePath ).build();
-            RemoteRepository.Builder builder = new RemoteRepository.Builder( prototype );
-            ofNullable( mavenSession.getRepositorySession().getProxySelector().getProxy( prototype ) )
-                    .ifPresent( builder::setProxy );
-            ofNullable( mavenSession.getRepositorySession().getAuthenticationSelector().getAuthentication( prototype ) )
-                    .ifPresent( builder::setAuthentication );
-            ofNullable( mavenSession.getRepositorySession().getMirrorSelector().getMirror( prototype ) )
-                    .ifPresent( mirror -> builder.setMirroredRepositories( singletonList( mirror ) ) );
-            return builder.build();
-        }
 
-        private Optional<ProxyInfo> getProxyInfo( RemoteRepository repository )
-        {
-            return ofNullable( repository.getProxy() )
-                    .map( proxy -> new ProxyInfo()
-                    {{
-                        setHost( proxy.getHost() );
-                        setPort( proxy.getPort() );
-                        setType( proxy.getType() );
-                        ofNullable( proxy.getAuthentication() )
-                                .ifPresent( auth ->
-                                {
-                                    try ( AuthenticationContext authCtx = AuthenticationContext
-                                            .forProxy( mavenSession.getRepositorySession(), repository ) )
-                                    {
-                                        ofNullable( authCtx.get( AuthenticationContext.USERNAME ) )
-                                                .ifPresent( this::setUserName );
-                                        ofNullable( authCtx.get( AuthenticationContext.PASSWORD ) )
-                                                .ifPresent( this::setPassword );
-                                        ofNullable( authCtx.get( AuthenticationContext.NTLM_DOMAIN ) )
-                                                .ifPresent( this::setNtlmDomain );
-                                        ofNullable( authCtx.get( AuthenticationContext
-                                                .NTLM_WORKSTATION ) ).ifPresent( this::setNtlmHost );
-                                    }
-                                } );
-                    }} );
-        }
-
-        private Optional<AuthenticationInfo> getAuthenticationInfo( RemoteRepository repository )
-        {
-            return ofNullable( repository.getAuthentication() )
-                    .map( authentication -> new AuthenticationInfo()
-                        {{
-                            try ( AuthenticationContext authCtx = AuthenticationContext
-                                    .forProxy( mavenSession.getRepositorySession(), repository ) )
-                            {
-                                ofNullable( authCtx.get( AuthenticationContext.USERNAME ) )
-                                        .ifPresent( this::setUserName );
-                                ofNullable( authCtx.get( AuthenticationContext.PASSWORD ) )
-                                        .ifPresent( this::setPassword );
-                                ofNullable( authCtx.get( AuthenticationContext.PRIVATE_KEY_PASSPHRASE ) )
-                                        .ifPresent( this::setPassphrase );
-                                ofNullable( authCtx.get( AuthenticationContext.PRIVATE_KEY_PATH ) )
-                                        .ifPresent( this::setPrivateKey );
-                            }
-                        }} );
-        }
-
-        private org.apache.maven.wagon.repository.Repository wagonRepository( RemoteRepository repository )
-        {
-            return new org.apache.maven.wagon.repository.Repository( repository.getId(), repository.getUrl() );
-        }
-
-        private RuleSet getRulesUsingWagon() throws MojoExecutionException
+        private RuleSet getRulesUsingTransporter()
         {
             RulesUri uri;
             try
@@ -865,58 +799,44 @@ public class DefaultVersionsHelper
                 return null;
             }
 
-            RemoteRepository repository = remoteRepository( uri );
-            return ofNullable( wagonMap.get( repository.getProtocol() ) )
-                    .map( wagon ->
+            RemoteRepository repository = new RemoteRepository.Builder( serverId, null, uri.baseUri )
+                    .build();
+            return transporterFactoryMap
+                    .values()
+                    .stream()
+                    // highest priority first -> reversing the order of arguments:
+                    .sorted( ( f1, f2 ) -> Float.compare( f2.getPriority(), f1.getPriority() ) )
+                    .map( factory ->
                     {
-                        if ( log.isDebugEnabled() )
-                        {
-                            Debug debug = new Debug();
-                            wagon.addSessionListener( debug );
-                            wagon.addTransferListener( debug );
-                        }
-
                         try
                         {
-                            Optional<ProxyInfo> proxyInfo = getProxyInfo( repository );
-                            Optional<AuthenticationInfo> authenticationInfo = getAuthenticationInfo( repository );
-                            if ( log.isDebugEnabled() )
-                            {
-                                log.debug( "Connecting to remote repository \"" + repository.getId() + "\""
-                                        + proxyInfo.map( pi -> " using proxy " + pi.getHost() + ":"
-                                        + pi.getPort() ).orElse( "" )
-                                        + authenticationInfo.map( ai -> " as " + ai.getUserName() ).orElse( "" ) );
-                            }
-                            wagon.connect( wagonRepository( repository ), getAuthenticationInfo( repository )
-                                    .orElse( null ), getProxyInfo( repository ).orElse( null ) );
-                            try
-                            {
-                                Path tempFile = Files.createTempFile( "rules-", ".xml" );
-                                wagon.get( uri.resource, tempFile.toFile() );
-                                try ( BufferedInputStream is = new BufferedInputStream(
-                                        Files.newInputStream( tempFile ) ) )
-                                {
-                                    return new RuleXpp3Reader().read( is );
-                                }
-                                finally
-                                {
-                                    Files.deleteIfExists( tempFile );
-                                }
-
-                            }
-                            finally
-                            {
-                                wagon.disconnect();
-                            }
+                            return factory.newInstance( mavenSession.getRepositorySession(), repository );
                         }
-                        catch ( Exception e )
+                        catch ( NoTransporterException e )
                         {
-                            log.warn( e.getMessage() );
+                            log.warn( "No transporter possible for " + uri.baseUri + ": "
+                                    + e.getMessage() );
                             return null;
                         }
                     } )
-                    .orElseThrow( () -> new MojoExecutionException( "Could not load specified rules from "
-                            + rulesUri ) );
+                    .filter( Objects::nonNull )
+                    .map( transporter ->
+                    {
+                        try
+                        {
+                            GetTask getTask = new GetTask( uri.fileUri );
+                            transporter.get( getTask );
+                            return new RuleXpp3Reader().read( new StringReader( getTask.getDataString() ) );
+                        }
+                        catch ( Exception e )
+                        {
+                            log.warn( "Error while reading the rules string: " + e.getMessage() );
+                            return null;
+                        }
+                    } )
+                    .filter( Objects::nonNull )
+                    .findFirst()
+                    .orElse( null );
         }
 
         public static Optional<String> protocol( final String url )
@@ -981,12 +901,6 @@ public class DefaultVersionsHelper
             return this;
         }
 
-        public Builder withWagonMap( Map<String, Wagon> wagonMap )
-        {
-            this.wagonMap = wagonMap;
-            return this;
-        }
-
         /**
          * Builds the constructed {@linkplain DefaultVersionsHelper} object
          * @return constructed {@linkplain DefaultVersionsHelper}
@@ -1012,7 +926,7 @@ public class DefaultVersionsHelper
                         ? new RuleSet()
                         : isClasspathUri( rulesUri )
                             ? getRulesFromClasspath( rulesUri, log )
-                            : getRulesUsingWagon();
+                            : getRulesUsingTransporter();
             }
             if ( ignoredVersions != null && !ignoredVersions.isEmpty() )
             {
