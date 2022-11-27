@@ -1548,7 +1548,6 @@ public class PomHelper
         }
         return result.getProject();
     }
-
     /**
      * <p>Convenience method for creating a {@link ProjectBuildingRequest} instance based on maven session.</p>
      * <p><u>Note:</u> The method initializes the remote repositories with the remote artifact repositories.
