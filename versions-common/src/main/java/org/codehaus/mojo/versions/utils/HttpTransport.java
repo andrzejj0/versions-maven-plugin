@@ -64,6 +64,8 @@ public class HttpTransport implements Transport
         HttpClientBuilder builder = HttpClientBuilder.create();
         builder.setUserAgent( mavenSession.getRepositorySession().getConfigProperties()
                 .getOrDefault( USER_AGENT, "Maven" ).toString() );
+        // TODO: I think it's possible to simply use RepositorySystemSession.getProxySelector() instead
+        // also the same for mirrors, auth, etc. -- much easier and simpler
         mavenSession.getSettings().getProxies()
                 .stream()
                 .filter( Proxy::isActive )
