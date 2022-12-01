@@ -35,18 +35,20 @@ import org.apache.hc.core5.http.HttpHost;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.settings.Proxy;
 import org.codehaus.mojo.versions.api.Transport;
+import org.eclipse.aether.repository.AuthenticationContext;
 import org.eclipse.aether.repository.RemoteRepository;
 import sun.misc.IOUtils;
 
+import static java.util.Collections.singletonList;
 import static java.util.Optional.ofNullable;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.eclipse.aether.ConfigurationProperties.USER_AGENT;
 
 public class HttpTransport implements Transport
 {
-    private RemoteRepository remoteRepository( RulesUri uri )
+    private RemoteRepository remoteRepository( URI uri, String serverId, MavenSession mavenSession )
     {
-        RemoteRepository prototype = new RemoteRepository.Builder( serverId, uri.fileUri.getScheme(), uri.baseUri )
+        RemoteRepository prototype = new RemoteRepository.Builder( serverId, uri.getScheme(), uri.toString() )
                 .build();
         RemoteRepository.Builder builder = new RemoteRepository.Builder( prototype );
         ofNullable( mavenSession.getRepositorySession().getProxySelector().getProxy( prototype ) )
@@ -77,15 +79,34 @@ public class HttpTransport implements Transport
         assert serverId != null;
         assert mavenSession != null;
 
-        RemoteRepository repository = remoteRepository( uri );
-
         HttpClientBuilder builder = HttpClientBuilder.create();
         builder.setUserAgent( mavenSession.getRepositorySession().getConfigProperties()
                 .getOrDefault( USER_AGENT, "Maven" ).toString() );
         // TODO: I think it's possible to simply use RepositorySystemSession.getProxySelector() instead
         // also the same for mirrors, auth, etc. -- much easier and simpler
-        mavenSession.getRepositorySession().getProxySelector()
-                        .getProxy(  )
+        RemoteRepository repository = remoteRepository( uri, serverId, mavenSession );
+        ofNullable( repository.getProxy() )
+                .ifPresent( proxy ->
+                {
+                    builder.setProxy( new HttpHost( proxy.getType(), proxy.getHost(), proxy.getPort() ) );
+                    ofNullable( proxy.getAuthentication() )
+                            .ifPresent( auth ->
+                            {
+                                try ( AuthenticationContext authCtx = AuthenticationContext
+                                        .forProxy( mavenSession.getRepositorySession(), repository ) )
+                                {
+                                    ofNullable( authCtx.get( AuthenticationContext.USERNAME ) )
+                                            .ifPresent( builder.setPro );
+                                    ofNullable( authCtx.get( AuthenticationContext.PASSWORD ) )
+                                            .ifPresent( this::setPassword );
+                                    ofNullable( authCtx.get( AuthenticationContext.NTLM_DOMAIN ) )
+                                            .ifPresent( this::setNtlmDomain );
+                                    ofNullable( authCtx.get( AuthenticationContext
+                                            .NTLM_WORKSTATION ) ).ifPresent( this::setNtlmHost );
+                                }
+                            } );
+                } );
+
         mavenSession.getSettings().getProxies()
                 .stream()
                 .filter( Proxy::isActive )

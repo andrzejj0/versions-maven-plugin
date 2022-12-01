@@ -754,36 +754,12 @@ public class DefaultVersionsHelper
             return ruleSet;
         }
 
-        private static class RulesUri
-        {
-            String baseUri;
-            URI fileUri;
-
-            private RulesUri( String baseUri, URI fileUri )
-            {
-                this.baseUri = baseUri;
-                this.fileUri = fileUri;
-            }
-
-            static RulesUri build( String rulesUri ) throws URISyntaxException
-            {
-                int split = rulesUri.lastIndexOf( '/' );
-                return split == -1
-                        ? new RulesUri( rulesUri, new URI( "" ) )
-                        : new RulesUri( rulesUri.substring( 0, split ) + '/',
-                        new URI( split + 1 < rulesUri.length()
-                                ? rulesUri.substring( split + 1 )
-                                : "" ) );
-            }
-        }
-
-
         private RuleSet getRulesUsingTransporter()
         {
-            RulesUri uri;
+            URI uri;
             try
             {
-                uri = RulesUri.build( rulesUri );
+                uri = new URI( rulesUri );
             }
             catch ( URISyntaxException e )
             {
@@ -791,7 +767,7 @@ public class DefaultVersionsHelper
                 return null;
             }
 
-            RemoteRepository repository = new RemoteRepository.Builder( serverId, null, uri.baseUri )
+            RemoteRepository repository = new RemoteRepository.Builder( serverId, uri.getScheme(), uri.toString() )
                     .build();
             return null;
 //            return transporterFactoryMap
