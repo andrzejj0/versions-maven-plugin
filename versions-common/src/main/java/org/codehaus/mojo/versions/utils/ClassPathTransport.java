@@ -19,33 +19,27 @@ package org.codehaus.mojo.versions.utils;
  * under the License.
  */
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 
 import org.apache.maven.execution.MavenSession;
 import org.codehaus.mojo.versions.api.Transport;
 
-public class FileTransport implements Transport
+/**
+ * {@link Transport} implementation able to retrieve resources from a class path
+ */
+public class ClassPathTransport implements Transport
 {
     /**
      * Retrieves the resource indicated by the given uri.
      * @param uri uri pointing to the resource
      * @param serverId id of the server from which to download the information; may be {@code null}
      * @param mavenSession current Maven session; may be {@code null}
-     * @return input stream with the resource if the {@code uri} is a file resource; otherwise returns null
-     * @throws IOException thrown if the I/O operation doesn't succeed
+     * @return input stream with the resource if the {@code uri} is a class path resource; otherwise returns null
      */
     @Override
-    public InputStream download( URI uri, String serverId, MavenSession mavenSession ) throws IOException
+    public InputStream download( URI uri, String serverId, MavenSession mavenSession )
     {
-        if ( "file".equals( uri.getScheme() ) )
-        {
-            return Files.newInputStream( Paths.get( uri ), StandardOpenOption.READ );
-        }
-        return null;
+        return getClass().getResourceAsStream( uri.getPath() );
     }
 }

@@ -19,14 +19,11 @@ package org.codehaus.mojo.versions.utils;
  * under the License.
  */
 
-import javax.inject.Named;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Arrays;
-import java.util.Objects;
 
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
@@ -38,34 +35,57 @@ import org.apache.hc.core5.http.HttpHost;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.settings.Proxy;
 import org.codehaus.mojo.versions.api.Transport;
+import org.eclipse.aether.repository.RemoteRepository;
 import sun.misc.IOUtils;
 
 import static java.util.Optional.ofNullable;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.eclipse.aether.ConfigurationProperties.USER_AGENT;
 
-@Named( "http" )
 public class HttpTransport implements Transport
 {
+    private RemoteRepository remoteRepository( RulesUri uri )
+    {
+        RemoteRepository prototype = new RemoteRepository.Builder( serverId, uri.fileUri.getScheme(), uri.baseUri )
+                .build();
+        RemoteRepository.Builder builder = new RemoteRepository.Builder( prototype );
+        ofNullable( mavenSession.getRepositorySession().getProxySelector().getProxy( prototype ) )
+                .ifPresent( builder::setProxy );
+        ofNullable( mavenSession.getRepositorySession().getAuthenticationSelector().getAuthentication( prototype ) )
+                .ifPresent( builder::setAuthentication );
+        ofNullable( mavenSession.getRepositorySession().getMirrorSelector().getMirror( prototype ) )
+                .ifPresent( mirror -> builder.setMirroredRepositories( singletonList( mirror ) ) );
+        return builder.build();
+    }
+
     /**
      * Retrieves the resource indicated by the given uri.
      * @param uri uri pointing to the resource
      * @param serverId id of the server from which to download the information; <em>may not</em> be {@code null}
      * @param mavenSession current Maven session; <em>may not</em> be {@code null}
-     * @return input stream with the resource
+     * @return input stream with the resource if the {@code uri} is a http or https resource; otherwise returns null
      * @throws IOException thrown if the I/O operation doesn't succeed
      */
     @Override
     public InputStream download( URI uri, String serverId, MavenSession mavenSession ) throws IOException
     {
+        if ( ! ( "http".equals( uri.getScheme() ) || "https".equals( uri.getScheme() ) ) )
+        {
+            return null;
+        }
+
         assert serverId != null;
         assert mavenSession != null;
+
+        RemoteRepository repository = remoteRepository( uri );
 
         HttpClientBuilder builder = HttpClientBuilder.create();
         builder.setUserAgent( mavenSession.getRepositorySession().getConfigProperties()
                 .getOrDefault( USER_AGENT, "Maven" ).toString() );
         // TODO: I think it's possible to simply use RepositorySystemSession.getProxySelector() instead
         // also the same for mirrors, auth, etc. -- much easier and simpler
+        mavenSession.getRepositorySession().getProxySelector()
+                        .getProxy(  )
         mavenSession.getSettings().getProxies()
                 .stream()
                 .filter( Proxy::isActive )

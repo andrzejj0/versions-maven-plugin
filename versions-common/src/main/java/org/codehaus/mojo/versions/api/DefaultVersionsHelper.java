@@ -21,7 +21,6 @@ package org.codehaus.mojo.versions.api;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.StringReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -35,7 +34,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
@@ -82,13 +80,9 @@ import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResult;
 import org.eclipse.aether.resolution.VersionRangeRequest;
 import org.eclipse.aether.resolution.VersionRangeResolutionException;
-import org.eclipse.aether.spi.connector.transport.GetTask;
-import org.eclipse.aether.spi.connector.transport.TransporterFactory;
-import org.eclipse.aether.transfer.NoTransporterException;
 
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
-
 import static org.apache.maven.RepositoryUtils.toArtifact;
 
 /**
@@ -100,8 +94,6 @@ import static org.apache.maven.RepositoryUtils.toArtifact;
 public class DefaultVersionsHelper
     implements VersionsHelper
 {
-    private static final String CLASSPATH_PROTOCOL = "classpath";
-
     private static final String TYPE_EXACT = "exact";
 
     private static final String TYPE_REGEX = "regex";
@@ -697,7 +689,7 @@ public class DefaultVersionsHelper
             throws MojoExecutionException
         {
             logger.debug( "Going to load rules from \"" + uri + "\"" );
-            String choppedUrl = uri.substring( CLASSPATH_PROTOCOL.length() + 3 );
+            String choppedUrl = uri.substring( "classpath".length() + 3 );
             URL url = DefaultVersionsHelper.class.getResource( choppedUrl );
             if ( url == null )
             {
@@ -801,42 +793,43 @@ public class DefaultVersionsHelper
 
             RemoteRepository repository = new RemoteRepository.Builder( serverId, null, uri.baseUri )
                     .build();
-            return transporterFactoryMap
-                    .values()
-                    .stream()
-                    // highest priority first -> reversing the order of arguments:
-                    .sorted( ( f1, f2 ) -> Float.compare( f2.getPriority(), f1.getPriority() ) )
-                    .map( factory ->
-                    {
-                        try
-                        {
-                            return factory.newInstance( mavenSession.getRepositorySession(), repository );
-                        }
-                        catch ( NoTransporterException e )
-                        {
-                            log.warn( "No transporter possible for " + uri.baseUri + ": "
-                                    + e.getMessage() );
-                            return null;
-                        }
-                    } )
-                    .filter( Objects::nonNull )
-                    .map( transporter ->
-                    {
-                        try
-                        {
-                            GetTask getTask = new GetTask( uri.fileUri );
-                            transporter.get( getTask );
-                            return new RuleXpp3Reader().read( new StringReader( getTask.getDataString() ) );
-                        }
-                        catch ( Exception e )
-                        {
-                            log.warn( "Error while reading the rules string: " + e.getMessage() );
-                            return null;
-                        }
-                    } )
-                    .filter( Objects::nonNull )
-                    .findFirst()
-                    .orElse( null );
+            return null;
+//            return transporterFactoryMap
+//                    .values()
+//                    .stream()
+//                    // highest priority first -> reversing the order of arguments:
+//                    .sorted( ( f1, f2 ) -> Float.compare( f2.getPriority(), f1.getPriority() ) )
+//                    .map( factory ->
+//                    {
+//                        try
+//                        {
+//                            return factory.newInstance( mavenSession.getRepositorySession(), repository );
+//                        }
+//                        catch ( NoTransporterException e )
+//                        {
+//                            log.warn( "No transporter possible for " + uri.baseUri + ": "
+//                                    + e.getMessage() );
+//                            return null;
+//                        }
+//                    } )
+//                    .filter( Objects::nonNull )
+//                    .map( transporter ->
+//                    {
+//                        try
+//                        {
+//                            GetTask getTask = new GetTask( uri.fileUri );
+//                            transporter.get( getTask );
+//                            return new RuleXpp3Reader().read( new StringReader( getTask.getDataString() ) );
+//                        }
+//                        catch ( Exception e )
+//                        {
+//                            log.warn( "Error while reading the rules string: " + e.getMessage() );
+//                            return null;
+//                        }
+//                    } )
+//                    .filter( Objects::nonNull )
+//                    .findFirst()
+//                    .orElse( null );
         }
 
         public static Optional<String> protocol( final String url )
