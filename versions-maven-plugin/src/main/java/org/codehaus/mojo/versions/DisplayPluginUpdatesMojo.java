@@ -88,7 +88,6 @@ import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.ProjectBuildingResult;
 import org.apache.maven.repository.RepositorySystem;
 import org.apache.maven.settings.Settings;
-import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
@@ -172,14 +171,13 @@ public class DisplayPluginUpdatesMojo
     public DisplayPluginUpdatesMojo( RepositorySystem repositorySystem,
                                      org.eclipse.aether.RepositorySystem aetherRepositorySystem,
                                      ProjectBuilder projectBuilder,
-                                     Map<String, Wagon> wagonMap,
                                      LifecycleExecutor lifecycleExecutor,
                                      ModelInterpolator modelInterpolator,
                                      PluginManager pluginManager,
                                      RuntimeInformation runtimeInformation,
                                      Map<String, ChangeRecorder> changeRecorders )
     {
-        super( repositorySystem, aetherRepositorySystem, wagonMap, changeRecorders );
+        super( repositorySystem, aetherRepositorySystem, changeRecorders );
         this.projectBuilder = projectBuilder;
         this.lifecycleExecutor = lifecycleExecutor;
         this.modelInterpolator = modelInterpolator;

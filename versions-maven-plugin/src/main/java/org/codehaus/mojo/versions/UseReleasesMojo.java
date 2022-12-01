@@ -38,7 +38,6 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.repository.RepositorySystem;
-import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
@@ -84,10 +83,9 @@ public class UseReleasesMojo
     @Inject
     public UseReleasesMojo( RepositorySystem repositorySystem,
                             org.eclipse.aether.RepositorySystem aetherRepositorySystem,
-                            Map<String, Wagon> wagonMap,
                             Map<String, ChangeRecorder> changeRecorders )
     {
-        super( repositorySystem, aetherRepositorySystem, wagonMap, changeRecorders );
+        super( repositorySystem, aetherRepositorySystem, changeRecorders );
     }
 
     /**

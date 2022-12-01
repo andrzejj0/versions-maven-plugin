@@ -44,7 +44,6 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.repository.RepositorySystem;
-import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.DefaultVersionsHelper;
 import org.codehaus.mojo.versions.api.PomHelper;
@@ -195,24 +194,15 @@ public abstract class AbstractVersionsUpdaterMojo
     @Parameter( property = "maven.version.ignore" )
     protected Set<String> ignoredVersions;
 
-    /**
-     * (injected) map of {@link Wagon} instances
-     *
-     * @since 2.14.0
-     */
-    protected final Map<String, Wagon> wagonMap;
-
     // --------------------- GETTER / SETTER METHODS ---------------------
 
     @Inject
     protected AbstractVersionsUpdaterMojo( RepositorySystem repositorySystem,
                                            org.eclipse.aether.RepositorySystem aetherRepositorySystem,
-                                           Map<String, Wagon> wagonMap,
                                            Map<String, ChangeRecorder> changeRecorders )
     {
         this.repositorySystem = repositorySystem;
         this.aetherRepositorySystem = aetherRepositorySystem;
-        this.wagonMap = wagonMap;
         this.changeRecorders = changeRecorders;
     }
 
@@ -223,7 +213,6 @@ public abstract class AbstractVersionsUpdaterMojo
             helper = new DefaultVersionsHelper.Builder()
                     .withRepositorySystem( repositorySystem )
                     .withAetherRepositorySystem( aetherRepositorySystem )
-                    .withWagonMap( wagonMap )
                     .withServerId( serverId )
                     .withRulesUri( rulesUri )
                     .withRuleSet( ruleSet )

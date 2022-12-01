@@ -19,7 +19,6 @@ package org.apache.maven.plugins.enforcer;
  */
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -38,7 +37,6 @@ import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.repository.RepositorySystem;
-import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.DefaultVersionsHelper;
 import org.codehaus.mojo.versions.api.Segment;
@@ -277,13 +275,6 @@ public class MaxDependencyUpdates implements EnforcerRule2
             return new DefaultVersionsHelper.Builder()
                     .withRepositorySystem( ruleHelper.getComponent( RepositorySystem.class ) )
                     .withAetherRepositorySystem( ruleHelper.getComponent( org.eclipse.aether.RepositorySystem.class ) )
-                    .withWagonMap( ruleHelper.getComponentMap( Wagon.class.getName() )
-                            .entrySet()
-                            .parallelStream()
-                            .filter( e -> e.getValue() instanceof Wagon )
-                            .collect( HashMap::new,
-                                    ( m, e ) -> m.put( e.getKey(), (Wagon) e.getValue() ),
-                                    HashMap::putAll ) )
                     .withServerId( serverId )
                     .withRulesUri( rulesUri )
                     .withRuleSet( ruleSet )

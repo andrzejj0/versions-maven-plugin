@@ -50,7 +50,6 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuilder;
 import org.apache.maven.repository.RepositorySystem;
-import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.change.DefaultVersionChange;
@@ -255,11 +254,10 @@ public class SetMojo extends AbstractVersionsUpdaterMojo
     public SetMojo( RepositorySystem repositorySystem,
                     org.eclipse.aether.RepositorySystem aetherRepositorySystem,
                     ProjectBuilder projectBuilder,
-                    Map<String, Wagon> wagonMap,
                     Map<String, ChangeRecorder> changeRecorders,
                     Prompter prompter )
     {
-        super( repositorySystem, aetherRepositorySystem, wagonMap, changeRecorders );
+        super( repositorySystem, aetherRepositorySystem, changeRecorders );
         this.projectBuilder = projectBuilder;
         this.prompter = prompter;
     }

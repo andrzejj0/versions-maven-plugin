@@ -19,12 +19,16 @@ package org.codehaus.mojo.versions;
  * under the License.
  */
 
+import javax.inject.Inject;
+import javax.xml.stream.XMLStreamException;
+
+import java.util.Map;
+
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.repository.RepositorySystem;
-import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.Property;
 import org.codehaus.mojo.versions.api.VersionsHelper;
 import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
@@ -32,7 +36,6 @@ import org.codehaus.mojo.versions.rewriting.ModifiedPomXMLEventReader;
 
 import javax.inject.Inject;
 import javax.xml.stream.XMLStreamException;
-import java.util.Map;
 
 /**
  * Sets properties to the latest versions of specific artifacts.
@@ -70,10 +73,9 @@ public class UpdatePropertiesMojo extends UpdatePropertiesMojoBase
     @Inject
     public UpdatePropertiesMojo( RepositorySystem repositorySystem,
                                  org.eclipse.aether.RepositorySystem aetherRepositorySystem,
-                                 Map<String, Wagon> wagonMap,
                                  Map<String, ChangeRecorder> changeRecorders )
     {
-        super( repositorySystem, aetherRepositorySystem, wagonMap, changeRecorders );
+        super( repositorySystem, aetherRepositorySystem, changeRecorders );
     }
 
     /**
