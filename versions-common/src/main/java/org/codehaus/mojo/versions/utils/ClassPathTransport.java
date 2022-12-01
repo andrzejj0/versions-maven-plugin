@@ -30,6 +30,12 @@ import org.codehaus.mojo.versions.api.Transport;
  */
 public class ClassPathTransport implements Transport
 {
+    @Override
+    public boolean isApplicable( URI uri )
+    {
+        return "classpath".equals( uri.getScheme() );
+    }
+
     /**
      * Retrieves the resource indicated by the given uri.
      * @param uri uri pointing to the resource

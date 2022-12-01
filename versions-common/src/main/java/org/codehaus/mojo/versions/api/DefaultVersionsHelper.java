@@ -21,6 +21,8 @@ package org.codehaus.mojo.versions.api;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -66,8 +68,11 @@ import org.codehaus.mojo.versions.model.RuleSet;
 import org.codehaus.mojo.versions.model.io.xpp3.RuleXpp3Reader;
 import org.codehaus.mojo.versions.ordering.VersionComparator;
 import org.codehaus.mojo.versions.ordering.VersionComparators;
+import org.codehaus.mojo.versions.utils.ClassPathTransport;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.mojo.versions.utils.DependencyComparator;
+import org.codehaus.mojo.versions.utils.FileTransport;
+import org.codehaus.mojo.versions.utils.HttpTransport;
 import org.codehaus.mojo.versions.utils.PluginComparator;
 import org.codehaus.mojo.versions.utils.RegexUtils;
 import org.codehaus.mojo.versions.utils.VersionsExpressionEvaluator;
@@ -81,6 +86,7 @@ import org.eclipse.aether.resolution.ArtifactResult;
 import org.eclipse.aether.resolution.VersionRangeRequest;
 import org.eclipse.aether.resolution.VersionRangeResolutionException;
 
+import static java.util.Arrays.asList;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static org.apache.maven.RepositoryUtils.toArtifact;
@@ -92,7 +98,7 @@ import static org.apache.maven.RepositoryUtils.toArtifact;
  * @since 1.0-alpha-3
  */
 public class DefaultVersionsHelper
-    implements VersionsHelper
+        implements VersionsHelper
 {
     private static final String TYPE_EXACT = "exact";
 
@@ -180,11 +186,11 @@ public class DefaultVersionsHelper
             return new ArtifactVersions( artifact,
                     aetherRepositorySystem.resolveVersionRange( mavenSession.getRepositorySession(),
                                     new VersionRangeRequest(
-                                    toArtifact( artifact ).setVersion( "(,)" ),
-                                    usePluginRepositories
-                                            ? mavenSession.getCurrentProject().getRemotePluginRepositories()
-                                            : mavenSession.getCurrentProject().getRemoteProjectRepositories(),
-                                    "lookupArtifactVersions" ) )
+                                            toArtifact( artifact ).setVersion( "(,)" ),
+                                            usePluginRepositories
+                                                    ? mavenSession.getCurrentProject().getRemotePluginRepositories()
+                                                    : mavenSession.getCurrentProject().getRemoteProjectRepositories(),
+                                            "lookupArtifactVersions" ) )
                             .getVersions()
                             .parallelStream()
                             .filter( v -> ignoredVersions.stream()
@@ -243,9 +249,9 @@ public class DefaultVersionsHelper
             if ( !TYPE_EXACT.equals( ignoreVersion.getType() ) && !TYPE_REGEX.equals( ignoreVersion.getType() ) )
             {
                 getLog().warn( "The type attribute '" + ignoreVersion.getType() + "' for global ignoreVersion["
-                                   + ignoreVersion + "] is not valid." + " Please use either '" + TYPE_EXACT + "' or '"
-                                   + TYPE_REGEX
-                                   + "'." );
+                        + ignoreVersion + "] is not valid." + " Please use either '" + TYPE_EXACT + "' or '"
+                        + TYPE_REGEX
+                        + "'." );
             }
             else
             {
@@ -262,7 +268,7 @@ public class DefaultVersionsHelper
                 if ( !TYPE_EXACT.equals( ignoreVersion.getType() ) && !TYPE_REGEX.equals( ignoreVersion.getType() ) )
                 {
                     getLog().warn( "The type attribute '" + ignoreVersion.getType() + "' for " + rule + " is not valid."
-                                       + " Please use either '" + TYPE_EXACT + "' or '" + TYPE_REGEX + "'." );
+                            + " Please use either '" + TYPE_EXACT + "' or '" + TYPE_REGEX + "'." );
                 }
                 else
                 {
@@ -276,7 +282,7 @@ public class DefaultVersionsHelper
 
     @Override
     public void resolveArtifact( Artifact artifact, boolean usePluginRepositories )
-        throws ArtifactResolutionException
+            throws ArtifactResolutionException
     {
         try
         {
@@ -445,7 +451,7 @@ public class DefaultVersionsHelper
      * Returns a map of all possible updates per dependency. The lookup is done in parallel using
      * {@code LOOKUP_PARALLEL_THREADS} threads.
      *
-     * @param dependencies The set of {@link Dependency} instances to look up.
+     * @param dependencies          The set of {@link Dependency} instances to look up.
      * @param usePluginRepositories Search the plugin repositories.
      * @return map containing the ArtifactVersions object per dependency
      */
@@ -536,7 +542,7 @@ public class DefaultVersionsHelper
             pluginDependencies.addAll( plugin.getDependencies() );
         }
         Map<Dependency, ArtifactVersions> pluginDependencyDetails =
-            lookupDependenciesUpdates( pluginDependencies, false );
+                lookupDependenciesUpdates( pluginDependencies, false );
 
         ArtifactVersions allVersions =
                 lookupArtifactVersions( createPluginArtifact( plugin.getGroupId(), plugin.getArtifactId(), version ),
@@ -555,7 +561,7 @@ public class DefaultVersionsHelper
 
     @Override
     public Map<Property, PropertyVersions> getVersionPropertiesMap( VersionPropertiesMapRequest request )
-        throws MojoExecutionException
+            throws MojoExecutionException
     {
         Map<String, Property> properties = new HashMap<>();
         if ( request.getPropertyDefinitions() != null )
@@ -584,7 +590,7 @@ public class DefaultVersionsHelper
                 {
                     final Property value = new Property( name );
                     getLog().debug( "Property ${" + name + "}: Adding inferred version range of "
-                                        + propertyVersionsBuilder.getVersionRange() );
+                            + propertyVersionsBuilder.getVersionRange() );
                     value.setVersion( propertyVersionsBuilder.getVersionRange() );
                     properties.put( name, value );
                 }
@@ -592,10 +598,10 @@ public class DefaultVersionsHelper
         }
 
         List<String> includePropertiesList = request.getIncludeProperties() != null
-            ? Arrays.asList( request.getIncludeProperties().split( "\\s*,\\s*" ) )
-            : Collections.emptyList();
+                ? asList( request.getIncludeProperties().split( "\\s*,\\s*" ) )
+                : Collections.emptyList();
         List<String> excludePropertiesList = request.getExcludeProperties() != null
-            ? Arrays.asList( request.getExcludeProperties().split( "\\s*,\\s*" ) )
+                ? asList( request.getExcludeProperties().split( "\\s*,\\s*" ) )
                 : Collections.emptyList();
 
         getLog().debug( "Searching for properties associated with builders" );
@@ -627,7 +633,7 @@ public class DefaultVersionsHelper
             if ( builder == null || !builder.isAssociated() )
             {
                 getLog().debug( "Property ${" + property.getName() + "}: Looks like this property is not "
-                                    + "associated with any dependency..." );
+                        + "associated with any dependency..." );
                 builder = new PropertyVersionsBuilder( null, property.getName(), this );
             }
             if ( !property.isAutoLinkDependencies() )
@@ -648,10 +654,10 @@ public class DefaultVersionsHelper
             {
                 final PropertyVersions versions = builder.newPropertyVersions();
                 if ( property.isAutoLinkDependencies() && StringUtils.isEmpty( property.getVersion() )
-                    && !StringUtils.isEmpty( builder.getVersionRange() ) )
+                        && !StringUtils.isEmpty( builder.getVersionRange() ) )
                 {
                     getLog().debug( "Property ${" + property.getName() + "}: Adding inferred version range of "
-                                        + builder.getVersionRange() );
+                            + builder.getVersionRange() );
                     property.setVersion( builder.getVersionRange() );
                 }
                 versions.setCurrentVersion( request.getMavenProject().getProperties()
@@ -671,6 +677,8 @@ public class DefaultVersionsHelper
      */
     public static class Builder
     {
+        private static final List<Transport> TRANSPORTS = asList( new FileTransport(), new ClassPathTransport(),
+                new HttpTransport() );
         private RepositorySystem repositorySystem;
         private Collection<String> ignoredVersions;
         private RuleSet ruleSet;
@@ -686,7 +694,7 @@ public class DefaultVersionsHelper
         }
 
         private static RuleSet getRulesFromClasspath( String uri, Log logger )
-            throws MojoExecutionException
+                throws MojoExecutionException
         {
             logger.debug( "Going to load rules from \"" + uri + "\"" );
             String choppedUrl = uri.substring( "classpath".length() + 3 );
@@ -720,7 +728,7 @@ public class DefaultVersionsHelper
          * @param ignoredVersions collection of ignored version to enrich the clone of the original rule set
          * @param originalRuleSet original rule set
          * @return new RuleSet object containing the (if passed) cloned version of the rule set, enriched with
-         *         the given set of ignored versions
+         * the given set of ignored versions
          */
         @SuppressWarnings( "checkstyle:AvoidNestedBlocks" )
         private static RuleSet enrichRuleSet( Collection<String> ignoredVersions, RuleSet originalRuleSet )
@@ -754,7 +762,7 @@ public class DefaultVersionsHelper
             return ruleSet;
         }
 
-        private RuleSet getRulesUsingTransporter()
+        private RuleSet getRulesUsingTransporter() throws MojoExecutionException
         {
             URI uri;
             try
@@ -767,45 +775,69 @@ public class DefaultVersionsHelper
                 return null;
             }
 
-            RemoteRepository repository = new RemoteRepository.Builder( serverId, uri.getScheme(), uri.toString() )
-                    .build();
-            return null;
-//            return transporterFactoryMap
-//                    .values()
-//                    .stream()
-//                    // highest priority first -> reversing the order of arguments:
-//                    .sorted( ( f1, f2 ) -> Float.compare( f2.getPriority(), f1.getPriority() ) )
-//                    .map( factory ->
-//                    {
-//                        try
-//                        {
-//                            return factory.newInstance( mavenSession.getRepositorySession(), repository );
-//                        }
-//                        catch ( NoTransporterException e )
-//                        {
-//                            log.warn( "No transporter possible for " + uri.baseUri + ": "
-//                                    + e.getMessage() );
-//                            return null;
-//                        }
-//                    } )
-//                    .filter( Objects::nonNull )
-//                    .map( transporter ->
-//                    {
-//                        try
-//                        {
-//                            GetTask getTask = new GetTask( uri.fileUri );
-//                            transporter.get( getTask );
-//                            return new RuleXpp3Reader().read( new StringReader( getTask.getDataString() ) );
-//                        }
-//                        catch ( Exception e )
-//                        {
-//                            log.warn( "Error while reading the rules string: " + e.getMessage() );
-//                            return null;
-//                        }
-//                    } )
-//                    .filter( Objects::nonNull )
-//                    .findFirst()
-//                    .orElse( null );
+            try
+            {
+                return TRANSPORTS.stream()
+                        .filter( transport -> transport.isApplicable( uri ) )
+                        .findFirst()
+                        .map( transport ->
+                        {
+                            try
+                            {
+                                try ( InputStream is = transport.download( uri, serverId, mavenSession ) )
+                                {
+                                    return new RuleXpp3Reader().read( is );
+                                }
+                            }
+                            catch ( IOException | XmlPullParserException e )
+                            {
+                                throw new IllegalStateException( e );
+                            }
+                        } )
+                        .orElseThrow( () -> new MojoExecutionException( "No transport found for URI " + rulesUri ) );
+            }
+            catch ( IllegalStateException e )
+            {
+                throw new MojoExecutionException( "Error while downloading the rules file from " + rulesUri,
+                        e.getCause() );
+            }
+
+            //            return transporterFactoryMap
+            //                    .values()
+            //                    .stream()
+            //                    // highest priority first -> reversing the order of arguments:
+            //                    .sorted( ( f1, f2 ) -> Float.compare( f2.getPriority(), f1.getPriority() ) )
+            //                    .map( factory ->
+            //                    {
+            //                        try
+            //                        {
+            //                            return factory.newInstance( mavenSession.getRepositorySession(), repository );
+            //                        }
+            //                        catch ( NoTransporterException e )
+            //                        {
+            //                            log.warn( "No transporter possible for " + uri.baseUri + ": "
+            //                                    + e.getMessage() );
+            //                            return null;
+            //                        }
+            //                    } )
+            //                    .filter( Objects::nonNull )
+            //                    .map( transporter ->
+            //                    {
+            //                        try
+            //                        {
+            //                            GetTask getTask = new GetTask( uri.fileUri );
+            //                            transporter.get( getTask );
+            //                            return new RuleXpp3Reader().read( new StringReader( getTask.getDataString() ) );
+            //                        }
+            //                        catch ( Exception e )
+            //                        {
+            //                            log.warn( "Error while reading the rules string: " + e.getMessage() );
+            //                            return null;
+            //                        }
+            //                    } )
+            //                    .filter( Objects::nonNull )
+            //                    .findFirst()
+            //                    .orElse( null );
         }
 
         public static Optional<String> protocol( final String url )
@@ -872,6 +904,7 @@ public class DefaultVersionsHelper
 
         /**
          * Builds the constructed {@linkplain DefaultVersionsHelper} object
+         *
          * @return constructed {@linkplain DefaultVersionsHelper}
          * @throws MojoExecutionException should the constructor with the RuleSet retrieval doesn't succeed
          */
@@ -893,9 +926,7 @@ public class DefaultVersionsHelper
             {
                 instance.ruleSet = isBlank( rulesUri )
                         ? new RuleSet()
-                        : isClasspathUri( rulesUri )
-                            ? getRulesFromClasspath( rulesUri, log )
-                            : getRulesUsingTransporter();
+                        : getRulesUsingTransporter();
             }
             if ( ignoredVersions != null && !ignoredVersions.isEmpty() )
             {

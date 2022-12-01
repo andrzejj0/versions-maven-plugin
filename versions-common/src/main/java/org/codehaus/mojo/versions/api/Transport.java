@@ -31,6 +31,13 @@ import org.apache.maven.execution.MavenSession;
 public interface Transport
 {
     /**
+     * Returns {@code true} if the instance is applicable for the given URI
+     * @param uri URI to download
+     * @return {@code true} if the instance can be used to download the URI
+     */
+    boolean isApplicable( URI uri );
+
+    /**
      * Retrieves the resource indicated by the given uri.
      * @param uri uri pointing to the resource
      * @param serverId id of the server from which to download the information;

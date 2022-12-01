@@ -31,6 +31,12 @@ import org.codehaus.mojo.versions.api.Transport;
 
 public class FileTransport implements Transport
 {
+    @Override
+    public boolean isApplicable( URI uri )
+    {
+        return "file".equals( uri.getScheme() );
+    }
+
     /**
      * Retrieves the resource indicated by the given uri.
      * @param uri uri pointing to the resource
@@ -42,10 +48,6 @@ public class FileTransport implements Transport
     @Override
     public InputStream download( URI uri, String serverId, MavenSession mavenSession ) throws IOException
     {
-        if ( "file".equals( uri.getScheme() ) )
-        {
-            return Files.newInputStream( Paths.get( uri ), StandardOpenOption.READ );
-        }
-        return null;
+        return Files.newInputStream( Paths.get( uri ), StandardOpenOption.READ );
     }
 }

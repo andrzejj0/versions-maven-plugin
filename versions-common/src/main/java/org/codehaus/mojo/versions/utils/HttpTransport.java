@@ -26,6 +26,7 @@ import java.net.URI;
 import java.util.Arrays;
 
 import org.apache.hc.client5.http.auth.AuthScope;
+import org.apache.hc.client5.http.auth.CredentialsProvider;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
@@ -46,6 +47,12 @@ import static org.eclipse.aether.ConfigurationProperties.USER_AGENT;
 
 public class HttpTransport implements Transport
 {
+    @Override
+    public boolean isApplicable( URI uri )
+    {
+        return "http".equals( uri.getScheme() ) || "https".equals( uri.getScheme() );
+    }
+
     private RemoteRepository remoteRepository( URI uri, String serverId, MavenSession mavenSession )
     {
         RemoteRepository prototype = new RemoteRepository.Builder( serverId, uri.getScheme(), uri.toString() )
@@ -71,11 +78,6 @@ public class HttpTransport implements Transport
     @Override
     public InputStream download( URI uri, String serverId, MavenSession mavenSession ) throws IOException
     {
-        if ( ! ( "http".equals( uri.getScheme() ) || "https".equals( uri.getScheme() ) ) )
-        {
-            return null;
-        }
-
         assert serverId != null;
         assert mavenSession != null;
 
@@ -95,6 +97,11 @@ public class HttpTransport implements Transport
                                 try ( AuthenticationContext authCtx = AuthenticationContext
                                         .forProxy( mavenSession.getRepositorySession(), repository ) )
                                 {
+                                    CredentialsProvider credentialsProvider
+                                            = new BasicCredentialsProvider()
+                                    {{
+                                        setCredentials(  );
+                                    }}
                                     ofNullable( authCtx.get( AuthenticationContext.USERNAME ) )
                                             .ifPresent( builder.setPro );
                                     ofNullable( authCtx.get( AuthenticationContext.PASSWORD ) )
