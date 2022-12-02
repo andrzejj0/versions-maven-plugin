@@ -26,7 +26,8 @@ import java.net.URI;
 import java.util.Arrays;
 
 import org.apache.hc.client5.http.auth.AuthScope;
-import org.apache.hc.client5.http.auth.CredentialsProvider;
+import org.apache.hc.client5.http.auth.Credentials;
+import org.apache.hc.client5.http.auth.NTCredentials;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
@@ -84,35 +85,36 @@ public class HttpTransport implements Transport
         HttpClientBuilder builder = HttpClientBuilder.create();
         builder.setUserAgent( mavenSession.getRepositorySession().getConfigProperties()
                 .getOrDefault( USER_AGENT, "Maven" ).toString() );
-        // TODO: I think it's possible to simply use RepositorySystemSession.getProxySelector() instead
-        // also the same for mirrors, auth, etc. -- much easier and simpler
+
         RemoteRepository repository = remoteRepository( uri, serverId, mavenSession );
-        ofNullable( repository.getProxy() )
-                .ifPresent( proxy ->
+        ofNullable( repository.getProxy() ).ifPresent( proxy ->
+        {
+            builder.setProxy( new HttpHost( proxy.getType(), proxy.getHost(), proxy.getPort() ) );
+            ofNullable( proxy.getAuthentication() ).ifPresent( auth ->
+            {
+                try ( AuthenticationContext authCtx = AuthenticationContext
+                        .forProxy( mavenSession.getRepositorySession(), repository ) )
                 {
-                    builder.setProxy( new HttpHost( proxy.getType(), proxy.getHost(), proxy.getPort() ) );
-                    ofNullable( proxy.getAuthentication() )
-                            .ifPresent( auth ->
-                            {
-                                try ( AuthenticationContext authCtx = AuthenticationContext
-                                        .forProxy( mavenSession.getRepositorySession(), repository ) )
-                                {
-                                    CredentialsProvider credentialsProvider
-                                            = new BasicCredentialsProvider()
-                                    {{
-                                        setCredentials(  );
-                                    }}
-                                    ofNullable( authCtx.get( AuthenticationContext.USERNAME ) )
-                                            .ifPresent( builder.setPro );
-                                    ofNullable( authCtx.get( AuthenticationContext.PASSWORD ) )
-                                            .ifPresent( this::setPassword );
-                                    ofNullable( authCtx.get( AuthenticationContext.NTLM_DOMAIN ) )
-                                            .ifPresent( this::setNtlmDomain );
-                                    ofNullable( authCtx.get( AuthenticationContext
-                                            .NTLM_WORKSTATION ) ).ifPresent( this::setNtlmHost );
-                                }
-                            } );
-                } );
+                    builder.setDefaultCredentialsProvider( new BasicCredentialsProvider()
+                    {{
+                        String userName = authCtx.get( AuthenticationContext.USERNAME );
+                        String password = authCtx.get( AuthenticationContext.PASSWORD );
+                        String ntlmDomain = authCtx.get( AuthenticationContext.NTLM_DOMAIN );
+                        String ntlmHost = authCtx.get( AuthenticationContext.NTLM_WORKSTATION );
+
+                        setCredentials( new AuthScope( proxy.getHost(), proxy.getPort() ),
+                                ntlmDomain != null && ntlmHost != null
+                                        ? new NTCredentials( userName, password.toCharArray(), ntlmHost, ntlmDomain )
+                                        : new UsernamePasswordCredentials( userName, password.toCharArray() ) );
+                    }} );
+                }
+            } );
+        } );
+        ofNullable( repository.getAuthentication() ).ifPresent( auth ->
+        {
+            builder.setDefaultCredentialsProvider(  )
+        }
+        );
 
         mavenSession.getSettings().getProxies()
                 .stream()
