@@ -39,8 +39,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.ok;
+import static com.github.tomakehurst.wiremock.client.WireMock.unauthorized;
 import static java.util.Collections.singletonList;
 import static org.apache.hc.core5.http.HttpHeaders.USER_AGENT;
+import static org.apache.hc.core5.http.HttpHeaders.WWW_AUTHENTICATE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.mock;
@@ -80,7 +82,7 @@ public class HttpTransportTest
     public void testUnauthenticatedPlainHttp()
             throws IOException, URISyntaxException
     {
-        wireMockRule.givenThat( get( anyUrl() )
+        wireMockRule.stubFor( get( anyUrl() )
                 .withHeader( USER_AGENT.toString(), matching( "Maven" ) )
                 .willReturn( ok().withBody( "Hello, world!" ) ) );
         try ( InputStream stream = TRANSPORT.download( new URI( wireMockRule.baseUrl() ),
@@ -94,10 +96,15 @@ public class HttpTransportTest
     public void testPlainHttpWithBasicAuth()
             throws IOException, URISyntaxException
     {
-        wireMockRule.givenThat( get( anyUrl() )
+        wireMockRule.stubFor(get(anyUrl())
                 .withHeader( USER_AGENT.toString(), matching( "Maven" ) )
-                .withBasicAuth( "user", "password" )
-                .willReturn( ok().withBody( "Hello, world!" ) ) );
+                .willReturn(unauthorized()
+                        .withHeader(WWW_AUTHENTICATE,"Basic")));
+        wireMockRule.stubFor(get(anyUrl())
+                .withHeader( USER_AGENT.toString(), matching( "Maven" ) )
+                .withBasicAuth("user", "password")
+                .willReturn(ok().withBody("Hello, world!")));
+
         try ( InputStream stream = TRANSPORT.download( new URI( wireMockRule.baseUrl() ),
                 "basicAuthPlainHttp", mavenSession ) )
         {

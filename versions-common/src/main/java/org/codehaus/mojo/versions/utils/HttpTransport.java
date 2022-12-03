@@ -82,6 +82,9 @@ public class HttpTransport implements Transport
         builder.setUserAgent( mavenSession.getRepositorySession().getConfigProperties()
                 .getOrDefault( USER_AGENT, "Maven" ).toString() );
 
+        BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+        builder.setDefaultCredentialsProvider( credentialsProvider );
+
         RemoteRepository repository = remoteRepository( uri, serverId, mavenSession );
         ofNullable( repository.getProxy() ).ifPresent( proxy ->
         {
@@ -92,38 +95,33 @@ public class HttpTransport implements Transport
                         .forProxy( mavenSession.getRepositorySession(), new RemoteRepository.Builder( repository )
                                 .setProxy( proxy ).build() ) )
                 {
-                    builder.setDefaultCredentialsProvider( new BasicCredentialsProvider()
-                    {{
-                        String userName = authCtx.get( AuthenticationContext.USERNAME );
-                        String password = authCtx.get( AuthenticationContext.PASSWORD );
-                        String ntlmDomain = authCtx.get( AuthenticationContext.NTLM_DOMAIN );
-                        String ntlmHost = authCtx.get( AuthenticationContext.NTLM_WORKSTATION );
-
-                        setCredentials( new AuthScope( proxy.getHost(), proxy.getPort() ),
-                                ntlmDomain != null && ntlmHost != null
-                                        ? new NTCredentials( userName, password.toCharArray(), ntlmHost, ntlmDomain )
-                                        : new UsernamePasswordCredentials( userName, password.toCharArray() ) );
-                    }} );
-                }
-            } );
-        } );
-        ofNullable( repository.getAuthentication() ).ifPresent( auth ->
-        {
-            try ( AuthenticationContext authCtx = AuthenticationContext
-                    .forRepository( mavenSession.getRepositorySession(), repository ) )
-            {
-                builder.setDefaultCredentialsProvider( new BasicCredentialsProvider()
-                {{
                     String userName = authCtx.get( AuthenticationContext.USERNAME );
                     String password = authCtx.get( AuthenticationContext.PASSWORD );
                     String ntlmDomain = authCtx.get( AuthenticationContext.NTLM_DOMAIN );
                     String ntlmHost = authCtx.get( AuthenticationContext.NTLM_WORKSTATION );
 
-                    setCredentials( new AuthScope( uri.getHost(), uri.getPort() ),
-                            ntlmDomain != null && ntlmHost != null
-                                    ? new NTCredentials( userName, password.toCharArray(), ntlmHost, ntlmDomain )
-                                    : new UsernamePasswordCredentials( userName, password.toCharArray() ) );
-                }} );
+                    credentialsProvider.setCredentials( new AuthScope( proxy.getHost(), proxy.getPort() ),
+                                ntlmDomain != null && ntlmHost != null
+                                        ? new NTCredentials( userName, password.toCharArray(), ntlmHost, ntlmDomain )
+                                        : new UsernamePasswordCredentials( userName, password.toCharArray() ) );
+                }
+            } );
+        } );
+        // TODO this is null:
+        ofNullable( repository.getAuthentication() ).ifPresent( auth ->
+        {
+            try ( AuthenticationContext authCtx = AuthenticationContext
+                    .forRepository( mavenSession.getRepositorySession(), repository ) )
+            {
+                String userName = authCtx.get( AuthenticationContext.USERNAME );
+                String password = authCtx.get( AuthenticationContext.PASSWORD );
+                String ntlmDomain = authCtx.get( AuthenticationContext.NTLM_DOMAIN );
+                String ntlmHost = authCtx.get( AuthenticationContext.NTLM_WORKSTATION );
+
+                credentialsProvider.setCredentials( new AuthScope( uri.getHost(), uri.getPort() ),
+                        ntlmDomain != null && ntlmHost != null
+                                ? new NTCredentials( userName, password.toCharArray(), ntlmHost, ntlmDomain )
+                                : new UsernamePasswordCredentials( userName, password.toCharArray() ) );
             }
         }
         );
