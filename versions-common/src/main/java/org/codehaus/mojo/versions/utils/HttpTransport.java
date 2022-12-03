@@ -23,10 +23,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.Arrays;
 
 import org.apache.hc.client5.http.auth.AuthScope;
-import org.apache.hc.client5.http.auth.Credentials;
 import org.apache.hc.client5.http.auth.NTCredentials;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -35,7 +33,6 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.apache.hc.core5.http.HttpHost;
 import org.apache.maven.execution.MavenSession;
-import org.apache.maven.settings.Proxy;
 import org.codehaus.mojo.versions.api.Transport;
 import org.eclipse.aether.repository.AuthenticationContext;
 import org.eclipse.aether.repository.RemoteRepository;
@@ -43,7 +40,6 @@ import sun.misc.IOUtils;
 
 import static java.util.Collections.singletonList;
 import static java.util.Optional.ofNullable;
-import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.eclipse.aether.ConfigurationProperties.USER_AGENT;
 
 public class HttpTransport implements Transport
@@ -93,7 +89,8 @@ public class HttpTransport implements Transport
             ofNullable( proxy.getAuthentication() ).ifPresent( auth ->
             {
                 try ( AuthenticationContext authCtx = AuthenticationContext
-                        .forProxy( mavenSession.getRepositorySession(), repository ) )
+                        .forProxy( mavenSession.getRepositorySession(), new RemoteRepository.Builder( repository )
+                                .setProxy( proxy ).build() ) )
                 {
                     builder.setDefaultCredentialsProvider( new BasicCredentialsProvider()
                     {{
@@ -112,53 +109,68 @@ public class HttpTransport implements Transport
         } );
         ofNullable( repository.getAuthentication() ).ifPresent( auth ->
         {
-            builder.setDefaultCredentialsProvider(  )
+            try ( AuthenticationContext authCtx = AuthenticationContext
+                    .forRepository( mavenSession.getRepositorySession(), repository ) )
+            {
+                builder.setDefaultCredentialsProvider( new BasicCredentialsProvider()
+                {{
+                    String userName = authCtx.get( AuthenticationContext.USERNAME );
+                    String password = authCtx.get( AuthenticationContext.PASSWORD );
+                    String ntlmDomain = authCtx.get( AuthenticationContext.NTLM_DOMAIN );
+                    String ntlmHost = authCtx.get( AuthenticationContext.NTLM_WORKSTATION );
+
+                    setCredentials( new AuthScope( uri.getHost(), uri.getPort() ),
+                            ntlmDomain != null && ntlmHost != null
+                                    ? new NTCredentials( userName, password.toCharArray(), ntlmHost, ntlmDomain )
+                                    : new UsernamePasswordCredentials( userName, password.toCharArray() ) );
+                }} );
+            }
         }
         );
 
-        mavenSession.getSettings().getProxies()
-                .stream()
-                .filter( Proxy::isActive )
-                .filter( proxy -> ofNullable( proxy.getProtocol() )
-                        .map( p -> p.equals( uri.getScheme() ) )
-                        .orElse( true ) )
-                .filter( proxy -> ofNullable( proxy.getNonProxyHosts() )
-                        .map( s -> s.split( "\\|" ) )
-                        .map( a -> Arrays.stream( a )
-                                .noneMatch( s -> s.equals( uri.getHost() ) ) )
-                        .orElse( true ) )
-                .findAny()
-                .ifPresent( proxy ->
-                {
-                    builder.setProxy( new HttpHost( proxy.getProtocol(), proxy.getHost(), proxy.getPort() ) );
-                    if ( !isBlank( proxy.getUsername() ) && !isBlank( proxy.getPassword() ) )
-                    {
-                        builder.setDefaultCredentialsProvider( new BasicCredentialsProvider()
-                        {{
-                            setCredentials( new AuthScope( proxy.getHost(), proxy.getPort() ),
-                                    new UsernamePasswordCredentials( proxy.getUsername(),
-                                            proxy.getPassword().toCharArray() ) );
-                        }} );
-                    }
-                } );
+//        mavenSession.getSettings().getProxies()
+//                .stream()
+//                .filter( Proxy::isActive )
+//                .filter( proxy -> ofNullable( proxy.getProtocol() )
+//                        .map( p -> p.equals( uri.getScheme() ) )
+//                        .orElse( true ) )
+//                .filter( proxy -> ofNullable( proxy.getNonProxyHosts() )
+//                        .map( s -> s.split( "\\|" ) )
+//                        .map( a -> Arrays.stream( a )
+//                                .noneMatch( s -> s.equals( uri.getHost() ) ) )
+//                        .orElse( true ) )
+//                .findAny()
+//                .ifPresent( proxy ->
+//                {
+//                    builder.setProxy( new HttpHost( proxy.getProtocol(), proxy.getHost(), proxy.getPort() ) );
+//                    if ( !isBlank( proxy.getUsername() ) && !isBlank( proxy.getPassword() ) )
+//                    {
+//                        builder.setDefaultCredentialsProvider( new BasicCredentialsProvider()
+//                        {{
+//                            setCredentials( new AuthScope( proxy.getHost(), proxy.getPort() ),
+//                                    new UsernamePasswordCredentials( proxy.getUsername(),
+//                                            proxy.getPassword().toCharArray() ) );
+//                        }} );
+//                    }
+//                } );
         // TODO: add authentication, truststore, keystore, etc
-        mavenSession.getSettings().getServers()
-                .stream()
-                .filter( s -> serverId.equals( s.getId() ) )
-                .findFirst()
-                .ifPresent( server ->
-                {
-                    return;
-                } );
-        mavenSession.getSettings().getMirrors()
-                .stream()
-                .filter( m -> serverId.equals( m.getMirrorOf() ) )
-                .findFirst()
-                .ifPresent( mirror ->
-                {
-                    // TODO: handle this
-                    return;
-                } );
+//        mavenSession.getSettings().getServers()
+//                .stream()
+//                .filter( s -> serverId.equals( s.getId() ) )
+//                .findFirst()
+//                .ifPresent( server ->
+//                {
+//                    return;
+//                } );
+//        mavenSession.getSettings().getMirrors()
+//                .stream()
+//                .filter( m -> serverId.equals( m.getMirrorOf() ) )
+//                .findFirst()
+//                .ifPresent( mirror ->
+//                {
+//                    // TODO: handle this
+//                    return;
+//                } );
 
         try ( CloseableHttpClient httpClient = builder.build() )
         {

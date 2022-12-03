@@ -162,7 +162,7 @@ public class DefaultVersionsHelper
 
     static boolean isClasspathUri( String uri )
     {
-        return ( uri != null && uri.startsWith( CLASSPATH_PROTOCOL + ":" ) );
+        return ( uri != null && uri.startsWith( "classpath" + ":" ) );
     }
 
     @Override
