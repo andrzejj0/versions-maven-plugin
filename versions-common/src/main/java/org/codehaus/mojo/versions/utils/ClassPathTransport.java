@@ -19,8 +19,10 @@ package org.codehaus.mojo.versions.utils;
  * under the License.
  */
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.function.Function;
 
 import org.apache.maven.execution.MavenSession;
 import org.codehaus.mojo.versions.api.Transport;
@@ -41,11 +43,16 @@ public class ClassPathTransport implements Transport
      * @param uri uri pointing to the resource
      * @param serverId id of the server from which to download the information; may be {@code null}
      * @param mavenSession current Maven session; may be {@code null}
+     * @param supplier function producing the desired object based on the input stream with the downloaded resource
      * @return input stream with the resource if the {@code uri} is a class path resource; otherwise returns null
      */
     @Override
-    public InputStream download( URI uri, String serverId, MavenSession mavenSession )
+    public <T> T download( URI uri, String serverId, MavenSession mavenSession, Function<InputStream, T> supplier )
+            throws IOException
     {
-        return getClass().getResourceAsStream( uri.getPath() );
+        try ( InputStream stream = getClass().getResourceAsStream( uri.getPath() ) )
+        {
+            return supplier.apply( stream );
+        }
     }
 }

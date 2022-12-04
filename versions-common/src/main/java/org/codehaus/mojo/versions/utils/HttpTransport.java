@@ -19,10 +19,10 @@ package org.codehaus.mojo.versions.utils;
  * under the License.
  */
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.function.Function;
 
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.NTCredentials;
@@ -36,7 +36,6 @@ import org.apache.maven.execution.MavenSession;
 import org.codehaus.mojo.versions.api.Transport;
 import org.eclipse.aether.repository.AuthenticationContext;
 import org.eclipse.aether.repository.RemoteRepository;
-import sun.misc.IOUtils;
 
 import static java.util.Collections.singletonList;
 import static java.util.Optional.ofNullable;
@@ -73,7 +72,8 @@ public class HttpTransport implements Transport
      * @throws IOException thrown if the I/O operation doesn't succeed
      */
     @Override
-    public InputStream download( URI uri, String serverId, MavenSession mavenSession ) throws IOException
+    public <T> T download( URI uri, String serverId, MavenSession mavenSession, Function<InputStream, T> supplier )
+            throws IOException
     {
         assert serverId != null;
         assert mavenSession != null;
@@ -172,9 +172,7 @@ public class HttpTransport implements Transport
 
         try ( CloseableHttpClient httpClient = builder.build() )
         {
-            // copying to a new byte array so that the client and its underlying resources can be released
-            return new ByteArrayInputStream(
-                    IOUtils.readAllBytes( httpClient.execute( new HttpGet( uri ) ).getEntity().getContent() ) );
+            return supplier.apply( httpClient.execute( new HttpGet( uri ) ).getEntity().getContent() );
         }
     }
 }

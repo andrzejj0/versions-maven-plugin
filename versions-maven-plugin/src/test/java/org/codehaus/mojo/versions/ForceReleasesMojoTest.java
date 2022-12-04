@@ -64,7 +64,6 @@ public class ForceReleasesMojoTest extends AbstractMojoTestCase
         changeRecorder = new TestChangeRecorder();
         mojo = new ForceReleasesMojo( mockRepositorySystem(),
                 mockAetherRepositorySystem(),
-                null,
                 changeRecorder.asTestMap() );
         setVariableValueToObject( mojo, "reactorProjects", emptyList() );
         mojo.project = new MavenProject()

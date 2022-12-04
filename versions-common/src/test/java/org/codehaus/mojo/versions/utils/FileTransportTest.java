@@ -37,6 +37,17 @@ public class FileTransportTest
 {
     private static final FileTransport TRANSPORT = new FileTransport();
 
+    private static String readString( InputStream stream )
+    {
+        try
+        {
+            return IOUtils.toString( stream );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
 
     @Test
     public void testFileTransport()
@@ -46,10 +57,8 @@ public class FileTransportTest
                         + getClass().getPackage().getName().replace( '.', '/' ) )
                 .resolve( "hello.txt" ).toUri();
 
-        try ( InputStream stream = TRANSPORT.download( rulesUri, null, null ) )
-        {
-            assertThat( IOUtils.toString( stream ), containsString( "Hello, world!" ) );
-        }
+        assertThat( TRANSPORT.download( rulesUri, null, null, FileTransportTest::readString ),
+                containsString( "Hello, world!" ) );
     }
 
 }

@@ -22,6 +22,7 @@ package org.codehaus.mojo.versions.api;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.function.Function;
 
 import org.apache.maven.execution.MavenSession;
 
@@ -43,8 +44,10 @@ public interface Transport
      * @param serverId id of the server from which to download the information;
      *                 may be {@code null} if not applicable
      * @param mavenSession current Maven session; may be {@code null} if not applicable
-     * @return input stream with the resource
+     * @param supplier function producing the desired object based on the input stream with the downloaded resource
+     * @return downloaded resource
      * @throws IOException thrown if the I/O operation doesn't succeed
      */
-    InputStream download( URI uri, String serverId, MavenSession mavenSession ) throws IOException;
+    <T> T download( URI uri, String serverId, MavenSession mavenSession, Function<InputStream, T> supplier )
+            throws IOException;
 }

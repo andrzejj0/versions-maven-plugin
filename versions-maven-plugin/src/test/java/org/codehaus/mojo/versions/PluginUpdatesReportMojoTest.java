@@ -70,7 +70,7 @@ public class PluginUpdatesReportMojoTest
         TestPluginUpdatesReportMojo()
         {
             super( MOCK_I18N, mockRepositorySystem(), mockAetherRepositorySystem(),
-                    null, new ReportRendererFactoryImpl( MOCK_I18N ) );
+                    new ReportRendererFactoryImpl( MOCK_I18N ) );
             siteTool = MockUtils.mockSiteTool();
 
             project = new MavenProject();

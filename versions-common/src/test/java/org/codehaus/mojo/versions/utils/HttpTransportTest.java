@@ -78,37 +78,45 @@ public class HttpTransportTest
                 .thenReturn( new DefaultRepositorySystemSession() );
     }
 
+    private static String readString( InputStream stream )
+    {
+        try
+        {
+            return IOUtils.toString( stream );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
+
     @Test
     public void testUnauthenticatedPlainHttp()
             throws IOException, URISyntaxException
     {
         wireMockRule.stubFor( get( anyUrl() )
-                .withHeader( USER_AGENT.toString(), matching( "Maven" ) )
+                .withHeader( USER_AGENT, matching( "Maven" ) )
                 .willReturn( ok().withBody( "Hello, world!" ) ) );
-        try ( InputStream stream = TRANSPORT.download( new URI( wireMockRule.baseUrl() ),
-                "basicAuthPlainHttp", mavenSession ) )
-        {
-            assertThat( IOUtils.toString( stream ), containsString( "Hello, world!" ) );
-        }
+        assertThat( TRANSPORT.download( new URI( wireMockRule.baseUrl() ),
+                "basicAuthPlainHttp", mavenSession, HttpTransportTest::readString ),
+                containsString( "Hello, world!" ) );
     }
 
     @Test
     public void testPlainHttpWithBasicAuth()
             throws IOException, URISyntaxException
     {
-        wireMockRule.stubFor(get(anyUrl())
-                .withHeader( USER_AGENT.toString(), matching( "Maven" ) )
-                .willReturn(unauthorized()
-                        .withHeader(WWW_AUTHENTICATE,"Basic")));
-        wireMockRule.stubFor(get(anyUrl())
-                .withHeader( USER_AGENT.toString(), matching( "Maven" ) )
-                .withBasicAuth("user", "password")
-                .willReturn(ok().withBody("Hello, world!")));
+        wireMockRule.stubFor( get( anyUrl() )
+                .withHeader( USER_AGENT, matching( "Maven" ) )
+                .willReturn( unauthorized()
+                        .withHeader( WWW_AUTHENTICATE, "Basic" ) ) );
+        wireMockRule.stubFor( get( anyUrl() )
+                .withHeader( USER_AGENT, matching( "Maven" ) )
+                .withBasicAuth( "user", "password" )
+                .willReturn( ok().withBody( "Hello, world!" ) ) );
 
-        try ( InputStream stream = TRANSPORT.download( new URI( wireMockRule.baseUrl() ),
-                "basicAuthPlainHttp", mavenSession ) )
-        {
-            assertThat( IOUtils.toString( stream ), containsString( "Hello, world!" ) );
-        }
+        assertThat( TRANSPORT.download( new URI( wireMockRule.baseUrl() ),
+                "basicAuthPlainHttp", mavenSession, HttpTransportTest::readString ),
+                containsString( "Hello, world!" ) );
     }
 }

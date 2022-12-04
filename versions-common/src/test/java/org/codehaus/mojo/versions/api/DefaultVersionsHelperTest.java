@@ -20,8 +20,6 @@ package org.codehaus.mojo.versions.api;
  */
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -29,11 +27,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.repository.DefaultArtifactRepository;
-import org.apache.maven.artifact.repository.layout.DefaultRepositoryLayout;
-import org.apache.maven.artifact.resolver.DefaultArtifactResolver;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecution;
@@ -51,23 +45,18 @@ import org.codehaus.mojo.versions.ordering.VersionComparators;
 import org.codehaus.mojo.versions.utils.VersionStub;
 import org.eclipse.aether.resolution.VersionRangeRequest;
 import org.eclipse.aether.resolution.VersionRangeResult;
-import org.eclipse.aether.spi.connector.transport.GetTask;
-import org.eclipse.aether.spi.connector.transport.Transporter;
-import org.eclipse.aether.spi.connector.transport.TransporterFactory;
 import org.eclipse.aether.version.Version;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
-import static java.util.Collections.singletonMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.IsIterableContaining.hasItems;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -76,17 +65,6 @@ import static org.mockito.Mockito.when;
  */
 public class DefaultVersionsHelperTest extends AbstractMojoTestCase
 {
-    @Test
-    public void testHttpClient()
-            throws MojoExecutionException, IllegalAccessException, IOException
-    {
-        final String resourcePath = "/" + getClass().getPackage().getName().replace( '.', '/' ) + "/hello.txt";
-        final String rulesUri = Objects.requireNonNull( getClass().getResource( resourcePath ) ).toExternalForm();
-
-//        String s = Request.get( rulesUri ).execute().returnContent().toString();
-//        fail();
-    }
-
     @Test
     public void testPerRuleVersionsIgnored() throws Exception
     {
@@ -241,7 +219,8 @@ public class DefaultVersionsHelperTest extends AbstractMojoTestCase
     private DefaultVersionsHelper createHelper( org.eclipse.aether.RepositorySystem aetherRepositorySystem )
             throws Exception
     {
-        final String resourcePath = "/" + getClass().getPackage().getName().replace( '.', '/' ) + "/hello.txt";
+        final String resourcePath = "/" + getClass().getPackage().getName().replace( '.', '/' )
+                + "/rules.xml";
         final String rulesUri = Objects.requireNonNull( getClass().getResource( resourcePath ) ).toExternalForm();
         MavenSession mavenSession = mock( MavenSession.class );
         when( mavenSession.getCurrentProject() ).thenReturn( mock( MavenProject.class ) );

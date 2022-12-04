@@ -63,7 +63,7 @@ public class ParentUpdatesReportMojoTest
                 mockAetherRepositorySystem( new HashMap<String, String[]>()
                 {{
                     put( "default-artifact", new String[] {"1.0.0", "1.0.1", "1.1.0", "2.0.0", "2.0.1-SNAPSHOT"} );
-                }} ), null, new ReportRendererFactoryImpl( MOCK_I18N ) )
+                }} ), new ReportRendererFactoryImpl( MOCK_I18N ) )
         {{
             allowSnapshots = true;
             project = new MavenProject( new Model()
@@ -86,7 +86,6 @@ public class ParentUpdatesReportMojoTest
 
             session = mockMavenSession();
         }}.generate( sinkFactory.createSink( os ), sinkFactory, Locale.getDefault() );
-
         String output = os.toString();
         assertThat( output, allOf( containsString( "1.0.0" ),
                 containsString( "1.0.1" ), containsString( "1.1.0" ),

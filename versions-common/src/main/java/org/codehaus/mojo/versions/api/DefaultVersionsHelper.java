@@ -19,13 +19,9 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -80,7 +76,6 @@ import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluatio
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
-import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResult;
 import org.eclipse.aether.resolution.VersionRangeRequest;
@@ -693,29 +688,6 @@ public class DefaultVersionsHelper
         {
         }
 
-        private static RuleSet getRulesFromClasspath( String uri, Log logger )
-                throws MojoExecutionException
-        {
-            logger.debug( "Going to load rules from \"" + uri + "\"" );
-            String choppedUrl = uri.substring( "classpath".length() + 3 );
-            URL url = DefaultVersionsHelper.class.getResource( choppedUrl );
-            if ( url == null )
-            {
-                throw new MojoExecutionException( "Resource \"" + uri + "\" not found in classpath." );
-            }
-
-            try ( BufferedInputStream bis = new BufferedInputStream( url.openStream() ) )
-            {
-                RuleSet result = new RuleXpp3Reader().read( bis );
-                logger.debug( "Loaded rules from \"" + uri + "\" successfully" );
-                return result;
-            }
-            catch ( IOException | XmlPullParserException e )
-            {
-                throw new MojoExecutionException( "Could not load specified rules from " + uri, e );
-            }
-        }
-
         /**
          * <p>Creates the enriched version of the ruleSet given as parameter; the ruleSet will contain the
          * set of ignored versions passed on top of its own (if defined).</p>
@@ -784,12 +756,19 @@ public class DefaultVersionsHelper
                         {
                             try
                             {
-                                try ( InputStream is = transport.download( uri, serverId, mavenSession ) )
+                                return transport.download( uri, serverId, mavenSession, is ->
                                 {
-                                    return new RuleXpp3Reader().read( is );
-                                }
+                                    try
+                                    {
+                                        return new RuleXpp3Reader().read( is );
+                                    }
+                                    catch ( IOException | XmlPullParserException e )
+                                    {
+                                        throw new IllegalStateException( e );
+                                    }
+                                } );
                             }
-                            catch ( IOException | XmlPullParserException e )
+                            catch ( IOException e )
                             {
                                 throw new IllegalStateException( e );
                             }
@@ -827,7 +806,7 @@ public class DefaultVersionsHelper
             //                        {
             //                            GetTask getTask = new GetTask( uri.fileUri );
             //                            transporter.get( getTask );
-            //                            return new RuleXpp3Reader().read( new StringReader( getTask.getDataString() ) );
+        //                            return new RuleXpp3Reader().read( new StringReader( getTask.getDataString() ) );
             //                        }
             //                        catch ( Exception e )
             //                        {

@@ -25,6 +25,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.function.Function;
 
 import org.apache.maven.execution.MavenSession;
 import org.codehaus.mojo.versions.api.Transport;
@@ -42,12 +43,18 @@ public class FileTransport implements Transport
      * @param uri uri pointing to the resource
      * @param serverId id of the server from which to download the information; may be {@code null}
      * @param mavenSession current Maven session; may be {@code null}
+     * @param supplier function producing the desired object based on the input stream with the downloaded resource
      * @return input stream with the resource if the {@code uri} is a file resource; otherwise returns null
      * @throws IOException thrown if the I/O operation doesn't succeed
      */
     @Override
-    public InputStream download( URI uri, String serverId, MavenSession mavenSession ) throws IOException
+    public <T> T download( URI uri, String serverId, MavenSession mavenSession,
+                           Function<InputStream, T> supplier ) throws IOException
     {
-        return Files.newInputStream( Paths.get( uri ), StandardOpenOption.READ );
+        try ( InputStream is = Files.newInputStream( Paths.get( uri ), StandardOpenOption.READ ) )
+        {
+            return supplier.apply( is );
+        }
+
     }
 }

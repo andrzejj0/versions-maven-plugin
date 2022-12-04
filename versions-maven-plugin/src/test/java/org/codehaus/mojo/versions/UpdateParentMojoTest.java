@@ -75,7 +75,7 @@ public class UpdateParentMojoTest
     {
         changeRecorder = new TestChangeRecorder();
 
-        mojo = new UpdateParentMojo( repositorySystem, aetherRepositorySystem, null, changeRecorder.asTestMap() )
+        mojo = new UpdateParentMojo( repositorySystem, aetherRepositorySystem, changeRecorder.asTestMap() )
         {{
             setProject( createProject() );
             reactorProjects = Collections.emptyList();

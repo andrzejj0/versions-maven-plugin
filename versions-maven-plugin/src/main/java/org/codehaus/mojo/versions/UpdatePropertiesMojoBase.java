@@ -18,12 +18,16 @@ package org.codehaus.mojo.versions;
  * under the License.
  */
 
+import javax.xml.stream.XMLStreamException;
+
+import java.util.Map;
+import java.util.Optional;
+
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.repository.RepositorySystem;
-import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.ArtifactAssociation;
 import org.codehaus.mojo.versions.api.Property;
 import org.codehaus.mojo.versions.api.PropertyVersions;
@@ -33,10 +37,6 @@ import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.recording.DefaultChangeRecord;
 import org.codehaus.mojo.versions.rewriting.ModifiedPomXMLEventReader;
-
-import javax.xml.stream.XMLStreamException;
-import java.util.Map;
-import java.util.Optional;
 
 import static org.codehaus.mojo.versions.utils.SegmentUtils.determineUnchangedSegment;
 
@@ -106,10 +106,9 @@ public abstract class UpdatePropertiesMojoBase extends AbstractVersionsDependenc
 
     public UpdatePropertiesMojoBase( RepositorySystem repositorySystem,
                                  org.eclipse.aether.RepositorySystem aetherRepositorySystem,
-                                 Map<String, Wagon> wagonMap,
                                  Map<String, ChangeRecorder> changeRecorders )
     {
-        super( repositorySystem, aetherRepositorySystem, wagonMap, changeRecorders );
+        super( repositorySystem, aetherRepositorySystem, changeRecorders );
     }
 
     protected void update( ModifiedPomXMLEventReader pom, Map<Property, PropertyVersions> propertyVersions )
