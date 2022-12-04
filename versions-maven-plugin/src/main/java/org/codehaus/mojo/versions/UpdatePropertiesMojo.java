@@ -34,9 +34,6 @@ import org.codehaus.mojo.versions.api.VersionsHelper;
 import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.rewriting.ModifiedPomXMLEventReader;
 
-import javax.inject.Inject;
-import javax.xml.stream.XMLStreamException;
-
 /**
  * Sets properties to the latest versions of specific artifacts.
  *

@@ -25,6 +25,7 @@ import java.net.URI;
 import java.util.function.Function;
 
 import org.apache.hc.client5.http.auth.AuthScope;
+import org.apache.hc.client5.http.auth.Credentials;
 import org.apache.hc.client5.http.auth.NTCredentials;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -63,6 +64,18 @@ public class HttpTransport implements Transport
         return builder.build();
     }
 
+    private static Credentials getCredentials( AuthenticationContext authCtx )
+    {
+        String userName = authCtx.get( AuthenticationContext.USERNAME );
+        String password = authCtx.get( AuthenticationContext.PASSWORD );
+        String ntlmDomain = authCtx.get( AuthenticationContext.NTLM_DOMAIN );
+        String ntlmHost = authCtx.get( AuthenticationContext.NTLM_WORKSTATION );
+
+        return ntlmDomain != null && ntlmHost != null
+                ? new NTCredentials( userName, password.toCharArray(), ntlmHost, ntlmDomain )
+                : new UsernamePasswordCredentials( userName, password.toCharArray() );
+    }
+
     /**
      * Retrieves the resource indicated by the given uri.
      * @param uri uri pointing to the resource
@@ -78,53 +91,41 @@ public class HttpTransport implements Transport
         assert serverId != null;
         assert mavenSession != null;
 
-        HttpClientBuilder builder = HttpClientBuilder.create();
-        builder.setUserAgent( mavenSession.getRepositorySession().getConfigProperties()
-                .getOrDefault( USER_AGENT, "Maven" ).toString() );
-
         BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-        builder.setDefaultCredentialsProvider( credentialsProvider );
+
+        HttpClientBuilder builder = HttpClientBuilder.create()
+            .setUserAgent( mavenSession.getRepositorySession().getConfigProperties()
+                .getOrDefault( USER_AGENT, "Maven" ).toString() )
+                .setDefaultCredentialsProvider( credentialsProvider );
 
         RemoteRepository repository = remoteRepository( uri, serverId, mavenSession );
+        ofNullable( repository.getAuthentication() ).ifPresent( auth ->
+        {
+            Credentials result;
+            try ( AuthenticationContext authCtx = AuthenticationContext
+                    .forRepository( mavenSession.getRepositorySession(), repository ) )
+            {
+                result = getCredentials( authCtx );
+            }
+            credentialsProvider.setCredentials( new AuthScope( uri.getHost(), uri.getPort() ),
+                    result );
+        } );
         ofNullable( repository.getProxy() ).ifPresent( proxy ->
         {
             builder.setProxy( new HttpHost( proxy.getType(), proxy.getHost(), proxy.getPort() ) );
             ofNullable( proxy.getAuthentication() ).ifPresent( auth ->
             {
+                Credentials result;
                 try ( AuthenticationContext authCtx = AuthenticationContext
                         .forProxy( mavenSession.getRepositorySession(), new RemoteRepository.Builder( repository )
                                 .setProxy( proxy ).build() ) )
                 {
-                    String userName = authCtx.get( AuthenticationContext.USERNAME );
-                    String password = authCtx.get( AuthenticationContext.PASSWORD );
-                    String ntlmDomain = authCtx.get( AuthenticationContext.NTLM_DOMAIN );
-                    String ntlmHost = authCtx.get( AuthenticationContext.NTLM_WORKSTATION );
-
-                    credentialsProvider.setCredentials( new AuthScope( proxy.getHost(), proxy.getPort() ),
-                                ntlmDomain != null && ntlmHost != null
-                                        ? new NTCredentials( userName, password.toCharArray(), ntlmHost, ntlmDomain )
-                                        : new UsernamePasswordCredentials( userName, password.toCharArray() ) );
+                    result = getCredentials( authCtx );
                 }
+                credentialsProvider.setCredentials( new AuthScope( proxy.getHost(), proxy.getPort() ),
+                        result );
             } );
         } );
-        // TODO this is null:
-        ofNullable( repository.getAuthentication() ).ifPresent( auth ->
-        {
-            try ( AuthenticationContext authCtx = AuthenticationContext
-                    .forRepository( mavenSession.getRepositorySession(), repository ) )
-            {
-                String userName = authCtx.get( AuthenticationContext.USERNAME );
-                String password = authCtx.get( AuthenticationContext.PASSWORD );
-                String ntlmDomain = authCtx.get( AuthenticationContext.NTLM_DOMAIN );
-                String ntlmHost = authCtx.get( AuthenticationContext.NTLM_WORKSTATION );
-
-                credentialsProvider.setCredentials( new AuthScope( uri.getHost(), uri.getPort() ),
-                        ntlmDomain != null && ntlmHost != null
-                                ? new NTCredentials( userName, password.toCharArray(), ntlmHost, ntlmDomain )
-                                : new UsernamePasswordCredentials( userName, password.toCharArray() ) );
-            }
-        }
-        );
 
 //        mavenSession.getSettings().getProxies()
 //                .stream()

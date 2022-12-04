@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Map;
+import java.util.function.Consumer;
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -31,6 +33,10 @@ import org.apache.maven.execution.MavenSession;
 import org.apache.maven.settings.Server;
 import org.apache.maven.settings.Settings;
 import org.eclipse.aether.DefaultRepositorySystemSession;
+import org.eclipse.aether.repository.Authentication;
+import org.eclipse.aether.repository.AuthenticationContext;
+import org.eclipse.aether.repository.AuthenticationDigest;
+import org.eclipse.aether.util.repository.DefaultAuthenticationSelector;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -74,8 +80,9 @@ public class HttpTransportTest
                setPassword( "password" );
            }} ) );
         }} );
-        when( mavenSession.getRepositorySession() )
-                .thenReturn( new DefaultRepositorySystemSession() );
+
+        DefaultRepositorySystemSession repositorySystemSession = new DefaultRepositorySystemSession();
+        when( mavenSession.getRepositorySession() ) .thenReturn( repositorySystemSession );
     }
 
     private static String readString( InputStream stream )
@@ -88,6 +95,26 @@ public class HttpTransportTest
         {
             throw new RuntimeException( e );
         }
+    }
+
+    private void setAuthContext( Consumer<AuthenticationContext> filler )
+    {
+        DefaultAuthenticationSelector authSelector = new DefaultAuthenticationSelector();
+        authSelector.add( "basicAuthPlainHttp", new Authentication()
+        {
+            @Override
+            public void fill( AuthenticationContext context, String key, Map<String, String> data )
+            {
+                filler.accept( context );
+            }
+
+            @Override
+            public void digest( AuthenticationDigest digest )
+            {
+            }
+        } );
+        ( (DefaultRepositorySystemSession) mavenSession.getRepositorySession() )
+                .setAuthenticationSelector( authSelector );
     }
 
     @Test
@@ -114,6 +141,12 @@ public class HttpTransportTest
                 .withHeader( USER_AGENT, matching( "Maven" ) )
                 .withBasicAuth( "user", "password" )
                 .willReturn( ok().withBody( "Hello, world!" ) ) );
+
+        setAuthContext( context ->
+        {
+            context.put( AuthenticationContext.USERNAME, "user" );
+            context.put( AuthenticationContext.PASSWORD, "password" );
+        } );
 
         assertThat( TRANSPORT.download( new URI( wireMockRule.baseUrl() ),
                 "basicAuthPlainHttp", mavenSession, HttpTransportTest::readString ),

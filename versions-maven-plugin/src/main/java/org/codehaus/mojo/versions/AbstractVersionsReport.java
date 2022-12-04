@@ -21,7 +21,6 @@ package org.codehaus.mojo.versions;
 
 import java.io.File;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.maven.artifact.Artifact;

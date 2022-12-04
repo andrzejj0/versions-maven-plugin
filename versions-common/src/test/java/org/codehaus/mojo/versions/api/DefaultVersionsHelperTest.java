@@ -19,7 +19,6 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
