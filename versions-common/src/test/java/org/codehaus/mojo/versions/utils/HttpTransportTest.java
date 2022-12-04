@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
+import java.util.Random;
 import java.util.function.Consumer;
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
@@ -37,6 +38,7 @@ import org.eclipse.aether.repository.Authentication;
 import org.eclipse.aether.repository.AuthenticationContext;
 import org.eclipse.aether.repository.AuthenticationDigest;
 import org.eclipse.aether.util.repository.DefaultAuthenticationSelector;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -60,8 +62,12 @@ import static org.mockito.Mockito.when;
 @WireMockTest
 public class HttpTransportTest
 {
+    private static final Random RND = new Random();
     @Rule
-    public WireMockRule wireMockRule = new WireMockRule();
+    public WireMockRule wireMock;
+
+    @Rule
+    public WireMockRule secureWireMock;
 
     private static final HttpTransport TRANSPORT = new HttpTransport();
 
@@ -70,6 +76,12 @@ public class HttpTransportTest
     @Before
     public void setUp() throws Exception
     {
+        wireMock = new WireMockRule( RND.nextInt(0x4000 ) + 0x1000 );
+        wireMock.start();
+
+        secureWireMock = new WireMockRule( RND.nextInt(0x4000 ) + 0x1000 );
+        secureWireMock.start();
+
         mavenSession = mock( MavenSession.class );
         when( mavenSession.getSettings() ).thenReturn( new Settings()
         {{
@@ -83,6 +95,13 @@ public class HttpTransportTest
 
         DefaultRepositorySystemSession repositorySystemSession = new DefaultRepositorySystemSession();
         when( mavenSession.getRepositorySession() ) .thenReturn( repositorySystemSession );
+    }
+
+    @After
+    public void tearDown()
+    {
+        wireMock.stop();
+        secureWireMock.stop();
     }
 
     private static String readString( InputStream stream )
@@ -121,10 +140,10 @@ public class HttpTransportTest
     public void testUnauthenticatedPlainHttp()
             throws IOException, URISyntaxException
     {
-        wireMockRule.stubFor( get( anyUrl() )
+        wireMock.stubFor( get( anyUrl() )
                 .withHeader( USER_AGENT, matching( "Maven" ) )
                 .willReturn( ok().withBody( "Hello, world!" ) ) );
-        assertThat( TRANSPORT.download( new URI( wireMockRule.baseUrl() ),
+        assertThat( TRANSPORT.download( new URI( wireMock.baseUrl() ),
                 "basicAuthPlainHttp", mavenSession, HttpTransportTest::readString ),
                 containsString( "Hello, world!" ) );
     }
@@ -133,11 +152,11 @@ public class HttpTransportTest
     public void testPlainHttpWithBasicAuth()
             throws IOException, URISyntaxException
     {
-        wireMockRule.stubFor( get( anyUrl() )
+        wireMock.stubFor( get( anyUrl() )
                 .withHeader( USER_AGENT, matching( "Maven" ) )
                 .willReturn( unauthorized()
                         .withHeader( WWW_AUTHENTICATE, "Basic" ) ) );
-        wireMockRule.stubFor( get( anyUrl() )
+        wireMock.stubFor( get( anyUrl() )
                 .withHeader( USER_AGENT, matching( "Maven" ) )
                 .withBasicAuth( "user", "password" )
                 .willReturn( ok().withBody( "Hello, world!" ) ) );
@@ -148,8 +167,27 @@ public class HttpTransportTest
             context.put( AuthenticationContext.PASSWORD, "password" );
         } );
 
-        assertThat( TRANSPORT.download( new URI( wireMockRule.baseUrl() ),
+        assertThat( TRANSPORT.download( new URI( wireMock.baseUrl() ),
                 "basicAuthPlainHttp", mavenSession, HttpTransportTest::readString ),
+                containsString( "Hello, world!" ) );
+    }
+
+    @Test
+    public void testHttpsWithNoAuth()
+            throws IOException, URISyntaxException
+    {
+        secureWireMock.stubFor( get( anyUrl() )
+                .withHeader( USER_AGENT, matching( "Maven" ) )
+                .willReturn( ok().withBody( "Hello, world!" ) ) );
+
+        setAuthContext( context ->
+        {
+            context.put( AuthenticationContext.USERNAME, "user" );
+            context.put( AuthenticationContext.PASSWORD, "password" );
+        } );
+
+        assertThat( TRANSPORT.download( new URI( secureWireMock.baseUrl().replace( "http", "https" ) ),
+                        "basicAuthPlainHttp", mavenSession, HttpTransportTest::readString ),
                 containsString( "Hello, world!" ) );
     }
 }
