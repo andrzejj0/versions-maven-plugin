@@ -127,50 +127,6 @@ public class HttpTransport implements Transport
             } );
         } );
 
-//        mavenSession.getSettings().getProxies()
-//                .stream()
-//                .filter( Proxy::isActive )
-//                .filter( proxy -> ofNullable( proxy.getProtocol() )
-//                        .map( p -> p.equals( uri.getScheme() ) )
-//                        .orElse( true ) )
-//                .filter( proxy -> ofNullable( proxy.getNonProxyHosts() )
-//                        .map( s -> s.split( "\\|" ) )
-//                        .map( a -> Arrays.stream( a )
-//                                .noneMatch( s -> s.equals( uri.getHost() ) ) )
-//                        .orElse( true ) )
-//                .findAny()
-//                .ifPresent( proxy ->
-//                {
-//                    builder.setProxy( new HttpHost( proxy.getProtocol(), proxy.getHost(), proxy.getPort() ) );
-//                    if ( !isBlank( proxy.getUsername() ) && !isBlank( proxy.getPassword() ) )
-//                    {
-//                        builder.setDefaultCredentialsProvider( new BasicCredentialsProvider()
-//                        {{
-//                            setCredentials( new AuthScope( proxy.getHost(), proxy.getPort() ),
-//                                    new UsernamePasswordCredentials( proxy.getUsername(),
-//                                            proxy.getPassword().toCharArray() ) );
-//                        }} );
-//                    }
-//                } );
-        // TODO: add authentication, truststore, keystore, etc
-//        mavenSession.getSettings().getServers()
-//                .stream()
-//                .filter( s -> serverId.equals( s.getId() ) )
-//                .findFirst()
-//                .ifPresent( server ->
-//                {
-//                    return;
-//                } );
-//        mavenSession.getSettings().getMirrors()
-//                .stream()
-//                .filter( m -> serverId.equals( m.getMirrorOf() ) )
-//                .findFirst()
-//                .ifPresent( mirror ->
-//                {
-//                    // TODO: handle this
-//                    return;
-//                } );
-
         try ( CloseableHttpClient httpClient = builder.build() )
         {
             return supplier.apply( httpClient.execute( new HttpGet( uri ) ).getEntity().getContent() );
