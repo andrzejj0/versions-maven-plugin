@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +53,9 @@ import org.apache.maven.lifecycle.LifecycleExecutor;
 import org.apache.maven.model.BuildBase;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Plugin;
+import org.apache.maven.model.PluginConfiguration;
 import org.apache.maven.model.PluginContainer;
+import org.apache.maven.model.PluginManagement;
 import org.apache.maven.model.Prerequisites;
 import org.apache.maven.model.Profile;
 import org.apache.maven.model.ReportPlugin;
@@ -64,6 +65,7 @@ import org.apache.maven.model.building.ModelBuildingRequest;
 import org.apache.maven.model.building.ModelProblemCollector;
 import org.apache.maven.model.building.ModelProblemCollectorRequest;
 import org.apache.maven.model.interpolation.ModelInterpolator;
+import org.apache.maven.model.io.ModelWriter;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -147,6 +149,11 @@ public class DisplayPluginUpdatesMojo
      */
     protected final ProjectBuilder projectBuilder;
 
+    /**
+     * (injected) {@link ModelWriter} instance
+     */
+    private final ModelWriter modelWriter;
+
     // --------------------- GETTER / SETTER METHODS ---------------------
 
     @Inject
@@ -158,6 +165,7 @@ public class DisplayPluginUpdatesMojo
                                      LifecycleExecutor lifecycleExecutor,
                                      ModelInterpolator modelInterpolator,
                                      RuntimeInformation runtimeInformation,
+                                     ModelWriter modelWriter,
                                      Map<String, ChangeRecorder> changeRecorders )
     {
         super( repositorySystem, aetherRepositorySystem, wagonMap, changeRecorders );
@@ -165,6 +173,7 @@ public class DisplayPluginUpdatesMojo
         this.lifecycleExecutor = lifecycleExecutor;
         this.modelInterpolator = modelInterpolator;
         this.runtimeInformation = runtimeInformation;
+        this.modelWriter = modelWriter;
     }
 
     /**
@@ -995,7 +1004,7 @@ public class DisplayPluginUpdatesMojo
             try
             {
                 origModel.write( "Original model:\n" );
-                getProject().writeOriginalModel( origModel );
+                modelWriter.write( origModel, null, getProject().getOriginalModel() );
                 getLog().debug( origModel.toString() );
             }
             catch ( IOException e )
@@ -1009,11 +1018,9 @@ public class DisplayPluginUpdatesMojo
 
         Map<String, String> excludePluginManagement = new HashMap<>( superPomPluginManagement );
         excludePluginManagement.putAll( parentPluginManagement );
-
         debugVersionMap( "aggregate version map", excludePluginManagement );
 
         excludePluginManagement.keySet().removeAll( pluginsWithVersionsSpecified );
-
         debugVersionMap( "final aggregate version map", excludePluginManagement );
 
         ModelBuildingRequest modelBuildingRequest = new DefaultModelBuildingRequest();
@@ -1022,8 +1029,10 @@ public class DisplayPluginUpdatesMojo
                 modelInterpolator.interpolateModel( getProject().getOriginalModel(), getProject().getBasedir(),
                         modelBuildingRequest, new IgnoringModelProblemCollector() );
 
-        addProjectPlugins( plugins, originalModel.getBuild().getPluginManagement().getPlugins(),
-                excludePluginManagement );
+        ofNullable( originalModel.getBuild() )
+            .map( PluginConfiguration::getPluginManagement )
+            .map( PluginManagement::getPlugins )
+            .ifPresent( p -> addProjectPlugins( plugins, p, excludePluginManagement ) );
         debugPluginMap( "after adding local pluginManagement", plugins );
 
         MavenProject project1 = getProject();
@@ -1043,90 +1052,34 @@ public class DisplayPluginUpdatesMojo
                              .collect( Collectors.toList() );
 
         addProjectPlugins( plugins, lifecyclePlugins, parentPluginManagement );
-
         debugPluginMap( "after adding lifecycle plugins", plugins );
 
-        try
-        {
-            List<Plugin> buildPlugins = new ArrayList<>( originalModel.getBuild().getPlugins() );
-            for ( Iterator<Plugin> i = buildPlugins.iterator(); i.hasNext(); )
-            {
-                Plugin buildPlugin = i.next();
-                if ( buildPlugin.getVersion() == null )
-                {
-                    String parentVersion = parentPluginManagement.get( buildPlugin.getKey() );
-                    if ( parentVersion != null )
-                    {
-                        // parent controls version
-                        i.remove();
-                    }
-                }
-            }
-            addProjectPlugins( plugins, buildPlugins, parentBuildPlugins );
-        }
-        catch ( NullPointerException e )
-        {
-            // guess there are no plugins here
-        }
+        List<Plugin> buildPlugins = new ArrayList<>( originalModel.getBuild().getPlugins() );
+        buildPlugins.removeIf( buildPlugin -> buildPlugin.getVersion() == null
+                && parentPluginManagement.containsKey( buildPlugin.getKey() ) );
+
+        addProjectPlugins( plugins, buildPlugins, parentBuildPlugins );
         debugPluginMap( "after adding build plugins", plugins );
 
-        try
-        {
-            List<ReportPlugin> reportPlugins = new ArrayList<>( originalModel.getReporting().getPlugins() );
-            for ( Iterator<ReportPlugin> i = reportPlugins.iterator(); i.hasNext(); )
-            {
-                ReportPlugin reportPlugin = i.next();
-                if ( reportPlugin.getVersion() == null )
-                {
-                    String parentVersion = parentPluginManagement.get( reportPlugin.getKey() );
-                    if ( parentVersion != null )
-                    {
-                        // parent controls version
-                        i.remove();
-                    }
-                }
-            }
-            addProjectPlugins( plugins, toPlugins( reportPlugins ), parentReportPlugins );
-        }
-        catch ( NullPointerException e )
-        {
-            // guess there are no plugins here
-        }
+        List<ReportPlugin> reportPlugins = new ArrayList<>( originalModel.getReporting().getPlugins() );
+        reportPlugins.removeIf( reportPlugin -> reportPlugin.getVersion() == null
+                && parentPluginManagement.containsKey( reportPlugin.getKey() ) );
+
+        addProjectPlugins( plugins, toPlugins( reportPlugins ), parentReportPlugins );
         debugPluginMap( "after adding reporting plugins", plugins );
 
-        for ( Profile profile : originalModel.getProfiles() )
+        originalModel.getProfiles().forEach( profile ->
         {
-            try
-            {
-                addProjectPlugins( plugins, profile.getBuild().getPluginManagement().getPlugins(),
-                        excludePluginManagement );
-            }
-            catch ( NullPointerException e )
-            {
-                // guess there are no plugins here
-            }
+            addProjectPlugins( plugins, profile.getBuild().getPluginManagement().getPlugins(),
+                    excludePluginManagement );
             debugPluginMap( "after adding build pluginManagement for profile " + profile.getId(), plugins );
 
-            try
-            {
-                addProjectPlugins( plugins, profile.getBuild().getPlugins(), parentBuildPlugins );
-            }
-            catch ( NullPointerException e )
-            {
-                // guess there are no plugins here
-            }
+            addProjectPlugins( plugins, profile.getBuild().getPlugins(), parentBuildPlugins );
             debugPluginMap( "after adding build plugins for profile " + profile.getId(), plugins );
 
-            try
-            {
-                addProjectPlugins( plugins, toPlugins( profile.getReporting().getPlugins() ), parentReportPlugins );
-            }
-            catch ( NullPointerException e )
-            {
-                // guess there are no plugins here
-            }
+            addProjectPlugins( plugins, toPlugins( profile.getReporting().getPlugins() ), parentReportPlugins );
             debugPluginMap( "after adding reporting plugins for profile " + profile.getId(), plugins );
-        }
+        } );
         Set<Plugin> result = new TreeSet<>( PluginComparator.INSTANCE );
         result.addAll( plugins.values() );
         return result;
