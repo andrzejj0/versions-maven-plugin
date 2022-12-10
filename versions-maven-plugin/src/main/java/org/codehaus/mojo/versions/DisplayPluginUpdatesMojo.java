@@ -976,7 +976,6 @@ public class DisplayPluginUpdatesMojo
      * @param parentReportPlugins          the parent pom's report plugins.
      * @param pluginsWithVersionsSpecified the plugin coords that have a version defined in the project.
      * @return the set of plugins used by the project.
-     * @throws org.apache.maven.plugin.MojoExecutionException if things go wrong.
      */
     @SuppressWarnings( "checkstyle:MethodLength" )
     private Set<Plugin> getProjectPlugins( Map<String, String> superPomPluginManagement,
@@ -984,7 +983,6 @@ public class DisplayPluginUpdatesMojo
                                            Map<String, String> parentBuildPlugins,
                                            Map<String, String> parentReportPlugins,
                                            Set<String> pluginsWithVersionsSpecified )
-            throws MojoExecutionException
     {
         Map<String, Plugin> plugins = new HashMap<>();
 
@@ -1024,43 +1022,29 @@ public class DisplayPluginUpdatesMojo
                 modelInterpolator.interpolateModel( getProject().getOriginalModel(), getProject().getBasedir(),
                         modelBuildingRequest, new IgnoringModelProblemCollector() );
 
-        try
-        {
-            addProjectPlugins( plugins, originalModel.getBuild().getPluginManagement().getPlugins(),
-                    excludePluginManagement );
-        }
-        catch ( NullPointerException e )
-        {
-            // guess there are no plugins here
-        }
+        addProjectPlugins( plugins, originalModel.getBuild().getPluginManagement().getPlugins(),
+                excludePluginManagement );
         debugPluginMap( "after adding local pluginManagement", plugins );
 
-        try
-        {
-            MavenProject project1 = getProject();
-            Collection<Plugin> lifecyclePlugins =
-                    lifecycleExecutor.getPluginsBoundByDefaultToAllLifecycles( project1.getPackaging() )
-                            .parallelStream()
-                            .filter( Objects::nonNull )
-                            .filter( p -> p.getKey() != null )
-                            .map( p -> new Plugin()
-                            {{
-                                setGroupId( p.getGroupId() );
-                                setArtifactId( p.getArtifactId() );
-                            }} )
-                            .distinct() // hashKey() and equals() are based on key (groupId, artifactId) equality
-                            .filter( p -> p.getVersion() == null ) // version comes from lifecycle -> cannot modify
-                            .filter( p -> parentPluginManagement.get( p.getKey() ) == null ) // parent controls version
-                                 .collect( Collectors.toList() );
+        MavenProject project1 = getProject();
+        Collection<Plugin> lifecyclePlugins =
+                lifecycleExecutor.getPluginsBoundByDefaultToAllLifecycles( project1.getPackaging() )
+                        .parallelStream()
+                        .filter( Objects::nonNull )
+                        .filter( p -> p.getKey() != null )
+                        .map( p -> new Plugin()
+                        {{
+                            setGroupId( p.getGroupId() );
+                            setArtifactId( p.getArtifactId() );
+                        }} )
+                        .distinct() // hashKey() and equals() are based on key (groupId, artifactId) equality
+                        .filter( p -> p.getVersion() == null ) // version comes from lifecycle -> cannot modify
+                        .filter( p -> parentPluginManagement.get( p.getKey() ) == null ) // parent controls version
+                             .collect( Collectors.toList() );
 
-            addProjectPlugins( plugins, lifecyclePlugins, parentPluginManagement );
+        addProjectPlugins( plugins, lifecyclePlugins, parentPluginManagement );
 
-            debugPluginMap( "after adding lifecycle plugins", plugins );
-        }
-        catch ( NullPointerException e )
-        {
-            // using maven 3.x or newer
-        }
+        debugPluginMap( "after adding lifecycle plugins", plugins );
 
         try
         {
@@ -1161,30 +1145,24 @@ public class DisplayPluginUpdatesMojo
     {
         for ( Plugin plugin : projectPlugins )
         {
-            String coord = plugin.getKey();
-            String version = plugin.getVersion();
-            String parentVersion = parentDefinitions.get( coord );
-            if ( version == null
-                    && ( !plugins.containsKey( coord ) || plugins.get( coord ).getVersion() == null )
-                    && parentVersion != null )
+            String parentVersion = parentDefinitions.get( plugin.getKey() );
+            if ( parentVersion != null
+                            && plugin.getVersion() == null
+                            && ofNullable( plugins.get( plugin.getKey() ) ).map( p -> p.getVersion() == null )
+                                .orElse( true ) )
             {
                 Plugin parentPlugin = new Plugin();
                 parentPlugin.setGroupId( plugin.getGroupId() );
                 parentPlugin.setArtifactId( plugin.getArtifactId() );
                 parentPlugin.setVersion( parentVersion );
-                plugins.put( coord, parentPlugin );
+                plugins.put( plugin.getKey(), parentPlugin );
             }
-            else if ( parentVersion == null || !parentVersion.equals( version ) )
+            else if ( ofNullable( parentVersion ).map( pv -> pv.equals( plugin.getVersion() ) ).orElse( true )
+                && ofNullable( plugins.get( plugin.getKey() ) ).map( p -> p.getVersion() == null ).orElse( true ) )
             {
-                if ( !plugins.containsKey( coord ) || plugins.get( coord ).getVersion() == null )
-                {
-                    plugins.put( coord, plugin );
-                }
+                plugins.put( plugin.getKey(), plugin );
             }
-            if ( !plugins.containsKey( coord ) )
-            {
-                plugins.put( coord, plugin );
-            }
+            plugins.putIfAbsent( plugin.getKey(), plugin );
         }
     }
 
