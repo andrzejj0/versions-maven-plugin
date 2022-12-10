@@ -333,8 +333,7 @@ public class DisplayPluginUpdatesMojo
         Map<String, String> superPomPluginManagement = getSuperPomPluginManagement();
         getLog().debug( "superPom plugins = " + superPomPluginManagement );
 
-        List<MavenProject> parents = getParentProjects( getProject() );
-        Map<String, String> parentPlugins = getParentsPlugins( parents );
+        Map<String, String> parentPlugins = getParentsPlugins( getParentProjects( getProject() ) );
         // TODO remove, not used any more (found while extracting getParentsPlugins method and
         //      renaming parentPluginManagement to parentPlugins)
         // NOTICE: getProjectPlugins() takes profiles while getParentPlugins does not
