@@ -1061,11 +1061,14 @@ public class DisplayPluginUpdatesMojo
         addProjectPlugins( plugins, buildPlugins, parentBuildPlugins );
         debugPluginMap( "after adding build plugins", plugins );
 
-        List<ReportPlugin> reportPlugins = new ArrayList<>( originalModel.getReporting().getPlugins() );
-        reportPlugins.removeIf( reportPlugin -> reportPlugin.getVersion() == null
-                && parentPluginManagement.containsKey( reportPlugin.getKey() ) );
-
-        addProjectPlugins( plugins, toPlugins( reportPlugins ), parentReportPlugins );
+        ofNullable( originalModel.getReporting() )
+                .map( Reporting::getPlugins )
+                .map( reportPlugins -> reportPlugins.stream()
+                        .filter( reportPlugin -> !( reportPlugin.getVersion() == null
+                                && parentPluginManagement.containsKey( reportPlugin.getKey() ) ) )
+                        .collect( Collectors.toList() ) )
+                .ifPresent( reportPlugins -> addProjectPlugins( plugins, toPlugins( reportPlugins ),
+                        parentReportPlugins ) );
         debugPluginMap( "after adding reporting plugins", plugins );
 
         originalModel.getProfiles().forEach( profile ->
