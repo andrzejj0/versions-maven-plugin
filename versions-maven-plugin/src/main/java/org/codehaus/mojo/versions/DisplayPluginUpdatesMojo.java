@@ -1029,12 +1029,6 @@ public class DisplayPluginUpdatesMojo
                 modelInterpolator.interpolateModel( getProject().getOriginalModel(), getProject().getBasedir(),
                         modelBuildingRequest, new IgnoringModelProblemCollector() );
 
-        ofNullable( originalModel.getBuild() )
-            .map( PluginConfiguration::getPluginManagement )
-            .map( PluginManagement::getPlugins )
-            .ifPresent( p -> addProjectPlugins( plugins, p, excludePluginManagement ) );
-        debugPluginMap( "after adding local pluginManagement", plugins );
-
         MavenProject project1 = getProject();
         Collection<Plugin> lifecyclePlugins =
                 lifecycleExecutor.getPluginsBoundByDefaultToAllLifecycles( project1.getPackaging() )
@@ -1050,15 +1044,22 @@ public class DisplayPluginUpdatesMojo
                         .filter( p -> p.getVersion() == null ) // version comes from lifecycle -> cannot modify
                         .filter( p -> parentPluginManagement.get( p.getKey() ) == null ) // parent controls version
                              .collect( Collectors.toList() );
-
         addProjectPlugins( plugins, lifecyclePlugins, parentPluginManagement );
         debugPluginMap( "after adding lifecycle plugins", plugins );
 
-        List<Plugin> buildPlugins = new ArrayList<>( originalModel.getBuild().getPlugins() );
-        buildPlugins.removeIf( buildPlugin -> buildPlugin.getVersion() == null
-                && parentPluginManagement.containsKey( buildPlugin.getKey() ) );
+        ofNullable( originalModel.getBuild() )
+                .map( PluginConfiguration::getPluginManagement )
+                .map( PluginManagement::getPlugins )
+                .ifPresent( p -> addProjectPlugins( plugins, p, excludePluginManagement ) );
+        debugPluginMap( "after adding local pluginManagement", plugins );
 
-        addProjectPlugins( plugins, buildPlugins, parentBuildPlugins );
+        ofNullable( originalModel.getBuild() )
+                .map( PluginConfiguration::getPlugins )
+                .map( p -> p.stream()
+                        .filter( buildPlugin -> !( buildPlugin.getVersion() == null
+                                && parentPluginManagement.containsKey( buildPlugin.getKey() ) ) )
+                        .collect( Collectors.toList() ) )
+                .ifPresent( p -> addProjectPlugins( plugins, p, parentBuildPlugins ) );
         debugPluginMap( "after adding build plugins", plugins );
 
         ofNullable( originalModel.getReporting() )
@@ -1073,14 +1074,20 @@ public class DisplayPluginUpdatesMojo
 
         originalModel.getProfiles().forEach( profile ->
         {
-            addProjectPlugins( plugins, profile.getBuild().getPluginManagement().getPlugins(),
-                    excludePluginManagement );
+            ofNullable( profile.getBuild() )
+                    .map( PluginConfiguration::getPluginManagement )
+                    .map( PluginManagement::getPlugins )
+                    .ifPresent( p -> addProjectPlugins( plugins, p, excludePluginManagement ) );
             debugPluginMap( "after adding build pluginManagement for profile " + profile.getId(), plugins );
 
-            addProjectPlugins( plugins, profile.getBuild().getPlugins(), parentBuildPlugins );
+            ofNullable( profile.getBuild() )
+                    .map( PluginConfiguration::getPlugins )
+                    .ifPresent( p -> addProjectPlugins( plugins, p, parentBuildPlugins ) );
             debugPluginMap( "after adding build plugins for profile " + profile.getId(), plugins );
 
-            addProjectPlugins( plugins, toPlugins( profile.getReporting().getPlugins() ), parentReportPlugins );
+            ofNullable( profile.getReporting() )
+                    .map( Reporting::getPlugins )
+                    .ifPresent( p -> addProjectPlugins( plugins, toPlugins( p ), parentReportPlugins ) );
             debugPluginMap( "after adding reporting plugins for profile " + profile.getId(), plugins );
         } );
         Set<Plugin> result = new TreeSet<>( PluginComparator.INSTANCE );
