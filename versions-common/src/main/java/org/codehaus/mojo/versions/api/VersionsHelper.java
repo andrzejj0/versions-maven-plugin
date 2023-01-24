@@ -1,22 +1,18 @@
 package org.codehaus.mojo.versions.api;
 
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Copyright MojoHaus and Contributors
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 
 import java.util.Collection;
@@ -152,7 +148,7 @@ public interface VersionsHelper {
      * <b>The resulting {@link ArtifactVersions} instance will contain all versions, including snapshots.</b>
      *
      * @param artifact The artifact to look for versions of.
-     * @param usePluginRepositories <code>true</code> will consult the pluginRepositories, while <code>false</code> will
+     * @param usePluginRepositories {@code true} will consult the pluginRepositories, while {@code false} will
      *            consult the repositories for normal dependencies.
      * @return The details of the available artifact versions.
      * @throws VersionRetrievalException thrown if version resolution fails
@@ -167,7 +163,24 @@ public interface VersionsHelper {
      * <b>The resulting {@link ArtifactVersions} instance will contain all versions, including snapshots.</b>
      *
      * @param artifact The artifact to look for versions of.
-     * @param versionRange versionRange to restrict the search
+     * @param versionRange versionRange to restrict the search, may be {@code null}
+     * @param usePluginRepositories {@code true} will consult the pluginRepositories
+     * @param useProjectRepositories {@code true} will consult regular project repositories
+     * @return The details of the available artifact versions.
+     * @throws VersionRetrievalException thrown if version resolution fails
+     * @since 2.15.0
+     */
+    ArtifactVersions lookupArtifactVersions(
+            Artifact artifact, VersionRange versionRange, boolean usePluginRepositories, boolean useProjectRepositories)
+            throws VersionRetrievalException;
+
+    /**
+     * Looks up the versions of the specified artifact that are available in either the local repository, or the
+     * appropriate remote repositories.
+     * <b>The resulting {@link ArtifactVersions} instance will contain all versions, including snapshots.</b>
+     *
+     * @param artifact The artifact to look for versions of.
+     * @param versionRange versionRange to restrict the search, may be {@code null}
      * @param usePluginRepositories <code>true</code> will consult the pluginRepositories, while <code>false</code> will
      *            consult the repositories for normal dependencies.
      * @return The details of the available artifact versions.
@@ -191,17 +204,38 @@ public interface VersionsHelper {
             throws VersionRetrievalException;
 
     /**
+     * Returns a map of all possible updates per dependency. The lookup is done in parallel using
+     * {@code LOOKUP_PARALLEL_THREADS} threads.
+     *
+     * @param dependencies The set of {@link Dependency} instances to look up.
+     * @param usePluginRepositories Search the plugin repositories.
+     * @param useProjectRepositories whether to use regular project repositories
+     * @param allowSnapshots whether snapshots should be included
+     * @return map containing the ArtifactVersions object per dependency
+     */
+    Map<Dependency, ArtifactVersions> lookupDependenciesUpdates(
+            Set<Dependency> dependencies,
+            boolean usePluginRepositories,
+            boolean useProjectRepositories,
+            boolean allowSnapshots)
+            throws VersionRetrievalException;
+
+    /**
      * Creates an {@link org.codehaus.mojo.versions.api.ArtifactVersions} instance from a dependency.
      *
      * @param dependency The dependency.
      * @param usePluginRepositories Search the plugin repositories.
+     * @param useProjectRepositories whether to use regular project repositories
      * @param allowSnapshots whether snapshots should be included
      * @return The details of updates to the dependency.
      * @throws VersionRetrievalException thrown if version resolution fails
      * @since 1.0-beta-1
      */
     ArtifactVersions lookupDependencyUpdates(
-            Dependency dependency, boolean usePluginRepositories, boolean allowSnapshots)
+            Dependency dependency,
+            boolean usePluginRepositories,
+            boolean useProjectRepositories,
+            boolean allowSnapshots)
             throws VersionRetrievalException;
 
     /**
