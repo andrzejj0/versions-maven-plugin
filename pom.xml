@@ -101,7 +101,6 @@
     <module>versions-maven-plugin</module>
     <module>versions-model-report</module>
     <module>versions-model</module>
-    <module>versions-model-core-extensions</module>
     <module>versions-test</module>
   </modules>
 
