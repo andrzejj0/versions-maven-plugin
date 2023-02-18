@@ -126,6 +126,7 @@
     <maven.compiler.source>${mojo.java.target}</maven.compiler.source>
     <junitBomVersion>5.9.1</junitBomVersion>
     <mavenVersion>3.2.5</mavenVersion>
+    <mavenEmbedderVersion>3.8.7</mavenEmbedderVersion>
     <doxiaVersion>1.12.0</doxiaVersion>
     <doxia-sitetoolsVersion>1.11.1</doxia-sitetoolsVersion>
     <pluginVersion>${project.version}</pluginVersion>
@@ -180,8 +181,7 @@
       <dependency>
         <groupId>org.apache.maven</groupId>
         <artifactId>maven-embedder</artifactId>
-        <version>${mavenVersion}</version>
-        <scope>provided</scope>
+        <version>${mavenEmbedderVersion}</version>
       </dependency>
 
       <dependency>
