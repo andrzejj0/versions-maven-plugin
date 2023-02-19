@@ -1,6 +1,7 @@
 def parentOutput = new File( basedir, "output1.txt").text
 assert parentOutput =~ /\Qlocalhost:dummy-maven-plugin\E\s*\.*\s*\Q1.0\E\s+->\s+\Q3.1\E/
 assert parentOutput =~ /\Qlocalhost:dummy-api\E\s*\.*\s*\Q1.0\E\s+->\s+\Q3.0\E/
+assert !(parentOutput =~ /\Qlocalhost:dummy-impl\E/)
 
 def childOutput = new File( basedir, "child/output1.txt")
 assert !childOutput.exists()
