@@ -19,26 +19,22 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
-import org.apache.maven.artifact.ArtifactUtils;
-import org.apache.maven.artifact.versioning.ArtifactVersion;
-import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
-import org.apache.maven.artifact.versioning.Restriction;
-import org.apache.maven.artifact.versioning.VersionRange;
-import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
-import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
-import org.codehaus.mojo.versions.ordering.VersionComparator;
-import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
-
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.maven.artifact.ArtifactUtils;
+import org.apache.maven.artifact.versioning.*;
+import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
+import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
+import org.codehaus.mojo.versions.ordering.VersionComparator;
+import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
+
 import static java.util.Collections.reverseOrder;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
-import static org.codehaus.mojo.versions.api.Segment.MAJOR;
-import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
+import static org.codehaus.mojo.versions.api.Segment.*;
 
 /**
  * Base class for {@link org.codehaus.mojo.versions.api.VersionDetails}.
@@ -69,17 +65,15 @@ public abstract class AbstractVersionDetails implements VersionDetails {
         // one range spec can have multiple restrictions, and multiple 'lower bound', we want the highest one.
         // [1.0,2.0),[3.0,4.0) -> 3.0
         ArtifactVersion highestLowerBound = currentVersion;
-        if (currentVersion != null) {
-            try {
-                highestLowerBound =
-                        VersionRange.createFromVersionSpec(currentVersion.toString()).getRestrictions().stream()
-                                .map(Restriction::getLowerBound)
-                                .filter(Objects::nonNull)
-                                .max(getVersionComparator())
-                                .orElse(currentVersion);
-            } catch (InvalidVersionSpecificationException ignored) {
-                ignored.printStackTrace(System.err);
-            }
+        assert highestLowerBound != null;
+        try {
+            highestLowerBound = VersionRange.createFromVersionSpec(currentVersion.toString()).getRestrictions().stream()
+                    .map(Restriction::getLowerBound)
+                    .filter(Objects::nonNull)
+                    .max(getVersionComparator())
+                    .orElse(currentVersion);
+        } catch (InvalidVersionSpecificationException e) {
+            e.printStackTrace(System.err);
         }
 
         final ArtifactVersion currentVersion = highestLowerBound;
@@ -92,18 +86,23 @@ public abstract class AbstractVersionDetails implements VersionDetails {
                 nextVersion,
                 false,
                 unchangedSegment
-                        .filter(MAJOR::isGreaterThan)
                         .map(s -> (ArtifactVersion) new BoundArtifactVersion(currentVersion, s))
                         .orElse(null),
                 false);
     }
 
     @Override
-    public Restriction restrictionForIgnoreScope(Optional<Segment> ignored) {
-        ArtifactVersion nextVersion = ignored
-                .map(Segment::ofGreaterThan)
-                .map(s -> (ArtifactVersion) new BoundArtifactVersion(currentVersion, s))
-                .orElse(currentVersion);
+    public Restriction restrictionForIgnoreScope(Optional<Segment> ignoredSegment) {
+        ArtifactVersion nextVersion;
+        if (ignoredSegment.map(s -> s == MAJOR).orElse(false)) {
+            // special case: we will ignore all possible version updates
+            nextVersion = DefaultArtifactVersionCache.of(String.valueOf(Integer.MAX_VALUE));
+        } else {
+            nextVersion = ignoredSegment
+                    .map(Segment::ofGreaterThan)
+                    .map(s -> (ArtifactVersion) new BoundArtifactVersion(currentVersion, s))
+                    .orElse(currentVersion);
+        }
         return new Restriction(nextVersion, false, null, false);
     }
 
@@ -217,8 +216,7 @@ public abstract class AbstractVersionDetails implements VersionDetails {
                         .orElse(null)
                 : currentVersion;
         ArtifactVersion upperBound = unchangedSegment
-                .map(s -> (ArtifactVersion) new BoundArtifactVersion(
-                        currentVersion, s.isGreaterThan(SUBINCREMENTAL) ? Segment.of(s.value() + 1) : s))
+                .map(s -> (ArtifactVersion) new BoundArtifactVersion(currentVersion, s))
                 .orElse(null);
 
         Restriction restriction = new Restriction(lowerBound, allowDowngrade, upperBound, allowDowngrade);
@@ -317,7 +315,7 @@ public abstract class AbstractVersionDetails implements VersionDetails {
      * implying that there is also no string designation of the lower bound version.
      *
      * @param version {@link ArtifactVersion} object specifying the version for which the lower bound is being computed
-     * @param unchangedSegment first segment not to be changed; empty() means anything can change
+     * @param unchangedSegment first segment not to be changed; empty() means any segment may change
      * @return {@link Optional} string containing the lowest artifact version with the given segment held
      * @throws InvalidSegmentException if the requested segment is outside of the bounds (less than 1 or greater than
      * the segment count)

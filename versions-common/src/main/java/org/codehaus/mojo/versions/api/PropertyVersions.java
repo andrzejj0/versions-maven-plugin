@@ -19,32 +19,18 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
-import org.apache.maven.artifact.versioning.ArtifactVersion;
-import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
-import org.apache.maven.artifact.versioning.OverConstrainedVersionException;
-import org.apache.maven.artifact.versioning.Restriction;
-import org.apache.maven.artifact.versioning.VersionRange;
+import org.apache.maven.artifact.versioning.*;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.ordering.VersionComparator;
 import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
 
+import java.util.*;
+
 import static java.util.Optional.empty;
-import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 
 /**
  * Manages a property that is associated with one or more artifacts.
@@ -282,7 +268,7 @@ public class PropertyVersions extends AbstractVersionDetails {
      * @param reactorProjects collection of reactor projects
      * @param helper VersionHelper object
      * @param allowDowngrade whether downgrades should be allowed
-     * @param upperBoundSegment the upper bound segment; empty() means no upper bound
+     * @param unchangedSegment segment not to be changed; empty() means any segment may change
      * @return newest artifact version fulfilling the criteria or null if no newer version could be found
      * @throws InvalidSegmentException thrown if the {@code unchangedSegment} is not valid (e.g. greater than the number
      * of segments in the version string)
@@ -295,7 +281,7 @@ public class PropertyVersions extends AbstractVersionDetails {
             Collection<MavenProject> reactorProjects,
             VersionsHelper helper,
             boolean allowDowngrade,
-            Optional<Segment> upperBoundSegment)
+            Optional<Segment> unchangedSegment)
             throws InvalidSegmentException, InvalidVersionSpecificationException {
         final boolean includeSnapshots = !property.isBanSnapshots() && allowSnapshots;
         helper.getLog().debug("getNewestVersion(): includeSnapshots='" + includeSnapshots + "'");
@@ -308,7 +294,7 @@ public class PropertyVersions extends AbstractVersionDetails {
 
         ArtifactVersion currentVersion = DefaultArtifactVersionCache.of(versionString);
         ArtifactVersion lowerBound = allowDowngrade
-                ? getLowerBound(currentVersion, upperBoundSegment)
+                ? getLowerBound(currentVersion, unchangedSegment)
                         .map(DefaultArtifactVersionCache::of)
                         .orElse(null)
                 : currentVersion;
@@ -316,12 +302,9 @@ public class PropertyVersions extends AbstractVersionDetails {
             helper.getLog().debug("lowerBoundArtifactVersion: " + lowerBound);
         }
 
-        ArtifactVersion upperBound = !upperBoundSegment.isPresent()
-                ? null
-                : upperBoundSegment
-                        .map(s -> (ArtifactVersion) new BoundArtifactVersion(
-                                currentVersion, s.isGreaterThan(SUBINCREMENTAL) ? Segment.of(s.value() + 1) : s))
-                        .orElse(null);
+        ArtifactVersion upperBound = unchangedSegment
+                .map(s -> new BoundArtifactVersion(currentVersion, s))
+                .orElse(null);
         if (helper.getLog().isDebugEnabled()) {
             helper.getLog().debug("Property ${" + property.getName() + "}: upperBound is: " + upperBound);
         }
@@ -350,7 +333,8 @@ public class PropertyVersions extends AbstractVersionDetails {
                     }
                 }
             }
-            if (fromReactor != null && (result != null || !currentVersion.equals(fromReactor.toString()))) {
+            if (fromReactor != null && (result != null || !String.valueOf(currentVersion)
+                    .equals(fromReactor.toString()))) {
                 if (property.isPreferReactor()) {
                     helper.getLog()
                             .debug("Property ${" + property.getName()

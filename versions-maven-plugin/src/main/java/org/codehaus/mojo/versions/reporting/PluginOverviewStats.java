@@ -27,11 +27,11 @@ import org.codehaus.mojo.versions.api.ArtifactVersionsCache;
 import org.codehaus.mojo.versions.api.PluginUpdatesDetails;
 import org.codehaus.mojo.versions.reporting.model.PluginUpdatesModel;
 
+import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static org.codehaus.mojo.versions.api.Segment.INCREMENTAL;
 import static org.codehaus.mojo.versions.api.Segment.MAJOR;
 import static org.codehaus.mojo.versions.api.Segment.MINOR;
-import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 
 public class PluginOverviewStats extends OverviewStats {
     /**
@@ -63,13 +63,13 @@ public class PluginOverviewStats extends OverviewStats {
             Collection<V> updates, ArtifactVersionsCache cache, boolean allowSnapshots) {
         PluginOverviewStats stats = new PluginOverviewStats();
         updates.forEach(details -> {
-            if (getNewestUpdate(cache, details, of(SUBINCREMENTAL), allowSnapshots) != null) {
+            if (getNewestUpdate(cache, details, of(INCREMENTAL), allowSnapshots) != null) {
                 stats.incrementAny();
-            } else if (getNewestUpdate(cache, details, of(INCREMENTAL), allowSnapshots) != null) {
-                stats.incrementIncremental();
             } else if (getNewestUpdate(cache, details, of(MINOR), allowSnapshots) != null) {
-                stats.incrementMinor();
+                stats.incrementIncremental();
             } else if (getNewestUpdate(cache, details, of(MAJOR), allowSnapshots) != null) {
+                stats.incrementMinor();
+            } else if (getNewestUpdate(cache, details, empty(), allowSnapshots) != null) {
                 stats.incrementMajor();
             } else {
                 stats.incrementUpToDate();

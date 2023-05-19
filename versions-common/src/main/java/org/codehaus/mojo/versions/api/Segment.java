@@ -59,9 +59,7 @@ public enum Segment implements Comparable<Segment> {
      * if the segment is already {@link #MAJOR}
      */
     public static Segment ofGreaterThan(Segment other) {
-        return Optional.ofNullable(other)
-                .map(s -> of(s.value() - 1))
-                .orElse(null);
+        return Optional.ofNullable(other).map(s -> of(s.value() - 1)).orElse(null);
     }
 
     /**
@@ -70,9 +68,7 @@ public enum Segment implements Comparable<Segment> {
      * @return that has a lesser scope than the given segment
      */
     public static Segment ofLesserThan(Segment other) {
-        return Optional.ofNullable(other)
-                .map(s -> of(s.value() + 1))
-                .orElse(MAJOR);
+        return Optional.ofNullable(other).map(s -> of(s.value() + 1)).orElse(MAJOR);
     }
 
     /**

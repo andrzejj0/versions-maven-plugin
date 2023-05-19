@@ -37,6 +37,7 @@ import org.codehaus.mojo.versions.recording.DefaultDependencyChangeRecord;
 import org.codehaus.mojo.versions.recording.DefaultPropertyChangeRecord;
 import org.codehaus.mojo.versions.rewriting.ModifiedPomXMLEventReader;
 
+import static org.codehaus.mojo.versions.api.Segment.*;
 import static org.codehaus.mojo.versions.utils.SegmentUtils.determineUnchangedSegment;
 
 /**

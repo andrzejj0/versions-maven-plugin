@@ -43,10 +43,7 @@ import org.codehaus.mojo.versions.utils.SegmentUtils;
 import org.codehaus.plexus.util.StringUtils;
 
 import static java.util.Collections.emptySet;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
 import static org.apache.commons.lang3.StringUtils.countMatches;
-import static org.codehaus.mojo.versions.api.Segment.MAJOR;
 import static org.codehaus.mojo.versions.filtering.DependencyFilter.filterDependencies;
 import static org.codehaus.mojo.versions.utils.MavenProjectUtils.*;
 
@@ -479,15 +476,6 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
         }
     }
 
-    private Optional<Segment> calculateUpdateScope() {
-        return allowMajorUpdates && allowMinorUpdates && allowIncrementalUpdates
-                ? empty()
-                : of(SegmentUtils.determineUnchangedSegment(
-                                allowMajorUpdates, allowMinorUpdates, allowIncrementalUpdates, getLog())
-                        .map(s -> Segment.of(s.value() + 1))
-                        .orElse(MAJOR));
-    }
-
     private void logUpdates(Map<Dependency, ArtifactVersions> updates, String section) {
         List<String> withUpdates = new ArrayList<>();
         List<String> usingCurrent = new ArrayList<>();
@@ -495,16 +483,18 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
             String left = "  " + ArtifactUtils.versionlessKey(versions.getArtifact()) + " ";
             final String current;
             ArtifactVersion latest;
+            Optional<Segment> unchangedSegment = SegmentUtils.determineUnchangedSegment(
+                    allowMajorUpdates, allowMinorUpdates, allowIncrementalUpdates, getLog());
             if (versions.isCurrentVersionDefined()) {
                 current = versions.getCurrentVersion().toString();
-                latest = versions.getNewestUpdate(calculateUpdateScope(), allowSnapshots);
+                latest = versions.getNewestUpdate(unchangedSegment, allowSnapshots);
             } else {
                 ArtifactVersion newestVersion =
                         versions.getNewestVersion(versions.getArtifact().getVersionRange(), allowSnapshots);
                 current = versions.getArtifact().getVersionRange().toString();
                 latest = newestVersion == null
                         ? null
-                        : versions.getNewestUpdate(newestVersion, calculateUpdateScope(), allowSnapshots);
+                        : versions.getNewestUpdate(newestVersion, unchangedSegment, allowSnapshots);
                 if (latest != null
                         && ArtifactVersions.isVersionInRange(
                                 latest, versions.getArtifact().getVersionRange())) {

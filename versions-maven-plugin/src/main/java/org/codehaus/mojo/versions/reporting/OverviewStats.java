@@ -28,11 +28,9 @@ import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.ArtifactVersionsCache;
 import org.codehaus.mojo.versions.api.Segment;
 
+import static java.util.Optional.empty;
 import static java.util.Optional.of;
-import static org.codehaus.mojo.versions.api.Segment.INCREMENTAL;
-import static org.codehaus.mojo.versions.api.Segment.MAJOR;
-import static org.codehaus.mojo.versions.api.Segment.MINOR;
-import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
+import static org.codehaus.mojo.versions.api.Segment.*;
 
 /**
  * Represents summary stats
@@ -67,13 +65,13 @@ public class OverviewStats {
             Collection<V> updates, ArtifactVersionsCache cache, boolean allowSnapshots) {
         OverviewStats stats = new OverviewStats();
         updates.forEach(details -> {
-            if (getNewestUpdate(cache, details, of(SUBINCREMENTAL), allowSnapshots) != null) {
+            if (getNewestUpdate(cache, details, of(INCREMENTAL), allowSnapshots) != null) {
                 stats.incrementAny();
-            } else if (getNewestUpdate(cache, details, of(INCREMENTAL), allowSnapshots) != null) {
-                stats.incrementIncremental();
             } else if (getNewestUpdate(cache, details, of(MINOR), allowSnapshots) != null) {
-                stats.incrementMinor();
+                stats.incrementIncremental();
             } else if (getNewestUpdate(cache, details, of(MAJOR), allowSnapshots) != null) {
+                stats.incrementMinor();
+            } else if (getNewestUpdate(cache, details, empty(), allowSnapshots) != null) {
                 stats.incrementMajor();
             } else {
                 stats.incrementUpToDate();
@@ -83,10 +81,10 @@ public class OverviewStats {
     }
 
     protected static <V extends AbstractVersionDetails> ArtifactVersion getNewestUpdate(
-            ArtifactVersionsCache cache, V details, Optional<Segment> segment, boolean allowSnapshots) {
+            ArtifactVersionsCache cache, V details, Optional<Segment> unchangedSegment, boolean allowSnapshots) {
         return cache != null
-                ? cache.get(details, segment, allowSnapshots)
-                : details.getNewestUpdate(segment, allowSnapshots);
+                ? cache.get(details, unchangedSegment, allowSnapshots)
+                : details.getNewestUpdate(unchangedSegment, allowSnapshots);
     }
 
     public int getMajor() {

@@ -30,6 +30,7 @@ import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.repository.RepositorySystem;
@@ -47,7 +48,10 @@ import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.mojo.versions.utils.SegmentUtils;
 
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
 import static org.apache.maven.shared.utils.StringUtils.isBlank;
+import static org.codehaus.mojo.versions.api.Segment.*;
 
 /**
  * Sets the parent version to the latest parent version.
@@ -212,8 +216,8 @@ public class UpdateParentMojo extends AbstractVersionsUpdaterMojo {
         }
 
         final ArtifactVersions versions = getHelper().lookupArtifactVersions(artifact, false);
-        Optional<Segment> unchangedSegment = SegmentUtils.determineUnchangedSegment(
-                allowMajorUpdates, allowMinorUpdates, allowIncrementalUpdates, getLog());
+        Optional<Segment> unchangedSegment = SegmentUtils.determineUnchangedSegment(allowMajorUpdates,
+                allowMinorUpdates, allowIncrementalUpdates, getLog());
 
         // currentVersion (set to parentVersion here) is not included in the version range for searching upgrades
         // unless we set allowDowngrade to true
