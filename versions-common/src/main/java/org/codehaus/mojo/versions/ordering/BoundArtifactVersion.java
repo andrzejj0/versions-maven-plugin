@@ -1,8 +1,5 @@
 package org.codehaus.mojo.versions.ordering;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
@@ -10,15 +7,20 @@ import org.codehaus.mojo.versions.api.Segment;
 import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
 import org.codehaus.plexus.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
 /**
- * <p>Represents an <b>immutable</b> artifact version with all segments <em>major</em> to the given segment
+ * <p>Represents an <b>immutable</b> upper bound artifact version
+ * where all segments <em>major or equal</em> to the given segment
  * held in place. It can be thought of as an artifact having +∞ as its upper bound
- * on all segments minor to the held segment.</p>
+ * on all segments minor or equal to the held segment.</p>
  * <p>For example:</p>
  * <p>A {@link BoundArtifactVersion} of {@code [1.2.3-2, INCREMENTAL]} can be seen as {@code 1.2.+∞}
  * and will be greater than all versions matching the {@code 1.2.*} pattern.</p>
  * <p>A {@link BoundArtifactVersion} of {@code [1.2.3-2, SUBINCREMENTAL]} will be greater
- *  * than all versions matching the {@code 1.2.3-2.*} pattern.</p>
+ *  * than all versions matching the {@code 1.2.3.*} pattern.</p>
  * <p>When compared to another artifact versions, this results with the other object
  * with the segment versions up to the held segment being equal,
  * always comparing lower than this object.</p>
@@ -27,26 +29,33 @@ import org.codehaus.plexus.util.StringUtils;
  */
 public class BoundArtifactVersion implements ArtifactVersion {
     /**
-     * Most major segment that can change, i.e. not held in place.
-     * All segments that are more major than this one are held in place.
+     * Least major segment that may not change
+     * All segments that are more major than this one are also held in place.
+     * If equal to {@code null}, no restrictions are in place, meaning that all version
+     * segments can change freely.
      */
-    private final Segment segment;
+    private final Segment unchangedSegment;
 
     private final ArtifactVersion comparable;
 
     /**
      * Constructs the instance given the version in a text format.
      * @param artifactVersion version in a text format
-     * @param segment most major segment that can change, i.e. <em>not</em> held in place
+     * @param unchangedSegment most major segment that may not change, may be {@code null} meaning no restrictions
      */
-    public BoundArtifactVersion(String artifactVersion, Segment segment) {
-        this.segment = segment;
+    public BoundArtifactVersion(String artifactVersion, Segment unchangedSegment) {
+        this.unchangedSegment = unchangedSegment;
+        comparable = createComparable(artifactVersion, unchangedSegment);
+    }
+
+    static ArtifactVersion createComparable(String artifactVersion, Segment unchangedSegment) {
+        final ArtifactVersion comparable;
         StringBuilder versionBuilder = new StringBuilder();
         String[] segments = tokens(artifactVersion);
         for (int segNr = 0;
                 segNr <= segments.length || segNr <= Segment.SUBINCREMENTAL.value();
                 segNr++, versionBuilder.append(".")) {
-            if (segNr < segment.value()) {
+            if (segNr <= Optional.ofNullable(unchangedSegment).map(Segment::value).orElse(-1)) {
                 versionBuilder.append(segNr < segments.length ? integerItemOrZero(segments[segNr]) : "0");
             } else {
                 versionBuilder.append(Integer.MAX_VALUE);
@@ -54,15 +63,16 @@ public class BoundArtifactVersion implements ArtifactVersion {
         }
         versionBuilder.append(Integer.MAX_VALUE);
         comparable = DefaultArtifactVersionCache.of(versionBuilder.toString());
+        return comparable;
     }
 
     /**
      * Constructs the instance given a {@link ArtifactVersion instance}
      * @param artifactVersion artifact version containing the segment version values
-     * @param segment most major segment that can change, i.e. <em>not</em> held in place
+     * @param unchangedSegment least major segment that may not change
      */
-    public BoundArtifactVersion(ArtifactVersion artifactVersion, Segment segment) {
-        this(artifactVersion.toString(), segment);
+    public BoundArtifactVersion(ArtifactVersion artifactVersion, Segment unchangedSegment) {
+        this(artifactVersion.toString(), unchangedSegment);
     }
 
     /**
@@ -108,8 +118,8 @@ public class BoundArtifactVersion implements ArtifactVersion {
      * All segments that are more major than this one are held in place.
      * @return segment that can change
      */
-    public Segment getSegment() {
-        return segment;
+    public Segment getUnchangedSegment() {
+        return unchangedSegment;
     }
 
     @Override
@@ -135,7 +145,7 @@ public class BoundArtifactVersion implements ArtifactVersion {
 
         return new EqualsBuilder()
                 .appendSuper(super.equals(o))
-                .append(getSegment(), that.getSegment())
+                .append(getUnchangedSegment(), that.getUnchangedSegment())
                 .append(comparable, that.comparable)
                 .isEquals();
     }
@@ -144,7 +154,7 @@ public class BoundArtifactVersion implements ArtifactVersion {
     public int hashCode() {
         return new HashCodeBuilder(17, 37)
                 .appendSuper(super.hashCode())
-                .append(getSegment())
+                .append(getUnchangedSegment())
                 .append(comparable)
                 .toHashCode();
     }

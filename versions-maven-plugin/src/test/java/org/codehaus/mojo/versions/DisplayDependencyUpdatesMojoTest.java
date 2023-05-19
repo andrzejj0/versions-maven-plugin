@@ -145,7 +145,6 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     null) {
                 {
                     setProject(createProject());
-                    setVariableValueToObject(this, "allowAnyUpdates", false);
                     setVariableValueToObject(this, "allowMajorUpdates", false);
                     setVariableValueToObject(this, "processDependencies", true);
                     setVariableValueToObject(this, "dependencyIncludes", singletonList(WildcardMatcher.WILDCARD));
@@ -181,7 +180,6 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     null) {
                 {
                     setProject(createProject());
-                    setVariableValueToObject(this, "allowAnyUpdates", false);
                     setVariableValueToObject(this, "allowMajorUpdates", false);
                     setVariableValueToObject(this, "processDependencies", true);
                     setVariableValueToObject(this, "dependencyIncludes", singletonList(WildcardMatcher.WILDCARD));
@@ -214,7 +212,6 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     null) {
                 {
                     setProject(createProject());
-                    setVariableValueToObject(this, "allowAnyUpdates", false);
                     setVariableValueToObject(this, "allowMinorUpdates", false);
                     setVariableValueToObject(this, "processDependencies", true);
                     setVariableValueToObject(this, "dependencyIncludes", singletonList(WildcardMatcher.WILDCARD));
@@ -248,7 +245,6 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     null) {
                 {
                     setProject(createProject());
-                    setVariableValueToObject(this, "allowAnyUpdates", false);
                     setVariableValueToObject(this, "allowIncrementalUpdates", false);
                     setVariableValueToObject(this, "processDependencies", true);
                     setVariableValueToObject(this, "dependencyIncludes", singletonList(WildcardMatcher.WILDCARD));
@@ -285,7 +281,6 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     null) {
                 {
                     setProject(createProject());
-                    setVariableValueToObject(this, "allowAnyUpdates", false);
                     setVariableValueToObject(this, "allowMinorUpdates", false);
                     setVariableValueToObject(this, "processDependencies", true);
                     setVariableValueToObject(this, "dependencyIncludes", singletonList(WildcardMatcher.WILDCARD));
@@ -394,71 +389,6 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
             String output = String.join("", Files.readAllLines(tempFile.getPath()));
 
             assertThat(output, containsString("1.0.1-SNAPSHOT"));
-        }
-    }
-
-    /**
-     * With {@code allowMajorUpdates}, {@code allowMinorUpdates}, or {@code allowIncrementalUpdates} all equal
-     * {@code true}, {@code allowAnyUpdates} should be respected.
-     */
-    @Test
-    public void testAllowAnyUpdatesTrue() throws Exception {
-        try (CloseableTempFile tempFile = new CloseableTempFile("display-dependency-updates")) {
-            new DisplayDependencyUpdatesMojo(
-                    mockRepositorySystem(),
-                    mockAetherRepositorySystem(new HashMap<String, String[]>() {
-                        {
-                            put("default-dependency", new String[] {"2.0.0", "1.0.0"});
-                        }
-                    }),
-                    null,
-                    null) {
-                {
-                    setProject(createProject());
-                    setVariableValueToObject(this, "processDependencies", true);
-                    setVariableValueToObject(this, "dependencyIncludes", singletonList(WildcardMatcher.WILDCARD));
-                    setVariableValueToObject(this, "dependencyExcludes", emptyList());
-                    this.outputFile = tempFile.getPath().toFile();
-                    setPluginContext(new HashMap<>());
-                    session = mockMavenSession();
-                }
-            }.execute();
-
-            String output = String.join("", Files.readAllLines(tempFile.getPath()));
-            assertThat(output, containsString("2.0.0"));
-        }
-    }
-
-    /**
-     * Setting {@code allowMajorUpdates}, {@code allowMinorUpdates}, or {@code allowIncrementalUpdates} to {@code false}
-     * should also set {@code allowAnyUpdates} to {@code false}
-     */
-    @Test
-    public void testAllowAnyUpdatesFalseIfOtherAreSet() throws Exception {
-        try (CloseableTempFile tempFile = new CloseableTempFile("display-dependency-updates")) {
-            new DisplayDependencyUpdatesMojo(
-                    mockRepositorySystem(),
-                    mockAetherRepositorySystem(new HashMap<String, String[]>() {
-                        {
-                            put("default-dependency", new String[] {"2.0.0", "1.0.0"});
-                        }
-                    }),
-                    null,
-                    null) {
-                {
-                    setProject(createProject());
-                    setVariableValueToObject(this, "processDependencies", true);
-                    setVariableValueToObject(this, "dependencyIncludes", singletonList(WildcardMatcher.WILDCARD));
-                    setVariableValueToObject(this, "dependencyExcludes", emptyList());
-                    this.outputFile = tempFile.getPath().toFile();
-                    setVariableValueToObject(this, "allowMajorUpdates", false);
-                    setPluginContext(new HashMap<>());
-                    session = mockMavenSession();
-                }
-            }.execute();
-
-            String output = String.join("", Files.readAllLines(tempFile.getPath()));
-            assertThat(output, not(containsString("2.0.0")));
         }
     }
 }

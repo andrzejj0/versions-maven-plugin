@@ -331,7 +331,8 @@ public interface VersionDetails {
 
     /**
      * <p>Returns a {@linkplain Restriction} object for computing version <em>upgrades</em>
-     * with the given segment allowing updates, with all more major segments locked in place.</p>
+     * with the given segment being the least major segment to be left unchanged,
+     * with all more major segments locked in place.</p>
      * <p>The resulting restriction could be thought of as one
      * retaining the versions on positions up to the held position,
      * the position right after the position held in place will be incremented by one,
@@ -340,12 +341,13 @@ public interface VersionDetails {
      * <p>This will allow matching the required versions while not matching versions which are considered
      * inferior than the zeroth version, i.e. versions with a qualifier.</p>
      *
-     * @param scope most major segment where updates are allowed Optional.empty() for no restriction
+     * @param unchangedSegment least major segment where updates are allowed; {@code Optional.empty()}
+     *                        for no restriction
      * @return {@linkplain Restriction} object based on the arguments
      * @throws InvalidSegmentException if the requested segment is outside the bounds (less than 1 or greater than
      * the segment count)
      */
-    Restriction restrictionFor(Optional<Segment> scope) throws InvalidSegmentException;
+    Restriction restrictionForUnchangedSegment(Optional<Segment> unchangedSegment) throws InvalidSegmentException;
 
     /**
      * Returns the {@link Restriction} objects for a segemnt scope which is to be <b>ignored</b>.

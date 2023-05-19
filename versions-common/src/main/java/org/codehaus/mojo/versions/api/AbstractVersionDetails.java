@@ -69,7 +69,7 @@ public abstract class AbstractVersionDetails implements VersionDetails {
     protected AbstractVersionDetails() {}
 
     @Override
-    public Restriction restrictionFor(Optional<Segment> scope) throws InvalidSegmentException {
+    public Restriction restrictionForUnchangedSegment(Optional<Segment> unchangedSegment) throws InvalidSegmentException {
         // one range spec can have multiple restrictions, and multiple 'lower bound', we want the highest one.
         // [1.0,2.0),[3.0,4.0) -> 3.0
         ArtifactVersion highestLowerBound = currentVersion;
@@ -87,13 +87,13 @@ public abstract class AbstractVersionDetails implements VersionDetails {
         }
 
         final ArtifactVersion currentVersion = highestLowerBound;
-        ArtifactVersion nextVersion = scope.filter(s -> s.isMajorTo(SUBINCREMENTAL))
+        ArtifactVersion nextVersion = unchangedSegment.filter(s -> s.isMajorTo(SUBINCREMENTAL))
                 .map(s -> (ArtifactVersion) new BoundArtifactVersion(currentVersion, Segment.of(s.value() + 1)))
                 .orElse(currentVersion);
         return new Restriction(
                 nextVersion,
                 false,
-                scope.filter(MAJOR::isMajorTo)
+                unchangedSegment.filter(MAJOR::isMajorTo)
                         .map(s -> (ArtifactVersion) new BoundArtifactVersion(currentVersion, s))
                         .orElse(null),
                 false);
@@ -267,7 +267,7 @@ public abstract class AbstractVersionDetails implements VersionDetails {
     public final ArtifactVersion getNewestUpdate(
             ArtifactVersion currentVersion, Optional<Segment> updateScope, boolean includeSnapshots) {
         try {
-            return getNewestVersion(restrictionFor(updateScope), includeSnapshots);
+            return getNewestVersion(restrictionForUnchangedSegment(updateScope), includeSnapshots);
         } catch (InvalidSegmentException e) {
             return null;
         }
@@ -277,7 +277,7 @@ public abstract class AbstractVersionDetails implements VersionDetails {
     public final ArtifactVersion[] getAllUpdates(
             ArtifactVersion currentVersion, Optional<Segment> updateScope, boolean includeSnapshots) {
         try {
-            return getVersions(restrictionFor(updateScope), includeSnapshots);
+            return getVersions(restrictionForUnchangedSegment(updateScope), includeSnapshots);
         } catch (InvalidSegmentException e) {
             return null;
         }
@@ -435,7 +435,7 @@ public abstract class AbstractVersionDetails implements VersionDetails {
     private Stream<ArtifactVersion> getArtifactVersionStream(Optional<Segment> updateScope, boolean includeSnapshots) {
         if (isCurrentVersionDefined()) {
             try {
-                Restriction restriction = restrictionFor(updateScope);
+                Restriction restriction = restrictionForUnchangedSegment(updateScope);
 
                 return Arrays.stream(getVersions(includeSnapshots))
                         .filter(candidate -> isVersionInRestriction(restriction, candidate));

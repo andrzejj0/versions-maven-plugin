@@ -206,9 +206,6 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
     /**
      * Whether to allow the major version number to be changed.
      *
-     * <p><b>Note: {@code false} also implies {@linkplain #allowAnyUpdates}
-     * to be {@code false}</b></p>
-     *
      * @since 2.5
      */
     @Parameter(property = "allowMajorUpdates", defaultValue = "true")
@@ -217,8 +214,8 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
     /**
      * <p>Whether to allow the minor version number to be changed.</p>
      *
-     * <p><b>Note: {@code false} also implies {@linkplain #allowAnyUpdates}
-     * and {@linkplain #allowMajorUpdates} to be {@code false}</b></p>
+     * <p><b>Note: {@code false} also implies {@linkplain #allowMajorUpdates}
+     * to be {@code false}</b></p>
      *
      * @since 2.5
      */
@@ -228,31 +225,13 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
     /**
      * <p>Whether to allow the incremental version number to be changed.</p>
      *
-     * <p><b>Note: {@code false} also implies {@linkplain #allowAnyUpdates},
-     * {@linkplain #allowMajorUpdates}, and {@linkplain #allowMinorUpdates}
-     * to be {@code false}</b></p>
+     * <p><b>Note: {@code false} also implies {@linkplain #allowMajorUpdates}
+     * and {@linkplain #allowMinorUpdates} to be {@code false}</b></p>
      *
      * @since 2.5
      */
     @Parameter(property = "allowIncrementalUpdates", defaultValue = "true")
     private boolean allowIncrementalUpdates = true;
-
-    /**
-     * <p>Ignored -- largely replaced by {@linkplain #allowMajorUpdates},
-     * {@linkplain #allowMinorUpdates} and {@linkplain #allowIncrementalUpdates},
-     * which are equal to {@code true} by default.</p>
-     *
-     * <p><b>Please note: Prior to version 2.16.0, leaving this parameter at its default
-     * value ({@code true}) would mean that the plugin would <u>ignore</u>
-     * {@linkplain #allowMajorUpdates}, {@linkplain #allowMinorUpdates}, and {@linkplain #allowIncrementalUpdates},
-     * which confused many users.</b></p>
-     *
-     * @since 2.5
-     * @deprecated This will be removed with version 3.0.0
-     */
-    @Deprecated
-    @Parameter(property = "allowAnyUpdates", defaultValue = "true")
-    private boolean allowAnyUpdates = true;
 
     /**
      * Whether to show additional information such as dependencies that do not need updating. Defaults to false.
@@ -484,11 +463,6 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
         validateGAVList(pluginDependencyExcludes, 3, "pluginDependencyExcludes");
         validateGAVList(pluginManagementDependencyIncludes, 3, "pluginManagementDependencyIncludes");
         validateGAVList(pluginManagementDependencyExcludes, 3, "pluginManagementDependencyExcludes");
-        if (getLog() != null
-                && allowAnyUpdates
-                && !(allowMajorUpdates && allowMinorUpdates && allowIncrementalUpdates)) {
-            getLog().warn("Assuming allowAnyUpdates false because one or more other \"allow\" switches is false.");
-        }
     }
 
     /**
