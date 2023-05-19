@@ -320,7 +320,7 @@ public class PropertyVersions extends AbstractVersionDetails {
                 ? null
                 : upperBoundSegment
                         .map(s -> (ArtifactVersion) new BoundArtifactVersion(
-                                currentVersion, s.isMajorTo(SUBINCREMENTAL) ? Segment.of(s.value() + 1) : s))
+                                currentVersion, s.isGreaterThan(SUBINCREMENTAL) ? Segment.of(s.value() + 1) : s))
                         .orElse(null);
         if (helper.getLog().isDebugEnabled()) {
             helper.getLog().debug("Property ${" + property.getName() + "}: upperBound is: " + upperBound);

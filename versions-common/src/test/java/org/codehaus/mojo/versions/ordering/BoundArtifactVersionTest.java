@@ -63,7 +63,6 @@ public class BoundArtifactVersionTest {
         assertThat(comparable.toString(), matchesPattern("^\\Q1.2.3.4\\E.*"));
     }
 
-
     @Test
     public void testNullLockedGreaterThanNextMajor() {
         BoundArtifactVersion bound = new BoundArtifactVersion("1.2.3", null);

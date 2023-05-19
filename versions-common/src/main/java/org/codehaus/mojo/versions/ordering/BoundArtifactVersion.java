@@ -1,15 +1,15 @@
 package org.codehaus.mojo.versions.ordering;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.codehaus.mojo.versions.api.Segment;
 import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
 import org.codehaus.plexus.util.StringUtils;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 /**
  * <p>Represents an <b>immutable</b> upper bound artifact version
@@ -55,7 +55,8 @@ public class BoundArtifactVersion implements ArtifactVersion {
         for (int segNr = 0;
                 segNr <= segments.length || segNr <= Segment.SUBINCREMENTAL.value();
                 segNr++, versionBuilder.append(".")) {
-            if (segNr <= Optional.ofNullable(unchangedSegment).map(Segment::value).orElse(-1)) {
+            if (segNr
+                    <= Optional.ofNullable(unchangedSegment).map(Segment::value).orElse(-1)) {
                 versionBuilder.append(segNr < segments.length ? integerItemOrZero(segments[segNr]) : "0");
             } else {
                 versionBuilder.append(Integer.MAX_VALUE);
@@ -114,9 +115,9 @@ public class BoundArtifactVersion implements ArtifactVersion {
     }
 
     /**
-     * Returns the most major segment that can change.
-     * All segments that are more major than this one are held in place.
-     * @return segment that can change
+     * Returns the least major segment that may not change.
+     * All segments that are more or equally major than this one are held in place.
+     * @return segment that is held in place change
      */
     public Segment getUnchangedSegment() {
         return unchangedSegment;
@@ -145,7 +146,7 @@ public class BoundArtifactVersion implements ArtifactVersion {
 
         return new EqualsBuilder()
                 .appendSuper(super.equals(o))
-                .append(getUnchangedSegment(), that.getUnchangedSegment())
+                .append(unchangedSegment, that.unchangedSegment)
                 .append(comparable, that.comparable)
                 .isEquals();
     }
@@ -154,7 +155,7 @@ public class BoundArtifactVersion implements ArtifactVersion {
     public int hashCode() {
         return new HashCodeBuilder(17, 37)
                 .appendSuper(super.hashCode())
-                .append(getUnchangedSegment())
+                .append(unchangedSegment)
                 .append(comparable)
                 .toHashCode();
     }

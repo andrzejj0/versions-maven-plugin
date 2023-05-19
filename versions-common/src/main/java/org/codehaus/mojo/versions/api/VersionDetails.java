@@ -199,7 +199,7 @@ public interface VersionDetails {
      * should be included.
      *
      * @param versionString current version
-     * @param upperBoundSegment the upper bound segment; empty() means no upper bound
+     * @param unchangedSegment the upper bound segment; empty() means no upper bound
      * @param includeSnapshots whether snapshot versions should be included
      * @param allowDowngrade whether to allow downgrading if the current version is a snapshots and snapshots
      *                       are disallowed
@@ -208,7 +208,7 @@ public interface VersionDetails {
      * the segment count)
      */
     Optional<ArtifactVersion> getNewestVersion(
-            String versionString, Optional<Segment> upperBoundSegment, boolean includeSnapshots, boolean allowDowngrade)
+            String versionString, Optional<Segment> unchangedSegment, boolean includeSnapshots, boolean allowDowngrade)
             throws InvalidSegmentException;
 
     /**
@@ -216,7 +216,7 @@ public interface VersionDetails {
      * <code>null</code> if no such version exists.
      *
      * @param currentVersion the lower bound or <code>null</code> if the lower limit is unbounded.
-     * @param updateScope the update scope to include.
+     * @param unchangedSegment the update scope to include.
      * @param includeSnapshots <code>true</code> if snapshots are to be included.
      * @return the newest version after currentVersion within the specified update scope or <code>null</code> if no
      *         version is available.
@@ -224,7 +224,7 @@ public interface VersionDetails {
      * @since 1.0-beta-1
      */
     ArtifactVersion getNewestUpdate(
-            ArtifactVersion currentVersion, Optional<Segment> updateScope, boolean includeSnapshots)
+            ArtifactVersion currentVersion, Optional<Segment> unchangedSegment, boolean includeSnapshots)
             throws InvalidSegmentException;
 
     /**
@@ -242,7 +242,7 @@ public interface VersionDetails {
      * should be included.
      *
      * @param version           current version
-     * @param upperBoundSegment the upper bound segment; empty() means no upper bound
+     * @param unchangedSegment the upper bound segment; empty() means no upper bound
      * @param includeSnapshots  whether snapshot versions should be included
      * @return array of newer versions fulfilling the criteria
      * @throws InvalidSegmentException if the requested segment is outside the bounds (less than 1 or greater than
@@ -250,7 +250,7 @@ public interface VersionDetails {
      * @deprecated please use {@link AbstractVersionDetails#getNewerVersions(String, Optional, boolean, boolean)},
      * boolean, boolean)} instead
      */
-    ArtifactVersion[] getNewerVersions(String version, Optional<Segment> upperBoundSegment, boolean includeSnapshots)
+    ArtifactVersion[] getNewerVersions(String version, Optional<Segment> unchangedSegment, boolean includeSnapshots)
             throws InvalidSegmentException;
 
     /**
@@ -258,7 +258,7 @@ public interface VersionDetails {
      * should be included.
      *
      * @param versionString current version
-     * @param upperBoundSegment the upper bound segment; empty() means no upper bound
+     * @param unchangedSegment the upper bound segment; empty() means no upper bound
      * @param includeSnapshots whether snapshot versions should be included
      * @param allowDowngrade whether to allow downgrading if the current version is a snapshots and snapshots
      *                       are disallowed
@@ -267,47 +267,47 @@ public interface VersionDetails {
      * the segment count)
      */
     ArtifactVersion[] getNewerVersions(
-            String versionString, Optional<Segment> upperBoundSegment, boolean includeSnapshots, boolean allowDowngrade)
+            String versionString, Optional<Segment> unchangedSegment, boolean includeSnapshots, boolean allowDowngrade)
             throws InvalidSegmentException;
 
     /**
      * Returns the all versions newer than the specified current version, but within the specified update scope.
      *
      * @param currentVersion the lower bound or <code>null</code> if the lower limit is unbounded.
-     * @param updateScope the update scope to include.
+     * @param unchangedSegment the update scope to include.
      * @param includeSnapshots <code>true</code> if snapshots are to be included.
      * @return the all versions after currentVersion within the specified update scope.
      * @throws InvalidSegmentException thrown if the updateScope is greater than the number of segments
      * @since 1.0-beta-1
      */
     ArtifactVersion[] getAllUpdates(
-            ArtifactVersion currentVersion, Optional<Segment> updateScope, boolean includeSnapshots)
+            ArtifactVersion currentVersion, Optional<Segment> unchangedSegment, boolean includeSnapshots)
             throws InvalidSegmentException;
 
     /**
      * Returns the newest version newer than the specified current version, but within the specified update scope or
      * <code>null</code> if no such version exists.
      *
-     * @param updateScope the update scope to include.
+     * @param unchangedSegment the update scope to include.
      * @param includeSnapshots <code>true</code> if snapshots are to be included.
      * @return the newest version after currentVersion within the specified update scope or <code>null</code> if no
      *         version is available.
      * @throws InvalidSegmentException thrown if the updateScope is greater than the number of segments
      * @since 1.0-beta-1
      */
-    ArtifactVersion getNewestUpdate(Optional<Segment> updateScope, boolean includeSnapshots)
+    ArtifactVersion getNewestUpdate(Optional<Segment> unchangedSegment, boolean includeSnapshots)
             throws InvalidSegmentException;
 
     /**
      * Returns the all versions newer than the specified current version, but within the specified update scope.
      *
-     * @param updateScope the update scope to include.
+     * @param unchangedSegment the update scope to include.
      * @param includeSnapshots {@code true} if snapshots are to be included.
      * @return the all versions after currentVersion within the specified update scope.
      * @throws InvalidSegmentException thrown if the updateScope is greater than the number of segments
      * @since 1.0-beta-1
      */
-    ArtifactVersion[] getAllUpdates(Optional<Segment> updateScope, boolean includeSnapshots)
+    ArtifactVersion[] getAllUpdates(Optional<Segment> unchangedSegment, boolean includeSnapshots)
             throws InvalidSegmentException;
 
     /**

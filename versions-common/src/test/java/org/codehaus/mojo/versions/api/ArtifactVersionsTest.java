@@ -182,7 +182,7 @@ public class ArtifactVersionsTest {
                 new MavenVersionComparator());
 
         assertThat(instance.getNewestUpdate(of(SUBINCREMENTAL), false).toString(), is("1.1.0-2"));
-        assertThat(instance.getNewestUpdate(of(INCREMENTAL), false).toString(), is("1.1.3"));
+        assertThat(instance.getNewestUpdate(of(MINOR), false).toString(), is("1.1.3"));
     }
 
     @Test
