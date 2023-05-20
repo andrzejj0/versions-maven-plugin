@@ -1,22 +1,18 @@
 package org.codehaus.mojo.versions.api;
 
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Copyright MojoHaus and Contributors
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 
 import java.util.*;
@@ -77,13 +73,13 @@ public abstract class AbstractVersionDetails implements VersionDetails {
         }
 
         final ArtifactVersion currentVersion = highestLowerBound;
-        ArtifactVersion nextVersion = unchangedSegment
-                .filter(s -> s.isGreaterThan(SUBINCREMENTAL))
-                .map(Segment::ofLesserThan)
-                .map(s -> (ArtifactVersion) new BoundArtifactVersion(currentVersion, s))
-                .orElse(currentVersion);
+//        ArtifactVersion nextVersion = unchangedSegment
+//                .filter(s -> s.isGreaterThan(SUBINCREMENTAL))
+//                .map(Segment::ofLesserThan)
+//                .map(s -> (ArtifactVersion) new BoundArtifactVersion(currentVersion, s))
+//                .orElse(currentVersion);
         return new Restriction(
-                nextVersion,
+                currentVersion,
                 false,
                 unchangedSegment
                         .map(s -> (ArtifactVersion) new BoundArtifactVersion(currentVersion, s))
@@ -211,8 +207,9 @@ public abstract class AbstractVersionDetails implements VersionDetails {
             throws InvalidSegmentException {
         ArtifactVersion currentVersion = DefaultArtifactVersionCache.of(versionString);
         ArtifactVersion lowerBound = allowDowngrade
-                ? getLowerBound(currentVersion, unchangedSegment)
-                        .map(DefaultArtifactVersionCache::of)
+                ? unchangedSegment
+                .map(s -> s.isGreaterThan(SUBINCREMENTAL) ? Segment.ofLesserThan(s) : s)
+                .map(s -> (ArtifactVersion) new BoundArtifactVersion(currentVersion, s))
                         .orElse(null)
                 : currentVersion;
         ArtifactVersion upperBound = unchangedSegment
@@ -375,13 +372,13 @@ public abstract class AbstractVersionDetails implements VersionDetails {
     /**
      * Returns the latest version newer than the specified current version, and within the specified update scope,
      * or {@code null} if no such version exists.
-     * @param updateScope the scope of updates to include.
+     * @param unchangedSegment the segment which must remain unchanged.
      * @param includeSnapshots whether snapshots should be included
      * @return the newest version after currentVersion within the specified update scope,
      *         or <code>null</code> if no version is available.
      */
-    public final ArtifactVersion getReportNewestUpdate(Optional<Segment> updateScope, boolean includeSnapshots) {
-        return getArtifactVersionStream(updateScope, includeSnapshots)
+    public final ArtifactVersion getReportNewestUpdate(Optional<Segment> unchangedSegment, boolean includeSnapshots) {
+        return getArtifactVersionStream(unchangedSegment, includeSnapshots)
                 .min(Collections.reverseOrder(getVersionComparator()))
                 .orElse(null);
     }
@@ -427,14 +424,14 @@ public abstract class AbstractVersionDetails implements VersionDetails {
 
     /**
      * Returns all versions newer than the specified current version, and within the specified update scope.
-     * @param updateScope the scope of updates to include.
+     * @param unchangedSegment segment that must remain unchanged
      * @param includeSnapshots whether snapshots should be included
      * @return all versions after currentVersion within the specified update scope.
      */
-    private Stream<ArtifactVersion> getArtifactVersionStream(Optional<Segment> updateScope, boolean includeSnapshots) {
+    private Stream<ArtifactVersion> getArtifactVersionStream(Optional<Segment> unchangedSegment, boolean includeSnapshots) {
         if (isCurrentVersionDefined()) {
             try {
-                Restriction restriction = restrictionForUnchangedSegment(updateScope);
+                Restriction restriction = restrictionForUnchangedSegment(unchangedSegment);
 
                 return Arrays.stream(getVersions(includeSnapshots))
                         .filter(candidate -> isVersionInRestriction(restriction, candidate));

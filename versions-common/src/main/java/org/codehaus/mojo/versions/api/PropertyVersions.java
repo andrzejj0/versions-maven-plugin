@@ -19,6 +19,8 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
+import java.util.*;
+
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.versioning.*;
@@ -27,8 +29,6 @@ import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.ordering.VersionComparator;
 import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
-
-import java.util.*;
 
 import static java.util.Optional.empty;
 
@@ -333,8 +333,8 @@ public class PropertyVersions extends AbstractVersionDetails {
                     }
                 }
             }
-            if (fromReactor != null && (result != null || !String.valueOf(currentVersion)
-                    .equals(fromReactor.toString()))) {
+            if (fromReactor != null
+                    && (result != null || !String.valueOf(currentVersion).equals(fromReactor.toString()))) {
                 if (property.isPreferReactor()) {
                     helper.getLog()
                             .debug("Property ${" + property.getName()

@@ -51,15 +51,15 @@ public class ArtifactVersionsCache {
      * @param <V> concrete implementation of {@linkplain AbstractVersionDetails}
      * @param <R> return type of the cached function
      * @param artifactVersions {@linkplain ArtifactVersions} object referring to the given dependency
-     * @param updateScope      update scope
+     * @param unchangedSegment      update scope
      * @param allowSnapshots   whether snapshots should be included
      * @return last retrieved update information
      */
     @SuppressWarnings("unchecked")
     public <V extends AbstractVersionDetails, R> R get(
-            V artifactVersions, Optional<Segment> updateScope, boolean allowSnapshots) {
+            V artifactVersions, Optional<Segment> unchangedSegment, boolean allowSnapshots) {
         return (R) updateCache.computeIfAbsent(
-                Triple.of(artifactVersions, updateScope, allowSnapshots),
+                Triple.of(artifactVersions, unchangedSegment, allowSnapshots),
                 triple -> cachedFunction.apply(triple.getLeft(), triple.getMiddle(), triple.getRight()));
     }
 }

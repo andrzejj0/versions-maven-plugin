@@ -38,9 +38,7 @@ import static org.codehaus.mojo.versions.api.Segment.MAJOR;
 import static org.codehaus.mojo.versions.api.Segment.MINOR;
 import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayContaining;
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -202,7 +200,7 @@ public class ArtifactVersionsTest {
     public void testAllVersionsForIgnoreScopeSubIncremental() {
         ArtifactVersion[] versions = versions("1.0.0", "1.0.0-1", "1.0.1");
         ArtifactVersions instance = new ArtifactVersions(
-                new DefaultArtifact("default-group", "dummy-api", "1.0.0", "foo", "bar", "jar", null),
+                createArtifact(),
                 Arrays.asList(versions),
                 new MavenVersionComparator());
         Restriction restriction = instance.restrictionForIgnoreScope(of(SUBINCREMENTAL));
@@ -211,24 +209,28 @@ public class ArtifactVersionsTest {
         assertThat(filteredVersions, arrayContaining(DefaultArtifactVersionCache.of("1.0.1")));
     }
 
+    private static DefaultArtifact createArtifact() {
+        return new DefaultArtifact("default-group", "dummy-api", "1.0.0", "foo", "bar", "jar", null);
+    }
+
     @Test
     public void testAllVersionsForIgnoreScopeIncremental() {
         ArtifactVersion[] versions = versions("1.0.0", "1.0.0-1", "1.0.1", "1.1.0");
         ArtifactVersions instance = new ArtifactVersions(
-                new DefaultArtifact("default-group", "dummy-api", "1.0.0", "foo", "bar", "jar", null),
+                createArtifact(),
                 Arrays.asList(versions),
                 new MavenVersionComparator());
         Restriction restriction = instance.restrictionForIgnoreScope(of(INCREMENTAL));
         ArtifactVersion[] filteredVersions = instance.getVersions(restriction, false);
-        assertThat(filteredVersions, arrayWithSize(1));
-        assertThat(filteredVersions, arrayContaining(DefaultArtifactVersionCache.of("1.1.0")));
+        assertThat(filteredVersions, arrayContaining(versions("1.1.0")));
+        assertThat(filteredVersions, not(arrayContaining(versions("1.0.0-1", "1.0.1"))));
     }
 
     @Test
     public void testAllVersionsForIgnoreScopeMinor() {
         ArtifactVersion[] versions = versions("1.0.0", "1.0.0-1", "1.0.1", "1.1.0", "2.0.0");
         ArtifactVersions instance = new ArtifactVersions(
-                new DefaultArtifact("default-group", "dummy-api", "1.0.0", "foo", "bar", "jar", null),
+                createArtifact(),
                 Arrays.asList(versions),
                 new MavenVersionComparator());
         Restriction restriction = instance.restrictionForIgnoreScope(of(MINOR));
@@ -241,11 +243,23 @@ public class ArtifactVersionsTest {
     public void testAllVersionsForIgnoreScopeMajor() {
         ArtifactVersion[] versions = versions("1.0.0", "1.0.0-1", "1.0.1", "1.1.0", "2.0.0");
         ArtifactVersions instance = new ArtifactVersions(
-                new DefaultArtifact("default-group", "dummy-api", "1.0.0", "foo", "bar", "jar", null),
+                createArtifact(),
                 Arrays.asList(versions),
                 new MavenVersionComparator());
         Restriction restriction = instance.restrictionForIgnoreScope(of(MAJOR));
         ArtifactVersion[] filteredVersions = instance.getVersions(restriction, false);
         assertThat(filteredVersions, arrayWithSize(0));
     }
+
+    @Test
+    public void testRestrictionForUnchangedSegmentMajor() throws InvalidSegmentException {
+        ArtifactVersion[] versions = versions("1.0.0", "1.0.0-1", "1.0.1", "1.1.0", "2.0.0");
+        ArtifactVersions instance = new ArtifactVersions(createArtifact(), Arrays.asList(versions),
+                new MavenVersionComparator());
+        Restriction restriction = instance.restrictionForUnchangedSegment(of(MAJOR));
+        ArtifactVersion[] filteredVersions = instance.getVersions(restriction, false);
+        assertThat(filteredVersions, arrayContaining(versions("1.0.0-1", "1.0.1", "1.1.0")));
+        assertThat(filteredVersions, not(arrayContaining(DefaultArtifactVersionCache.of("2.0.0"))));
+    }
+
 }
