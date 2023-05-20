@@ -43,10 +43,8 @@ import org.codehaus.mojo.versions.utils.SegmentUtils;
 import org.codehaus.plexus.util.StringUtils;
 
 import static java.util.Collections.emptySet;
-import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static org.apache.commons.lang3.StringUtils.countMatches;
-import static org.codehaus.mojo.versions.api.Segment.MAJOR;
 import static org.codehaus.mojo.versions.filtering.DependencyFilter.filterDependencies;
 import static org.codehaus.mojo.versions.utils.MavenProjectUtils.*;
 
@@ -210,9 +208,6 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
     /**
      * Whether to allow the major version number to be changed.
      *
-     * <p><b>Note: {@code false} also implies {@linkplain #allowAnyUpdates}
-     * to be {@code false}</b></p>
-     *
      * @since 2.5
      */
     @Parameter(property = "allowMajorUpdates", defaultValue = "true")
@@ -221,8 +216,7 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
     /**
      * <p>Whether to allow the minor version number to be changed.</p>
      *
-     * <p><b>Note: {@code false} also implies {@linkplain #allowAnyUpdates}
-     * and {@linkplain #allowMajorUpdates} to be {@code false}</b></p>
+     * <p><b>Note: {@code false} also implies {@linkplain #allowMajorUpdates} to be {@code false}</b></p>
      *
      * @since 2.5
      */
@@ -232,31 +226,13 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
     /**
      * <p>Whether to allow the incremental version number to be changed.</p>
      *
-     * <p><b>Note: {@code false} also implies {@linkplain #allowAnyUpdates},
-     * {@linkplain #allowMajorUpdates}, and {@linkplain #allowMinorUpdates}
-     * to be {@code false}</b></p>
+     * <p><b>Note: {@code false} also implies {@linkplain #allowMajorUpdates}
+     * and {@linkplain #allowMinorUpdates} to be {@code false}</b></p>
      *
      * @since 2.5
      */
     @Parameter(property = "allowIncrementalUpdates", defaultValue = "true")
     private boolean allowIncrementalUpdates = true;
-
-    /**
-     * <p>Ignored -- largely replaced by {@linkplain #allowMajorUpdates},
-     * {@linkplain #allowMinorUpdates} and {@linkplain #allowIncrementalUpdates},
-     * which are equal to {@code true} by default.</p>
-     *
-     * <p><b>Please note: Prior to version 2.16.0, leaving this parameter at its default
-     * value ({@code true}) would mean that the plugin would <u>ignore</u>
-     * {@linkplain #allowMajorUpdates}, {@linkplain #allowMinorUpdates}, and {@linkplain #allowIncrementalUpdates},
-     * which confused many users.</b></p>
-     *
-     * @since 2.5
-     * @deprecated This will be removed with version 3.0.0
-     */
-    @Deprecated
-    @Parameter(property = "allowAnyUpdates", defaultValue = "true")
-    private boolean allowAnyUpdates = true;
 
     /**
      * Whether to show additional information such as dependencies that do not need updating. Defaults to false.
@@ -488,11 +464,6 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
         validateGAVList(pluginDependencyExcludes, 3, "pluginDependencyExcludes");
         validateGAVList(pluginManagementDependencyIncludes, 3, "pluginManagementDependencyIncludes");
         validateGAVList(pluginManagementDependencyExcludes, 3, "pluginManagementDependencyExcludes");
-        if (getLog() != null
-                && allowAnyUpdates
-                && !(allowMajorUpdates && allowMinorUpdates && allowIncrementalUpdates)) {
-            getLog().warn("Assuming allowAnyUpdates false because one or more other \"allow\" switches is false.");
-        }
     }
 
     /**
@@ -509,15 +480,6 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
         }
     }
 
-    private Optional<Segment> calculateUpdateScope() {
-        return allowMajorUpdates && allowMinorUpdates && allowIncrementalUpdates
-                ? empty()
-                : of(SegmentUtils.determineUnchangedSegment(
-                                allowMajorUpdates, allowMinorUpdates, allowIncrementalUpdates, getLog())
-                        .map(s -> Segment.of(s.value() + 1))
-                        .orElse(MAJOR));
-    }
-
     private void logUpdates(Map<Dependency, ArtifactVersions> updates, String section) {
         List<String> withUpdates = new ArrayList<>();
         List<String> usingCurrent = new ArrayList<>();
@@ -525,16 +487,18 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
             String left = "  " + ArtifactUtils.versionlessKey(versions.getArtifact()) + " ";
             final String current;
             ArtifactVersion latest;
+            Segment updateScope = SegmentUtils.determineUpdateScope(
+                    allowMajorUpdates, allowMinorUpdates, allowIncrementalUpdates, getLog());
             if (versions.isCurrentVersionDefined()) {
                 current = versions.getCurrentVersion().toString();
-                latest = versions.getNewestUpdate(calculateUpdateScope(), allowSnapshots);
+                latest = versions.getNewestUpdate(of(updateScope), allowSnapshots);
             } else {
                 ArtifactVersion newestVersion =
                         versions.getNewestVersion(versions.getArtifact().getVersionRange(), allowSnapshots);
                 current = versions.getArtifact().getVersionRange().toString();
                 latest = newestVersion == null
                         ? null
-                        : versions.getNewestUpdate(newestVersion, calculateUpdateScope(), allowSnapshots);
+                        : versions.getNewestUpdate(newestVersion, of(updateScope), allowSnapshots);
                 if (latest != null
                         && ArtifactVersions.isVersionInRange(
                                 latest, versions.getArtifact().getVersionRange())) {

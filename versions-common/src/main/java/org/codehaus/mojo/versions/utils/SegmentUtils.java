@@ -26,9 +26,7 @@ import org.codehaus.mojo.versions.api.Segment;
 
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
-import static org.codehaus.mojo.versions.api.Segment.INCREMENTAL;
-import static org.codehaus.mojo.versions.api.Segment.MAJOR;
-import static org.codehaus.mojo.versions.api.Segment.MINOR;
+import static org.codehaus.mojo.versions.api.Segment.*;
 
 /**
  * Utility class for manipulating with {@link Segment} objects
@@ -61,7 +59,9 @@ public class SegmentUtils {
      * @param allowIncrementalUpdates if major and minor updates are disallowed, incremental updates are allowed
      * @param log                     If not null, the {@linkplain Log} object to log the selected scope
      * @return Returns the segment (0-based) that is unchangeable. If any segment can change, returns -1.
+     * @deprecated please use {@link #determineUpdateScope} instead
      */
+    @Deprecated
     public static Optional<Segment> determineUnchangedSegment(
             boolean allowMajorUpdates, boolean allowMinorUpdates, boolean allowIncrementalUpdates, Log log) {
         if (log != null && !allowIncrementalUpdates) {
@@ -83,5 +83,54 @@ public class SegmentUtils {
                             .orElse("ALL") + " version changes allowed");
         }
         return unchangedSegment;
+    }
+
+    /**
+     * <p>Based on the passed flags, determines the most major segment to receive updates.</p>
+     *
+     * <p>Also, logs the enriched values of the {@code allowMajorUpdates}, {@code allowMinorUpdates},
+     * and {@code allowIncrementalUpdates} options so that {@code allowMinorUpdates} equal to {@code false}
+     * implies that {@code allowMajorUpdates} is also {@code false}.</p>
+     * <p>Also, {@code allowIncrementalUpdates} equal to {@code false}
+     * implies that both {@code allowMajorUpdates} and {@code allowMinorUpdates} are also {@code false}.</p>
+     *
+     * <table>
+     * <caption>Effective values for update options</caption>
+     * <thead>
+     * <tr><th>allowMajorUpdates</th><th>allowMinorUpdates</th><th>allowIncrementalUpdates</th></tr>
+     * </thead>
+     * <tbody>
+     * <tr><td>true</td><td>true</td><td>true</td></tr>
+     * <tr><td></td><td>true</td><td>true</td></tr>
+     * <tr><td></td><td></td><td>true</td></tr>
+     * <tr><td></td><td></td><td></td></tr>
+     * </tbody>
+     * </table>
+     *
+     * @param allowMajorUpdates whether all updates should be allowed
+     * @param allowMinorUpdates if major updates are disallowed, minor, incremental updates should be allowed
+     * @param allowIncrementalUpdates if major and minor updates are disallowed, incremental updates are allowed
+     * @param log                     If not null, the {@linkplain Log} object to log the selected scope
+     * @return Returns the segment that is to be updated. If any segment can change, returns Segment.MAJOR
+     */
+    public static Segment determineUpdateScope(
+            boolean allowMajorUpdates, boolean allowMinorUpdates, boolean allowIncrementalUpdates, Log log) {
+        if (log != null && !allowIncrementalUpdates) {
+            log.info("Assuming allowMinorUpdates false because allowIncrementalUpdates is false.");
+        }
+
+        if (log != null && !allowMinorUpdates) {
+            log.info("Assuming allowMajorUpdates false because allowMinorUpdates is false.");
+        }
+
+        Segment updateScope = allowMajorUpdates && allowMinorUpdates && allowIncrementalUpdates
+                ? MAJOR
+                : allowMinorUpdates && allowIncrementalUpdates
+                        ? MINOR
+                        : allowIncrementalUpdates ? INCREMENTAL : SUBINCREMENTAL;
+        if (log != null && log.isDebugEnabled()) {
+            log.debug(updateScope + " version changes allowed");
+        }
+        return updateScope;
     }
 }
