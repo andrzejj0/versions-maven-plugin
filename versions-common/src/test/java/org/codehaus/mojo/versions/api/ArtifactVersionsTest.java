@@ -20,6 +20,7 @@ package org.codehaus.mojo.versions.api;
  */
 
 import java.util.Arrays;
+import java.util.Optional;
 
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.DefaultArtifactHandler;
@@ -30,6 +31,7 @@ import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.ordering.MavenVersionComparator;
 import org.codehaus.mojo.versions.ordering.MercuryVersionComparator;
 import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import static java.util.Optional.of;
@@ -38,9 +40,7 @@ import static org.codehaus.mojo.versions.api.Segment.MAJOR;
 import static org.codehaus.mojo.versions.api.Segment.MINOR;
 import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayContaining;
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -198,13 +198,17 @@ public class ArtifactVersionsTest {
                 arrayContaining(DefaultArtifactVersionCache.of("1.0.0")));
     }
 
-    @Test
-    public void testAllVersionsForIgnoreScopeSubIncremental() {
-        ArtifactVersion[] versions = versions("1.0.0", "1.0.0-1", "1.0.1");
-        ArtifactVersions instance = new ArtifactVersions(
+    private static ArtifactVersions createInstance(ArtifactVersion[] versions) {
+        return new ArtifactVersions(
                 new DefaultArtifact("default-group", "dummy-api", "1.0.0", "foo", "bar", "jar", null),
                 Arrays.asList(versions),
                 new MavenVersionComparator());
+    }
+
+    @Test
+    public void testAllVersionsForIgnoreScopeSubIncremental() {
+        ArtifactVersion[] versions = versions("1.0.0", "1.0.0-1", "1.0.1");
+        ArtifactVersions instance = createInstance(versions);
         Restriction restriction = instance.restrictionForIgnoreScope(of(SUBINCREMENTAL));
         ArtifactVersion[] filteredVersions = instance.getVersions(restriction, false);
         assertThat(filteredVersions, arrayWithSize(1));
@@ -214,10 +218,7 @@ public class ArtifactVersionsTest {
     @Test
     public void testAllVersionsForIgnoreScopeIncremental() {
         ArtifactVersion[] versions = versions("1.0.0", "1.0.0-1", "1.0.1", "1.1.0");
-        ArtifactVersions instance = new ArtifactVersions(
-                new DefaultArtifact("default-group", "dummy-api", "1.0.0", "foo", "bar", "jar", null),
-                Arrays.asList(versions),
-                new MavenVersionComparator());
+        ArtifactVersions instance = createInstance(versions);
         Restriction restriction = instance.restrictionForIgnoreScope(of(INCREMENTAL));
         ArtifactVersion[] filteredVersions = instance.getVersions(restriction, false);
         assertThat(filteredVersions, arrayWithSize(1));
@@ -227,10 +228,7 @@ public class ArtifactVersionsTest {
     @Test
     public void testAllVersionsForIgnoreScopeMinor() {
         ArtifactVersion[] versions = versions("1.0.0", "1.0.0-1", "1.0.1", "1.1.0", "2.0.0");
-        ArtifactVersions instance = new ArtifactVersions(
-                new DefaultArtifact("default-group", "dummy-api", "1.0.0", "foo", "bar", "jar", null),
-                Arrays.asList(versions),
-                new MavenVersionComparator());
+        ArtifactVersions instance = createInstance(versions);
         Restriction restriction = instance.restrictionForIgnoreScope(of(MINOR));
         ArtifactVersion[] filteredVersions = instance.getVersions(restriction, false);
         assertThat(filteredVersions, arrayWithSize(1));
@@ -240,12 +238,45 @@ public class ArtifactVersionsTest {
     @Test
     public void testAllVersionsForIgnoreScopeMajor() {
         ArtifactVersion[] versions = versions("1.0.0", "1.0.0-1", "1.0.1", "1.1.0", "2.0.0");
-        ArtifactVersions instance = new ArtifactVersions(
-                new DefaultArtifact("default-group", "dummy-api", "1.0.0", "foo", "bar", "jar", null),
-                Arrays.asList(versions),
-                new MavenVersionComparator());
+        ArtifactVersions instance = createInstance(versions);
         Restriction restriction = instance.restrictionForIgnoreScope(of(MAJOR));
         ArtifactVersion[] filteredVersions = instance.getVersions(restriction, false);
         assertThat(filteredVersions, arrayWithSize(0));
+    }
+
+    @Test
+    public void testGetReportNewestUpdateWithOnlyMajorUpdate() {
+        ArtifactVersion[] versions = versions("1.0.0", "2.0.0");
+        ArtifactVersions instance = createInstance(versions);
+        assertThat(instance.getReportNewestUpdate(Optional.empty(), true).toString(),
+                is("2.0.0"));
+        assertThat(instance.getReportNewestUpdate(of(MAJOR), true), hasToString("2.0.0"));
+        assertThat(instance.getReportNewestUpdate(of(MINOR), true), nullValue());
+        assertThat(instance.getReportNewestUpdate(of(INCREMENTAL), true), nullValue());
+        assertThat(instance.getReportNewestUpdate(of(SUBINCREMENTAL), true), nullValue());
+    }
+
+    @Test
+    public void testGetReportNewestUpdateWithMinorAndMajor() {
+        ArtifactVersion[] versions = versions("1.0.0", "1.1.0", "2.0.0");
+        ArtifactVersions instance = createInstance(versions);
+        assertThat(instance.getReportNewestUpdate(Optional.empty(), true).toString(),
+                is("2.0.0"));
+        assertThat(instance.getReportNewestUpdate(of(MAJOR), true), hasToString("2.0.0"));
+        assertThat(instance.getReportNewestUpdate(of(MINOR), true), hasToString("1.1.0"));
+        assertThat(instance.getReportNewestUpdate(of(INCREMENTAL), true), nullValue());
+        assertThat(instance.getReportNewestUpdate(of(SUBINCREMENTAL), true), nullValue());
+    }
+
+    @Test
+    public void testGetReportNewestUpdateWithIncrementalAndMajor() {
+        ArtifactVersion[] versions = versions("1.0.0", "1.0.1", "2.0.0");
+        ArtifactVersions instance = createInstance(versions);
+        assertThat(instance.getReportNewestUpdate(Optional.empty(), true).toString(),
+                is("2.0.0"));
+        assertThat(instance.getReportNewestUpdate(of(MAJOR), true), hasToString("2.0.0"));
+        assertThat(instance.getReportNewestUpdate(of(MINOR), true), nullValue());
+        assertThat(instance.getReportNewestUpdate(of(INCREMENTAL), true), hasToString("1.0.1"));
+        assertThat(instance.getReportNewestUpdate(of(SUBINCREMENTAL), true), nullValue());
     }
 }
