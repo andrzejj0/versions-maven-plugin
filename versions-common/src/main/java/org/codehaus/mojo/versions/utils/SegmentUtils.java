@@ -59,9 +59,7 @@ public class SegmentUtils {
      * @param allowIncrementalUpdates if major and minor updates are disallowed, incremental updates are allowed
      * @param log                     If not null, the {@linkplain Log} object to log the selected scope
      * @return Returns the segment (0-based) that is unchangeable. If any segment can change, returns -1.
-     * @deprecated please use {@link #determineUpdateScope} instead
      */
-    @Deprecated
     public static Optional<Segment> determineUnchangedSegment(
             boolean allowMajorUpdates, boolean allowMinorUpdates, boolean allowIncrementalUpdates, Log log) {
         if (log != null && !allowIncrementalUpdates) {
