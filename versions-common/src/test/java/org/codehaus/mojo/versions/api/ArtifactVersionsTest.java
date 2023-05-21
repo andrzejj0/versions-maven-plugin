@@ -31,7 +31,6 @@ import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.ordering.MavenVersionComparator;
 import org.codehaus.mojo.versions.ordering.MercuryVersionComparator;
 import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
-import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import static java.util.Optional.of;
@@ -248,8 +247,7 @@ public class ArtifactVersionsTest {
     public void testGetReportNewestUpdateWithOnlyMajorUpdate() {
         ArtifactVersion[] versions = versions("1.0.0", "2.0.0");
         ArtifactVersions instance = createInstance(versions);
-        assertThat(instance.getReportNewestUpdate(Optional.empty(), true).toString(),
-                is("2.0.0"));
+        assertThat(instance.getReportNewestUpdate(Optional.empty(), true).toString(), is("2.0.0"));
         assertThat(instance.getReportNewestUpdate(of(MAJOR), true), hasToString("2.0.0"));
         assertThat(instance.getReportNewestUpdate(of(MINOR), true), nullValue());
         assertThat(instance.getReportNewestUpdate(of(INCREMENTAL), true), nullValue());
@@ -260,8 +258,7 @@ public class ArtifactVersionsTest {
     public void testGetReportNewestUpdateWithMinorAndMajor() {
         ArtifactVersion[] versions = versions("1.0.0", "1.1.0", "2.0.0");
         ArtifactVersions instance = createInstance(versions);
-        assertThat(instance.getReportNewestUpdate(Optional.empty(), true).toString(),
-                is("2.0.0"));
+        assertThat(instance.getReportNewestUpdate(Optional.empty(), true).toString(), is("2.0.0"));
         assertThat(instance.getReportNewestUpdate(of(MAJOR), true), hasToString("2.0.0"));
         assertThat(instance.getReportNewestUpdate(of(MINOR), true), hasToString("1.1.0"));
         assertThat(instance.getReportNewestUpdate(of(INCREMENTAL), true), nullValue());
@@ -272,8 +269,7 @@ public class ArtifactVersionsTest {
     public void testGetReportNewestUpdateWithIncrementalAndMajor() {
         ArtifactVersion[] versions = versions("1.0.0", "1.0.1", "2.0.0");
         ArtifactVersions instance = createInstance(versions);
-        assertThat(instance.getReportNewestUpdate(Optional.empty(), true).toString(),
-                is("2.0.0"));
+        assertThat(instance.getReportNewestUpdate(Optional.empty(), true).toString(), is("2.0.0"));
         assertThat(instance.getReportNewestUpdate(of(MAJOR), true), hasToString("2.0.0"));
         assertThat(instance.getReportNewestUpdate(of(MINOR), true), nullValue());
         assertThat(instance.getReportNewestUpdate(of(INCREMENTAL), true), hasToString("1.0.1"));

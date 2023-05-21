@@ -87,8 +87,11 @@ public abstract class AbstractVersionDetails implements VersionDetails {
         }
 
         final ArtifactVersion currentVersion = highestLowerBound;
+        ArtifactVersion nextVersion = scope.filter(s -> s.isMajorTo(SUBINCREMENTAL))
+                .map(s -> (ArtifactVersion) new BoundArtifactVersion(currentVersion, Segment.of(s.value() + 1)))
+                .orElse(currentVersion);
         return new Restriction(
-                currentVersion,
+                nextVersion,
                 false,
                 scope.filter(MAJOR::isMajorTo)
                         .map(s -> (ArtifactVersion) new BoundArtifactVersion(currentVersion, s))
