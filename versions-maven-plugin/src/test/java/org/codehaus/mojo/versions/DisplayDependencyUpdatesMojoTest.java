@@ -164,7 +164,6 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     null) {
                 {
                     setProject(createProject());
-                    setVariableValueToObject(this, "allowAnyUpdates", false);
                     setVariableValueToObject(this, "allowMajorUpdates", false);
                     setVariableValueToObject(this, "processDependencies", true);
                     setVariableValueToObject(this, "dependencyIncludes", singletonList(WildcardMatcher.WILDCARD));
@@ -208,7 +207,6 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     null) {
                 {
                     setProject(createProject());
-                    setVariableValueToObject(this, "allowAnyUpdates", false);
                     setVariableValueToObject(this, "allowMajorUpdates", false);
                     setVariableValueToObject(this, "processDependencies", true);
                     setVariableValueToObject(this, "dependencyIncludes", singletonList(WildcardMatcher.WILDCARD));
@@ -249,7 +247,6 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     null) {
                 {
                     setProject(createProject());
-                    setVariableValueToObject(this, "allowAnyUpdates", false);
                     setVariableValueToObject(this, "allowMinorUpdates", false);
                     setVariableValueToObject(this, "processDependencies", true);
                     setVariableValueToObject(this, "dependencyIncludes", singletonList(WildcardMatcher.WILDCARD));
@@ -291,7 +288,6 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     null) {
                 {
                     setProject(createProject());
-                    setVariableValueToObject(this, "allowAnyUpdates", false);
                     setVariableValueToObject(this, "allowIncrementalUpdates", false);
                     setVariableValueToObject(this, "processDependencies", true);
                     setVariableValueToObject(this, "dependencyIncludes", singletonList(WildcardMatcher.WILDCARD));
@@ -336,7 +332,6 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     null) {
                 {
                     setProject(createProject());
-                    setVariableValueToObject(this, "allowAnyUpdates", false);
                     setVariableValueToObject(this, "allowMinorUpdates", false);
                     setVariableValueToObject(this, "processDependencies", true);
                     setVariableValueToObject(this, "dependencyIncludes", singletonList(WildcardMatcher.WILDCARD));
