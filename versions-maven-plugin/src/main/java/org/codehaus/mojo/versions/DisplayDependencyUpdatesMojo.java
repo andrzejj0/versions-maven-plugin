@@ -281,7 +281,7 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
     /**
      * <p>Only take these artifacts into consideration:<br/>
      * Comma-separated list of {@code groupId:[artifactId[:version]]} patterns</p>
-     *
+     * <p>
      * The wildcard "*" can be used as the only, first, last or both characters in each token.
      * The version token does support version ranges.
      * </p>
@@ -468,8 +468,8 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
 
     /**
      * Validates a list of GAV strings
-     * @param gavList list of the input GAV strings
-     * @param numSections number of sections in the GAV to verify against
+     * @param gavList      list of the input GAV strings
+     * @param numSections  number of sections in the GAV to verify against
      * @param argumentName argument name to indicate in the exception
      * @throws MojoExecutionException if the argument is invalid
      */
