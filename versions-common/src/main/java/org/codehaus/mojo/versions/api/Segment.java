@@ -42,9 +42,14 @@ public enum Segment implements Comparable<Segment> {
     }
 
     public static Segment of(int index) {
-        if (index < 0 || index > 3) {
+        if (index < 0) {
+            return null;
+        }
+
+        if (index > 3) {
             throw new IllegalArgumentException("Wrong segment index: " + index);
         }
+
         return values()[index];
     }
 
