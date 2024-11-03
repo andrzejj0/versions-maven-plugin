@@ -33,7 +33,7 @@ import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 /**
- * Represents the modified pom file. Note: implementations of the StAX API (JSR-173) are not good round-trip rewriting
+ * A mutable {@link XMLEventReader}. Note: implementations of the StAX API (JSR-173) are not good round-trip rewriting
  * <b>while</b> keeping all unchanged bytes in the file as is. For example, the StAX API specifies that <code>CR</code>
  * characters will be stripped. Current implementations do not keep &quot; and ' characters consistent.
  *
@@ -49,29 +49,19 @@ public class ModifiedPomXMLEventReader implements XMLEventReader {
     private static final int MAX_MARKS = 3;
 
     /**
-     * Field pom
+     * Document that is being edited
      */
     private final StringBuilder pom;
 
     /**
-     * Field modified
+     * Whether the document has been modified since the construction of the object
      */
     private boolean modified = false;
 
     /**
-     * Field factory
+     * Factory for the delegate {@link XMLEventReader}
      */
     private final XMLInputFactory factory;
-
-    /**
-     * Field nextStart
-     */
-    private int nextStart = 0;
-
-    /**
-     * Field nextEnd
-     */
-    private int nextEnd = 0;
 
     /**
      * Field markStart
@@ -89,37 +79,53 @@ public class ModifiedPomXMLEventReader implements XMLEventReader {
     private int[] markDelta = new int[MAX_MARKS];
 
     /**
-     * Field lastStart
+     * Begin offset of the current event as reported by the {@linkplain #delegate} (needs to be shifted
+     * by {@link #lastDelta})
      */
     private int lastStart = -1;
 
     /**
-     * Field lastEnd
+     * End offset of the current event as reported by the {@linkplain #delegate} (needs to be shifted
+     * by {@link #lastDelta})
      */
     private int lastEnd;
 
     /**
-     * Field lastDelta
+     * Indicates the offset by which {@link #lastStart} and {@link #lastEnd} (reported by the {@linkplain #delegate})
+     * need to be shifted due to replacements having taken place since {@link #rewind()}
      */
     private int lastDelta = 0;
 
     /**
-     * Field next
+     * Next event (incompatible with {@link XMLEventReader}: filled in by {@link #hasNext()}, not by {@link #next()})
      */
     private XMLEvent next = null;
 
     /**
-     * Field nextDelta
+     * Begin offset of the next event as reported by the {@linkplain #delegate} (needs to be shifted
+     * by {@link #nextDelta})
+     */
+    private int nextStart = 0;
+
+    /**
+     * End offset of the next event as reported by the {@linkplain #delegate} (needs to be shifted by
+     * {@link #nextDelta})
+     */
+    private int nextEnd = 0;
+
+    /**
+     * Indicates the offset by which {@link #nextStart} and {@link #nextEnd} (reported by the {@linkplain #delegate})
+     * need to be shifted due to replacements having taken place since {@link #rewind()}
      */
     private int nextDelta = 0;
 
     /**
-     * Field backing
+     * Delegate {@link XMLEventReader}
      */
-    private XMLEventReader backing;
+    private XMLEventReader delegate;
 
     /**
-     * Field path
+     * File path of the current document
      */
     private final String path;
 
@@ -147,7 +153,7 @@ public class ModifiedPomXMLEventReader implements XMLEventReader {
      * @throws XMLStreamException when things go wrong.
      */
     public void rewind() throws XMLStreamException {
-        backing = factory.createXMLEventReader(new StringReader(pom.toString()));
+        delegate = factory.createXMLEventReader(new StringReader(pom.toString()));
         nextEnd = 0;
         nextDelta = 0;
         for (int i = 0; i < MAX_MARKS; i++) {
@@ -214,14 +220,14 @@ public class ModifiedPomXMLEventReader implements XMLEventReader {
      * {@inheritDoc}
      */
     public XMLEvent peek() throws XMLStreamException {
-        return backing.peek();
+        return delegate.peek();
     }
 
     /**
      * {@inheritDoc}
      */
     public String getElementText() throws XMLStreamException {
-        return backing.getElementText();
+        return delegate.getElementText();
     }
 
     /**
@@ -244,16 +250,16 @@ public class ModifiedPomXMLEventReader implements XMLEventReader {
      * {@inheritDoc}
      */
     public Object getProperty(String name) {
-        return backing.getProperty(name);
+        return delegate.getProperty(name);
     }
 
     /**
      * {@inheritDoc}
      */
     public void close() throws XMLStreamException {
-        backing.close();
+        delegate.close();
         next = null;
-        backing = null;
+        delegate = null;
     }
 
     // -------------------------- OTHER METHODS --------------------------
@@ -309,15 +315,15 @@ public class ModifiedPomXMLEventReader implements XMLEventReader {
             // fast path
             return true;
         }
-        if (!backing.hasNext()) {
+        if (!delegate.hasNext()) {
             // fast path
             return false;
         }
         try {
-            next = backing.nextEvent();
+            next = delegate.nextEvent();
             nextStart = nextEnd;
-            if (backing.hasNext()) {
-                nextEnd = backing.peek().getLocation().getCharacterOffset();
+            if (delegate.hasNext()) {
+                nextEnd = delegate.peek().getLocation().getCharacterOffset();
             }
 
             if (nextEnd != -1) {
