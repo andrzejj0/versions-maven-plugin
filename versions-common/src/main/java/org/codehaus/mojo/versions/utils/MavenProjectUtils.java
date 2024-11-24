@@ -98,7 +98,7 @@ public class MavenProjectUtils {
                 log.debug("dependency from pom: " + dependency.getGroupId() + ":" + dependency.getArtifactId() + ":"
                         + dependency.getVersion() + ":" + dependency.getScope());
                 if (dependency.getVersion() == null) {
-                    // getModel parent and getModel the information from there.
+                    // this is a fix for #114: retrieve version from parent
                     if (project.hasParent()) {
                         log.debug("Reading parent dependencyManagement information");
                         DependencyManagement parentProjectDependencyManagement = processDependencyManagementTransitive
