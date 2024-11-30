@@ -346,6 +346,26 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
                 || Objects.equals(managedDependency.getVersion(), dependency.getVersion());
     }
 
+    public boolean isProcessingDependencyManagement() {
+        return processDependencyManagement;
+    }
+
+    public boolean isProcessingDependencies() {
+        return processDependencies;
+    }
+
+    public boolean isProcessingPluginDependencies() {
+        return processPluginDependencies;
+    }
+
+    public boolean isProcessPluginDependenciesInDependencyManagement() {
+        return processPluginDependenciesInPluginManagement;
+    }
+
+    public boolean isVerbose() {
+        return verbose;
+    }
+
     // ------------------------ INTERFACE METHODS ------------------------
 
     // --------------------- Interface Mojo ---------------------
@@ -361,9 +381,10 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
         logInit();
         validateInput();
 
-        Set<Dependency> dependencyManagement;
+        Set<Dependency> dependencyManagement = emptySet();
+
         try {
-            if (processDependencyManagement) {
+            if (isProcessingDependencyManagement()) {
                 dependencyManagement = filterDependencies(
                         extractDependenciesFromDependencyManagement(
                                 getProject(), processDependencyManagementTransitive, getLog()),
@@ -379,16 +400,15 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
                                         false,
                                         allowSnapshots),
                         "Dependency Management");
-            } else {
-                dependencyManagement = emptySet();
             }
-            if (processDependencies) {
+            if (isProcessingDependencies()) {
+                Set<Dependency> finalDependencyManagement = dependencyManagement;
                 logUpdates(
                         getHelper()
                                 .lookupDependenciesUpdates(
                                         filterDependencies(
                                                         getProject().getDependencies().stream()
-                                                                .filter(dep -> dependencyManagement.stream()
+                                                                .filter(dep -> finalDependencyManagement.stream()
                                                                         .noneMatch(depMan ->
                                                                                 dependenciesMatch(dep, depMan)))
                                                                 .filter(dep -> showVersionless
@@ -409,7 +429,7 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
                                         allowSnapshots),
                         "Dependencies");
             }
-            if (processPluginDependenciesInPluginManagement) {
+            if (isProcessPluginDependenciesInDependencyManagement()) {
                 logUpdates(
                         getHelper()
                                 .lookupDependenciesUpdates(
@@ -426,7 +446,7 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
                                         allowSnapshots),
                         "pluginManagement of plugins");
             }
-            if (processPluginDependencies) {
+            if (isProcessingPluginDependencies()) {
                 logUpdates(
                         getHelper()
                                 .lookupDependenciesUpdates(
@@ -485,7 +505,7 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
                 INFO_PAD_SIZE + getOutputLineWidthOffset(),
                 verbose);
 
-        if (verbose) {
+        if (isVerbose()) {
             if (updates.getUsingLatest().isEmpty()) {
                 if (!updates.getWithUpdates().isEmpty()) {
                     logLine(false, "No dependencies in " + section + " are using the newest version.");
