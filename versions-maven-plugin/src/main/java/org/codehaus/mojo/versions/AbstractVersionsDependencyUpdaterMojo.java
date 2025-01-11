@@ -15,9 +15,6 @@ package org.codehaus.mojo.versions;
  *  limitations under the License.
  */
 
-import javax.inject.Inject;
-import javax.xml.stream.XMLStreamException;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -25,7 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
-
+import javax.inject.Inject;
+import javax.xml.stream.XMLStreamException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;

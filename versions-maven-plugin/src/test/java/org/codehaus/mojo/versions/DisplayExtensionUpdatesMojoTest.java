@@ -24,6 +24,7 @@ import java.util.HashMap;
 
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Model;
+import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
@@ -46,6 +47,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
 /**
@@ -80,6 +82,7 @@ public class DisplayExtensionUpdatesMojoTest {
         setVariableValueToObject(mojo, "processCoreExtensions", false);
         // turning interpolateExtensions off so that we don't need to bother with the model tree
         mojo.interpolateProperties = false;
+        mojo.mojoExecution = mock(MojoExecution.class);
 
         mojo.setPluginContext(new HashMap<String, Object>() {
             {

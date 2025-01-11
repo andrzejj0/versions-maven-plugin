@@ -20,6 +20,7 @@ import javax.xml.stream.XMLStreamException;
 import java.util.HashMap;
 
 import org.apache.maven.model.Model;
+import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
@@ -27,7 +28,6 @@ import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.change.DefaultDependencyVersionChange;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.hamcrest.Matchers;
-import org.junit.Before;
 import org.junit.Test;
 
 import static java.util.Collections.emptyList;
@@ -40,42 +40,43 @@ import static org.codehaus.mojo.versions.utils.MockUtils.mockMavenSession;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasItem;
+import static org.mockito.Mockito.mock;
 
 public class UseLatestReleasesMojoTest extends UseLatestVersionsMojoTestBase {
 
-    @Before
-    public void setUp() throws Exception {
-        changeRecorder = createChangeRecorder();
-        mojo =
-                new UseLatestReleasesMojo(
-                        mockArtifactHandlerManager(), createRepositorySystem(), null, changeRecorder.asTestMap()) {
+    @Override
+    protected UseLatestReleasesMojo createMojo() throws IllegalAccessException {
+        return new UseLatestReleasesMojo(
+                mockArtifactHandlerManager(), createRepositorySystem(), null, changeRecorder.asTestMap()) {
+            {
+                reactorProjects = emptyList();
+                mojoExecution = mock(MojoExecution.class);
+                MavenProject project = new MavenProject() {
                     {
-                        reactorProjects = emptyList();
-                        MavenProject project = new MavenProject() {
+                        setModel(new Model() {
                             {
-                                setModel(new Model() {
-                                    {
-                                        setGroupId("default-group");
-                                        setArtifactId("project-artifact");
-                                        setVersion("1.0.0-SNAPSHOT");
+                                setGroupId("default-group");
+                                setArtifactId("project-artifact");
+                                setVersion("1.0.0-SNAPSHOT");
 
-                                        setDependencies(singletonList(DependencyBuilder.newBuilder()
-                                                .withGroupId("default-group")
-                                                .withArtifactId("dependency-artifact")
-                                                .withVersion("0.9.0")
-                                                .withScope(SCOPE_COMPILE)
-                                                .withType("jar")
-                                                .withClassifier("default")
-                                                .build()));
-                                    }
-                                });
+                                setDependencies(singletonList(DependencyBuilder.newBuilder()
+                                        .withGroupId("default-group")
+                                        .withArtifactId("dependency-artifact")
+                                        .withVersion("0.9.0")
+                                        .withScope(SCOPE_COMPILE)
+                                        .withType("jar")
+                                        .withClassifier("default")
+                                        .build()));
                             }
-                        };
-                        setProject(project);
-
-                        session = mockMavenSession();
+                        });
                     }
                 };
+                setProject(project);
+
+                session = mockMavenSession();
+                setVariableValueToObject(this, "processDependencyManagement", false);
+            }
+        };
     }
 
     @Test

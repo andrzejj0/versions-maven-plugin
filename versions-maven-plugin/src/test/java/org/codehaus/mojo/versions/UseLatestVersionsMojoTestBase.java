@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
@@ -16,8 +17,10 @@ import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.mojo.versions.utils.TestChangeRecorder;
 import org.eclipse.aether.RepositorySystem;
 import org.hamcrest.core.Is;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 import static org.apache.maven.artifact.Artifact.SCOPE_COMPILE;
 import static org.apache.maven.plugin.testing.ArtifactStubFactory.setVariableValueToObject;
@@ -36,6 +39,15 @@ public abstract class UseLatestVersionsMojoTestBase {
 
     protected TestChangeRecorder changeRecorder;
 
+    protected abstract UseLatestVersionsMojoBase createMojo() throws IllegalAccessException;
+
+    @Before
+    public void setUp() throws Exception {
+        changeRecorder = new TestChangeRecorder();
+        mojo = createMojo();
+        mojo.mojoExecution = Mockito.mock(MojoExecution.class);
+    }
+
     protected RepositorySystem createRepositorySystem() {
         return mockAetherRepositorySystem(new HashMap<String, String[]>() {
             {
@@ -48,10 +60,6 @@ public abstract class UseLatestVersionsMojoTestBase {
                 put("other-artifact", new String[] {"1.0", "2.0", "2.0-SNAPSHOT"});
             }
         });
-    }
-
-    protected TestChangeRecorder createChangeRecorder() {
-        return new TestChangeRecorder();
     }
 
     protected void tryUpdate()

@@ -37,6 +37,7 @@ import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException
 import org.apache.maven.artifact.versioning.OverConstrainedVersionException;
 import org.apache.maven.artifact.versioning.Restriction;
 import org.apache.maven.artifact.versioning.VersionRange;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
@@ -70,10 +71,14 @@ public class PropertyVersions extends AbstractVersionDetails {
 
     private final PropertyVersions.PropertyVersionComparator comparator;
 
-    PropertyVersions(String profileId, String name, VersionsHelper helper, Set<ArtifactAssociation> associations)
+    private final Log log;
+
+    PropertyVersions(
+            String profileId, String name, Log log, VersionsHelper helper, Set<ArtifactAssociation> associations)
             throws VersionRetrievalException {
         this.profileId = profileId;
         this.name = name;
+        this.log = log;
         this.helper = helper;
         this.associations = new TreeSet<>(associations);
         this.comparator = new PropertyVersionComparator();
@@ -298,13 +303,12 @@ public class PropertyVersions extends AbstractVersionDetails {
             Optional<Segment> upperBoundSegment)
             throws InvalidSegmentException, InvalidVersionSpecificationException {
         final boolean includeSnapshots = !property.isBanSnapshots() && allowSnapshots;
-        helper.getLog().debug("getNewestVersion(): includeSnapshots='" + includeSnapshots + "'");
-        helper.getLog()
-                .debug("Property ${" + property.getName() + "}: Set of valid available versions is "
-                        + Arrays.asList(getVersions(includeSnapshots)));
+        log.debug("getNewestVersion(): includeSnapshots='" + includeSnapshots + "'");
+        log.debug("Property ${" + property.getName() + "}: Set of valid available versions is "
+                + Arrays.asList(getVersions(includeSnapshots)));
         VersionRange range =
                 property.getVersion() != null ? VersionRange.createFromVersionSpec(property.getVersion()) : null;
-        helper.getLog().debug("Property ${" + property.getName() + "}: Restricting results to " + range);
+        log.debug("Property ${" + property.getName() + "}: Restricting results to " + range);
 
         ArtifactVersion currentVersion = DefaultArtifactVersionCache.of(versionString);
         ArtifactVersion lowerBound = allowDowngrade
@@ -312,8 +316,8 @@ public class PropertyVersions extends AbstractVersionDetails {
                         .map(DefaultArtifactVersionCache::of)
                         .orElse(null)
                 : currentVersion;
-        if (helper.getLog().isDebugEnabled()) {
-            helper.getLog().debug("lowerBoundArtifactVersion: " + lowerBound);
+        if (log.isDebugEnabled()) {
+            log.debug("lowerBoundArtifactVersion: " + lowerBound);
         }
 
         ArtifactVersion upperBound = !upperBoundSegment.isPresent()
@@ -322,50 +326,46 @@ public class PropertyVersions extends AbstractVersionDetails {
                         .map(s -> (ArtifactVersion) new BoundArtifactVersion(
                                 currentVersion, s.isMajorTo(SUBINCREMENTAL) ? Segment.minorTo(s) : s))
                         .orElse(null);
-        if (helper.getLog().isDebugEnabled()) {
-            helper.getLog().debug("Property ${" + property.getName() + "}: upperBound is: " + upperBound);
+        if (log.isDebugEnabled()) {
+            log.debug("Property ${" + property.getName() + "}: upperBound is: " + upperBound);
         }
 
         Restriction restriction = new Restriction(lowerBound, allowDowngrade, upperBound, allowDowngrade);
         ArtifactVersion result = getNewestVersion(range, restriction, includeSnapshots);
 
-        helper.getLog().debug("Property ${" + property.getName() + "}: Current winner is: " + result);
+        log.debug("Property ${" + property.getName() + "}: Current winner is: " + result);
 
         if (property.isSearchReactor()) {
-            helper.getLog().debug("Property ${" + property.getName() + "}: Searching reactor for a valid version...");
+            log.debug("Property ${" + property.getName() + "}: Searching reactor for a valid version...");
             Set<Artifact> reactorArtifacts = helper.extractArtifacts(reactorProjects);
             ArtifactVersion[] reactorVersions = getVersions(reactorArtifacts);
-            helper.getLog()
-                    .debug("Property ${" + property.getName()
-                            + "}: Set of valid available versions from the reactor is "
-                            + Arrays.asList(reactorVersions));
+            log.debug("Property ${" + property.getName()
+                    + "}: Set of valid available versions from the reactor is "
+                    + Arrays.asList(reactorVersions));
             ArtifactVersion fromReactor = null;
             if (reactorVersions.length > 0) {
                 for (int j = reactorVersions.length - 1; j >= 0; j--) {
                     if (range == null || ArtifactVersions.isVersionInRange(reactorVersions[j], range)) {
                         fromReactor = reactorVersions[j];
-                        helper.getLog()
-                                .debug("Property ${" + property.getName() + "}: Reactor has version " + fromReactor);
+                        log.debug("Property ${" + property.getName() + "}: Reactor has version " + fromReactor);
                         break;
                     }
                 }
             }
             if (fromReactor != null && (result != null || !currentVersion.equals(fromReactor.toString()))) {
                 if (property.isPreferReactor()) {
-                    helper.getLog()
-                            .debug("Property ${" + property.getName()
-                                    + "}: Reactor has a version and we prefer the reactor");
+                    log.debug(
+                            "Property ${" + property.getName() + "}: Reactor has a version and we prefer the reactor");
                     result = fromReactor;
                 } else {
                     if (result == null) {
-                        helper.getLog().debug("Property ${" + property.getName() + "}: Reactor has the only version");
+                        log.debug("Property ${" + property.getName() + "}: Reactor has the only version");
                         result = fromReactor;
                     } else if (getVersionComparator().compare(result, fromReactor) < 0) {
-                        helper.getLog().debug("Property ${" + property.getName() + "}: Reactor has a newer version");
+                        log.debug("Property ${" + property.getName() + "}: Reactor has a newer version");
                         result = fromReactor;
                     } else {
-                        helper.getLog()
-                                .debug("Property ${" + property.getName() + "}: Reactor has the same or older version");
+                        log.debug("Property ${" + property.getName() + "}: Reactor has the same or older version");
                     }
                 }
             }

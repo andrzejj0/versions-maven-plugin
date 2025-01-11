@@ -24,6 +24,7 @@ import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.enforcer.rule.api.EnforcerLogger;
 import org.apache.maven.enforcer.rule.api.EnforcerRuleException;
 import org.apache.maven.execution.MavenSession;
+import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.mojo.versions.utils.MockUtils;
@@ -59,6 +60,9 @@ class MaxDependencyUpdatesTest {
 
     @Mock
     private RepositorySystem repositorySystem;
+
+    @Mock
+    private MojoExecution mojoExecution;
 
     private ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
 

@@ -4,6 +4,7 @@ import javax.xml.stream.XMLStreamException;
 
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.model.Model;
+import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
@@ -29,6 +30,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
 /*
@@ -71,6 +73,7 @@ public class ForceReleasesMojoTest extends AbstractMojoTestCase {
             }
         };
         mojo.session = mockMavenSession();
+        mojo.mojoExecution = mock(MojoExecution.class);
     }
 
     @Test

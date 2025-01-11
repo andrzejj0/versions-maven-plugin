@@ -35,6 +35,7 @@ import org.codehaus.mojo.versions.api.DefaultVersionsHelper;
 import org.codehaus.mojo.versions.api.VersionsHelper;
 import org.codehaus.mojo.versions.model.RuleSet;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactory;
+import org.codehaus.mojo.versions.rules.RulesServiceBuilder;
 import org.codehaus.plexus.i18n.I18N;
 import org.eclipse.aether.RepositorySystem;
 
@@ -179,14 +180,17 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
                 helper = new DefaultVersionsHelper.Builder()
                         .withArtifactHandlerManager(artifactHandlerManager)
                         .withRepositorySystem(repositorySystem)
-                        .withWagonMap(wagonMap)
-                        .withServerId(serverId)
-                        .withRulesUri(rulesUri)
-                        .withRuleSet(ruleSet)
-                        .withIgnoredVersions(ignoredVersions)
                         .withLog(getLog())
                         .withMavenSession(session)
                         .withMojoExecution(mojoExecution)
+                        .withRuleService(new RulesServiceBuilder()
+                                .withWagonMap(wagonMap)
+                                .withServerId(serverId)
+                                .withRulesUri(rulesUri)
+                                .withRuleSet(ruleSet)
+                                .withIgnoredVersions(ignoredVersions)
+                                .withLog(getLog())
+                                .build())
                         .build();
             } catch (MojoExecutionException e) {
                 throw new MavenReportException(e.getMessage(), e);

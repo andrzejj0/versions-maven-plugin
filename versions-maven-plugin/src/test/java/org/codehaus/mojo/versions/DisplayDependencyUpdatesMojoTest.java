@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.maven.model.InputLocation;
 import org.apache.maven.model.InputSource;
 import org.apache.maven.model.Model;
+import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
@@ -53,6 +54,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.mockito.Mockito.mock;
 
 /**
  * Basic tests for {@linkplain DisplayDependencyUpdatesMojo}.
@@ -164,6 +166,7 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     setPluginContext(new HashMap<>());
 
                     session = mockMavenSession();
+                    mojoExecution = mock(MojoExecution.class);
                 }
             }.execute();
 
@@ -199,6 +202,7 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     setPluginContext(new HashMap<>());
 
                     session = mockMavenSession();
+                    mojoExecution = mock(MojoExecution.class);
                 }
             }.execute();
 
@@ -232,6 +236,7 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     setPluginContext(new HashMap<>());
 
                     session = mockMavenSession();
+                    mojoExecution = mock(MojoExecution.class);
                 }
             }.execute();
 
@@ -266,6 +271,7 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     setPluginContext(new HashMap<>());
 
                     session = mockMavenSession();
+                    mojoExecution = mock(MojoExecution.class);
                 }
             }.execute();
 
@@ -304,6 +310,7 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     setPluginContext(new HashMap<>());
 
                     session = mockMavenSession();
+                    mojoExecution = mock(MojoExecution.class);
                 }
             }.execute();
 
@@ -400,6 +407,7 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     setPluginContext(new HashMap<>());
 
                     session = mockMavenSession();
+                    mojoExecution = mock(MojoExecution.class);
                 }
             }.execute();
 
@@ -431,6 +439,7 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
                     setPluginContext(new HashMap<>());
 
                     session = mockMavenSession();
+                    mojoExecution = mock(MojoExecution.class);
                 }
             }.execute();
 

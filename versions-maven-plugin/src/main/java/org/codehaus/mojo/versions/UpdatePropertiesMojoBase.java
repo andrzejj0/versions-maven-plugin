@@ -15,11 +15,15 @@ package org.codehaus.mojo.versions;
  *  limitations under the License.
  */
 
-import javax.xml.stream.XMLStreamException;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static org.codehaus.mojo.versions.api.Segment.INCREMENTAL;
+import static org.codehaus.mojo.versions.api.Segment.MAJOR;
+import static org.codehaus.mojo.versions.api.Segment.MINOR;
 
 import java.util.Map;
 import java.util.Optional;
-
+import javax.xml.stream.XMLStreamException;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
@@ -38,12 +42,6 @@ import org.codehaus.mojo.versions.recording.DefaultDependencyChangeRecord;
 import org.codehaus.mojo.versions.recording.DefaultPropertyChangeRecord;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
 import org.eclipse.aether.RepositorySystem;
-
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-import static org.codehaus.mojo.versions.api.Segment.INCREMENTAL;
-import static org.codehaus.mojo.versions.api.Segment.MAJOR;
-import static org.codehaus.mojo.versions.api.Segment.MINOR;
 
 /**
  * Common base class for {@link UpdatePropertiesMojo}

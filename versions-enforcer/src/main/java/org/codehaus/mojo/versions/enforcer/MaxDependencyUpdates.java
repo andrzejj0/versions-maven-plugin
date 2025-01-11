@@ -46,6 +46,7 @@ import org.codehaus.mojo.versions.api.Segment;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.api.VersionsHelper;
 import org.codehaus.mojo.versions.model.RuleSet;
+import org.codehaus.mojo.versions.rules.RulesServiceBuilder;
 import org.codehaus.mojo.versions.utils.DependencyComparator;
 import org.eclipse.aether.RepositorySystem;
 
@@ -293,14 +294,16 @@ public class MaxDependencyUpdates extends AbstractEnforcerRule {
             return new DefaultVersionsHelper.Builder()
                     .withArtifactHandlerManager(artifactHandlerManager)
                     .withRepositorySystem(repositorySystem)
-                    .withWagonMap(wagonMap)
-                    .withServerId(serverId)
-                    .withRulesUri(rulesUri)
-                    .withRuleSet(ruleSet)
-                    .withIgnoredVersions(null)
                     .withLog(new PluginLogWrapper(getLog()))
                     .withMavenSession(mavenSession)
                     .withMojoExecution(mojoExecution)
+                    .withRuleService(new RulesServiceBuilder()
+                            .withWagonMap(wagonMap)
+                            .withServerId(serverId)
+                            .withRulesUri(rulesUri)
+                            .withRuleSet(ruleSet)
+                            .withLog(new PluginLogWrapper(getLog()))
+                            .build())
                     .build();
         } catch (MojoExecutionException e) {
             throw new EnforcerRuleError("Cannot resolve dependency", e);

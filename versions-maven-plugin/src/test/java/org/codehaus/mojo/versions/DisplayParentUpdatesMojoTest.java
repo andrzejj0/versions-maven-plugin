@@ -30,6 +30,7 @@ import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.model.Model;
+import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.testing.stubs.DefaultArtifactHandlerStub;
@@ -54,6 +55,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.stringContainsInOrder;
+import static org.mockito.Mockito.mock;
 
 public class DisplayParentUpdatesMojoTest {
     private DisplayParentUpdatesMojo mojo;
@@ -89,6 +91,7 @@ public class DisplayParentUpdatesMojoTest {
                 setProject(createProject());
                 reactorProjects = Collections.emptyList();
                 session = mockMavenSession();
+                mojoExecution = mock(MojoExecution.class);
             }
         };
         mojo.outputFile = tempFile.toFile();

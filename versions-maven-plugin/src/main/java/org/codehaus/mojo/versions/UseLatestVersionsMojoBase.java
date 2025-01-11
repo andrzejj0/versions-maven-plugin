@@ -15,7 +15,7 @@ package org.codehaus.mojo.versions;
  *  limitations under the License.
  */
 
-import javax.xml.stream.XMLStreamException;
+import static java.util.Collections.singletonList;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Stream;
-
+import javax.xml.stream.XMLStreamException;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
@@ -49,8 +49,6 @@ import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
 import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
 import org.codehaus.mojo.versions.utils.SegmentUtils;
 import org.eclipse.aether.RepositorySystem;
-
-import static java.util.Collections.singletonList;
 
 /**
  * Common base class for {@link UseLatestVersionsMojo}

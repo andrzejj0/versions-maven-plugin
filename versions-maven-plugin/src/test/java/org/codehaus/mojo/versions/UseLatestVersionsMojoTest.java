@@ -29,7 +29,6 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.change.DefaultDependencyVersionChange;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
-import org.junit.Before;
 import org.junit.Test;
 
 import static java.util.Collections.emptyList;
@@ -42,23 +41,32 @@ import static org.hamcrest.Matchers.hasItem;
 
 public class UseLatestVersionsMojoTest extends UseLatestVersionsMojoTestBase {
 
-    @Before
-    public void setUp() throws Exception {
-        changeRecorder = createChangeRecorder();
-        mojo =
-                new UseLatestVersionsMojo(
-                        mockArtifactHandlerManager(), createRepositorySystem(), null, changeRecorder.asTestMap()) {
+    @Override
+    protected UseLatestVersionsMojoBase createMojo() throws IllegalAccessException {
+        return new UseLatestVersionsMojo(
+                mockArtifactHandlerManager(), createRepositorySystem(), null, changeRecorder.asTestMap()) {
+            {
+                reactorProjects = emptyList();
+                MavenProject project = new MavenProject() {
                     {
-                        reactorProjects = emptyList();
-                        MavenProject project = new MavenProject() {
+                        setModel(new Model() {
                             {
-                                setModel(new Model() {
-                                    {
-                                        setGroupId("default-group");
-                                        setArtifactId("project-artifact");
-                                        setVersion("1.0.0-SNAPSHOT");
+                                setGroupId("default-group");
+                                setArtifactId("project-artifact");
+                                setVersion("1.0.0-SNAPSHOT");
 
-                                        setDependencies(Collections.singletonList(DependencyBuilder.newBuilder()
+                                setDependencies(Collections.singletonList(DependencyBuilder.newBuilder()
+                                        .withGroupId("default-group")
+                                        .withArtifactId("dependency-artifact")
+                                        .withVersion("1.1.1-SNAPSHOT")
+                                        .withType("pom")
+                                        .withClassifier("default")
+                                        .withScope(SCOPE_COMPILE)
+                                        .build()));
+
+                                setDependencyManagement(new DependencyManagement());
+                                getDependencyManagement()
+                                        .setDependencies(Collections.singletonList(DependencyBuilder.newBuilder()
                                                 .withGroupId("default-group")
                                                 .withArtifactId("dependency-artifact")
                                                 .withVersion("1.1.1-SNAPSHOT")
@@ -66,28 +74,16 @@ public class UseLatestVersionsMojoTest extends UseLatestVersionsMojoTestBase {
                                                 .withClassifier("default")
                                                 .withScope(SCOPE_COMPILE)
                                                 .build()));
-
-                                        setDependencyManagement(new DependencyManagement());
-                                        getDependencyManagement()
-                                                .setDependencies(
-                                                        Collections.singletonList(DependencyBuilder.newBuilder()
-                                                                .withGroupId("default-group")
-                                                                .withArtifactId("dependency-artifact")
-                                                                .withVersion("1.1.1-SNAPSHOT")
-                                                                .withType("pom")
-                                                                .withClassifier("default")
-                                                                .withScope(SCOPE_COMPILE)
-                                                                .build()));
-                                    }
-                                });
                             }
-                        };
-                        setProject(project);
-
-                        session = mockMavenSession();
+                        });
                     }
                 };
-        setVariableValueToObject(mojo, "processDependencyManagement", false);
+                setProject(project);
+
+                session = mockMavenSession();
+                setVariableValueToObject(this, "processDependencyManagement", false);
+            }
+        };
     }
 
     @Test

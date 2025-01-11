@@ -22,6 +22,7 @@ import java.util.HashMap;
 
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.model.Model;
+import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
@@ -48,6 +49,7 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
 /**
@@ -72,6 +74,7 @@ public class UseNextVersionsMojoTest {
             {
                 reactorProjects = emptyList();
                 session = mockMavenSession();
+                mojoExecution = mock(MojoExecution.class);
                 project = new MavenProject() {
                     {
                         setModel(new Model() {

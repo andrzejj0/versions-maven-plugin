@@ -4,6 +4,7 @@ import javax.xml.stream.XMLStreamException;
 
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.model.Model;
+import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
@@ -29,6 +30,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
 /*
@@ -59,6 +61,7 @@ public class UseReleasesMojoTest extends AbstractMojoTestCase {
         mojo = new UseReleasesMojo(
                 mockArtifactHandlerManager(), mockAetherRepositorySystem(), null, changeRecorder.asTestMap());
         setVariableValueToObject(mojo, "reactorProjects", emptyList());
+        mojo.mojoExecution = mock(MojoExecution.class);
         mojo.project = new MavenProject() {
             {
                 setModel(new Model() {

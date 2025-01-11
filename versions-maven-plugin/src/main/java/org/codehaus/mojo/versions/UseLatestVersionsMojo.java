@@ -15,13 +15,11 @@ package org.codehaus.mojo.versions;
  *  limitations under the License.
  */
 
-import javax.inject.Inject;
-
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
-
+import javax.inject.Inject;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.model.Dependency;

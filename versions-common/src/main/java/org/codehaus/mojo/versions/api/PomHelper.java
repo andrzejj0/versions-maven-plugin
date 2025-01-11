@@ -839,7 +839,7 @@ public final class PomHelper {
      * @since 1.0-alpha-3
      */
     public static PropertyVersionsBuilder[] getPropertyVersionsBuilders(
-            VersionsHelper helper, MavenProject project, boolean includeParent)
+            Log log, VersionsHelper helper, MavenProject project, boolean includeParent)
             throws ExpressionEvaluationException, IOException {
         ExpressionEvaluator expressionEvaluator = helper.getExpressionEvaluator(project);
         Map<MavenProject, Model> reactorModels =
@@ -860,7 +860,7 @@ public final class PomHelper {
                 it.hasNext(); ) {
             Profile profile = it.next();
             try {
-                addProperties(helper, propertiesMap, profile.getId(), profile.getProperties());
+                addProperties(log, helper, propertiesMap, profile.getId(), profile.getProperties());
                 if (profile.getDependencyManagement() != null) {
                     addDependencyAssocations(
                             helper,
@@ -897,7 +897,7 @@ public final class PomHelper {
         }
 
         // second, we add all the properties in the pom
-        reactorModels.values().forEach(model -> addProperties(helper, propertiesMap, null, model.getProperties()));
+        reactorModels.values().forEach(model -> addProperties(log, helper, propertiesMap, null, model.getProperties()));
 
         for (MavenProject currentPrj = project;
                 currentPrj != null;
@@ -1154,6 +1154,7 @@ public final class PomHelper {
     }
 
     private static void addProperties(
+            Log log,
             VersionsHelper helper,
             Map<String, PropertyVersionsBuilder> result,
             String profileId,
@@ -1163,7 +1164,7 @@ public final class PomHelper {
         }
         for (String propertyName : properties.stringPropertyNames()) {
             if (!result.containsKey(propertyName)) {
-                result.put(propertyName, new PropertyVersionsBuilder(profileId, propertyName, helper));
+                result.put(propertyName, new PropertyVersionsBuilder(profileId, propertyName, log, helper));
             }
         }
     }

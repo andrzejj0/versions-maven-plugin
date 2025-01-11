@@ -32,12 +32,11 @@ import java.util.stream.Collectors;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.handler.DefaultArtifactHandler;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecution;
-import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
-import org.apache.maven.plugin.logging.SystemStreamLog;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.wagon.ConnectionException;
 import org.apache.maven.wagon.ResourceDoesNotExistException;
@@ -47,10 +46,9 @@ import org.apache.maven.wagon.authentication.AuthenticationException;
 import org.apache.maven.wagon.authentication.AuthenticationInfo;
 import org.apache.maven.wagon.authorization.AuthorizationException;
 import org.apache.maven.wagon.proxy.ProxyInfo;
-import org.codehaus.mojo.versions.model.IgnoreVersion;
-import org.codehaus.mojo.versions.model.Rule;
-import org.codehaus.mojo.versions.model.RuleSet;
 import org.codehaus.mojo.versions.ordering.VersionComparators;
+import org.codehaus.mojo.versions.rules.RuleService;
+import org.codehaus.mojo.versions.rules.RulesServiceBuilder;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.repository.RemoteRepository;
@@ -65,11 +63,11 @@ import org.junit.jupiter.api.Test;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
+import static org.codehaus.mojo.versions.utils.MockUtils.mockAetherRepositorySystem;
 import static org.codehaus.mojo.versions.utils.MockUtils.mockArtifactHandlerManager;
+import static org.codehaus.mojo.versions.utils.MockUtils.mockMavenSession;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -227,7 +225,7 @@ class DefaultVersionsHelperTest {
     }
 
     private DefaultVersionsHelper createHelper() throws Exception {
-        return createHelper(null);
+        return createHelper(mock(RepositorySystem.class));
     }
 
     private static Wagon mockFileWagon(URI rulesUri)
@@ -260,76 +258,21 @@ class DefaultVersionsHelperTest {
         when(mavenSession.getCurrentProject().getRemotePluginRepositories()).thenReturn(emptyList());
         when(mavenSession.getRepositorySession()).thenReturn(new DefaultRepositorySystemSession());
 
+        Log log = mock(Log.class);
         return new DefaultVersionsHelper.Builder()
+                .withArtifactHandlerManager(mock(ArtifactHandlerManager.class))
                 .withRepositorySystem(repositorySystem)
-                .withWagonMap(singletonMap("file", mockFileWagon(new URI(rulesUri))))
-                .withServerId("")
-                .withRulesUri(rulesUri)
-                .withLog(mock(Log.class))
+                .withLog(log)
                 .withMavenSession(mavenSession)
                 .withMojoExecution(mock(MojoExecution.class))
+                .withRuleService(new RulesServiceBuilder()
+                        .withWagonMap(singletonMap("file", mockFileWagon(new URI(rulesUri))))
+                        .withServerId("")
+                        .withRulesUri(rulesUri)
+                        .withMavenSession(mavenSession)
+                        .withLog(log)
+                        .build())
                 .build();
-    }
-
-    @Test
-    void testIgnoredVersionsShouldBeTheOnlyPresentInAnEmptyRuleSet() throws MojoExecutionException {
-        DefaultVersionsHelper versionsHelper = new DefaultVersionsHelper.Builder()
-                .withLog(new SystemStreamLog())
-                .withIgnoredVersions(Arrays.asList(".*-M.", ".*-SNAPSHOT"))
-                .build();
-        RuleSet ruleSet = versionsHelper.getRuleSet();
-        assertThat(ruleSet.getIgnoreVersions(), hasSize(2));
-        assertThat(
-                ruleSet.getIgnoreVersions().stream()
-                        .map(IgnoreVersion::getVersion)
-                        .collect(Collectors.toList()),
-                containsInAnyOrder(".*-M.", ".*-SNAPSHOT"));
-    }
-
-    @Test
-    void testDefaultsShouldBePresentInAnEmptyRuleSet() throws MojoExecutionException, IllegalAccessException {
-        DefaultVersionsHelper versionsHelper = new DefaultVersionsHelper.Builder()
-                .withLog(new SystemStreamLog())
-                .withIgnoredVersions(singletonList(".*-M."))
-                .build();
-        RuleSet ruleSet = versionsHelper.getRuleSet();
-        assertThat(ruleSet.getComparisonMethod(), is("maven"));
-    }
-
-    @Test
-    void testIgnoredVersionsShouldExtendTheRuleSet() throws MojoExecutionException, IllegalAccessException {
-        DefaultVersionsHelper versionsHelper = new DefaultVersionsHelper.Builder()
-                .withLog(new SystemStreamLog())
-                .withRuleSet(new RuleSet() {
-                    {
-                        setIgnoreVersions(new ArrayList<>(singletonList(new IgnoreVersion() {
-                            {
-                                setVersion("1.0.0");
-                            }
-                        })));
-                        setRules(singletonList(new Rule() {
-                            {
-                                setGroupId("org.slf4j");
-                                setArtifactId("slf4j-api");
-                                setIgnoreVersions(singletonList(new IgnoreVersion() {
-                                    {
-                                        setType("regex");
-                                        setVersion("^[^1]\\.*");
-                                    }
-                                }));
-                            }
-                        }));
-                    }
-                })
-                .withIgnoredVersions(Arrays.asList(".*-M.", ".*-SNAPSHOT"))
-                .build();
-        RuleSet ruleSet = versionsHelper.getRuleSet();
-        assertThat(ruleSet.getIgnoreVersions(), hasSize(3));
-        assertThat(
-                ruleSet.getIgnoreVersions().stream()
-                        .map(IgnoreVersion::getVersion)
-                        .collect(Collectors.toList()),
-                containsInAnyOrder(".*-M.", ".*-SNAPSHOT", "1.0.0"));
     }
 
     @Test
@@ -381,9 +324,13 @@ class DefaultVersionsHelperTest {
 
     @Test
     void createPluginArtifact() throws Exception {
-
         DefaultVersionsHelper versionsHelper = new DefaultVersionsHelper.Builder()
                 .withArtifactHandlerManager(mockArtifactHandlerManager())
+                .withRepositorySystem(mockAetherRepositorySystem())
+                .withMavenSession(mockMavenSession())
+                .withMojoExecution(mock(MojoExecution.class))
+                .withRuleService(mock(RuleService.class))
+                .withLog(mock(Log.class))
                 .build();
 
         Artifact artifact = versionsHelper.createPluginArtifact("groupId", "artifactId", "version");

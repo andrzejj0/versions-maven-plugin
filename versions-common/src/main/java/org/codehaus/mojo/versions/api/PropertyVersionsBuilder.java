@@ -28,6 +28,7 @@ import java.util.TreeSet;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.VersionRange;
+import org.apache.maven.plugin.logging.Log;
 import org.codehaus.mojo.versions.ordering.VersionComparator;
 
 /**
@@ -49,6 +50,8 @@ public class PropertyVersionsBuilder {
 
     private final Map<String, Boolean> lowerBounds = new LinkedHashMap<>();
 
+    private final Log log;
+
     private ArtifactVersion currentVersion;
 
     private VersionRange currentVersionRange;
@@ -60,10 +63,11 @@ public class PropertyVersionsBuilder {
      * @param name The property name.
      * @param helper The {@link org.codehaus.mojo.versions.api.DefaultVersionsHelper}.
      */
-    PropertyVersionsBuilder(String profileId, String name, VersionsHelper helper) {
+    PropertyVersionsBuilder(String profileId, String name, Log log, VersionsHelper helper) {
         this.profileId = profileId;
         this.name = name;
         this.associations = new TreeSet<>();
+        this.log = log;
         this.helper = helper;
     }
 
@@ -85,7 +89,7 @@ public class PropertyVersionsBuilder {
     }
 
     public PropertyVersions build() throws VersionRetrievalException {
-        PropertyVersions instance = new PropertyVersions(profileId, name, helper, associations);
+        PropertyVersions instance = new PropertyVersions(profileId, name, log, helper, associations);
         instance.setCurrentVersion(currentVersion);
         instance.setCurrentVersionRange(currentVersionRange);
         return instance;

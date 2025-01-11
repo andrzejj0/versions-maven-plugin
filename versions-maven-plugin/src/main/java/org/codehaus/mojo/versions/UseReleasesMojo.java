@@ -15,8 +15,7 @@ package org.codehaus.mojo.versions;
  *  limitations under the License.
  */
 
-import javax.inject.Inject;
-import javax.xml.stream.XMLStreamException;
+import static java.util.Collections.singletonList;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -24,7 +23,8 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
-
+import javax.inject.Inject;
+import javax.xml.stream.XMLStreamException;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
@@ -42,8 +42,6 @@ import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.api.recording.DependencyChangeRecord;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
 import org.eclipse.aether.RepositorySystem;
-
-import static java.util.Collections.singletonList;
 
 /**
  * Replaces any -SNAPSHOT versions with the corresponding release version (if it has been released).
