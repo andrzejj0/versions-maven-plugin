@@ -19,6 +19,9 @@ package org.codehaus.mojo.versions.utils;
  * under the License.
  */
 
+import javax.inject.Inject;
+import javax.inject.Named;
+
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.PluginParameterExpressionEvaluator;
@@ -30,7 +33,9 @@ import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator
  * @author Stephen Connolly
  * @since 17-Mar-2009 08:51:42
  */
+@Named("versions")
 public class VersionsExpressionEvaluator extends PluginParameterExpressionEvaluator implements ExpressionEvaluator {
+    @Inject
     public VersionsExpressionEvaluator(MavenSession mavenSession, MojoExecution mojoExecution) {
         super(mavenSession, mojoExecution);
     }

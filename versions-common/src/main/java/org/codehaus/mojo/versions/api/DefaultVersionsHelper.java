@@ -67,9 +67,7 @@ import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 import org.codehaus.mojo.versions.utils.DependencyComparator;
 import org.codehaus.mojo.versions.utils.PluginComparator;
-import org.codehaus.mojo.versions.utils.VersionsExpressionEvaluator;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluationException;
-import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.repository.AuthenticationContext;
 import org.eclipse.aether.repository.RemoteRepository;
@@ -430,11 +428,6 @@ public class DefaultVersionsHelper implements VersionsHelper {
                 Arrays.stream(allVersions.getAllUpdates(allowSnapshots)).collect(Collectors.toList()),
                 allVersions.getVersionComparator());
         return new PluginUpdatesDetails(updatedVersions, pluginDependencyDetails, allowSnapshots);
-    }
-
-    @Override
-    public ExpressionEvaluator getExpressionEvaluator(MavenProject project) {
-        return new VersionsExpressionEvaluator(mavenSession, mojoExecution);
     }
 
     @Override

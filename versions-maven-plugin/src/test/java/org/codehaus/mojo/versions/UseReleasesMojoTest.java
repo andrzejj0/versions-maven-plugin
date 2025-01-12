@@ -4,6 +4,7 @@ import javax.xml.stream.XMLStreamException;
 
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Model;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -70,8 +71,6 @@ public class UseReleasesMojoTest extends AbstractMojoTestCase {
 
     private PomHelper pomHelper;
 
-    private ArtifactHandlerManager artifactHandlerManager;
-
     private ArtifactCreationService artifactCreationService;
 
     @Mock
@@ -80,6 +79,14 @@ public class UseReleasesMojoTest extends AbstractMojoTestCase {
     @Before
     public void setUp() throws IllegalAccessException, MojoExecutionException {
         openMocks(this);
+        ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
+        artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
+        MavenSession mavenSession = mockMavenSession();
+        ruleService = new RulesServiceBuilder()
+                .withLog(log)
+                .withMavenSession(mavenSession)
+                .build();
+        pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
         changeRecorder = new TestChangeRecorder();
         mojo = new UseReleasesMojo(
                 pomHelper, artifactCreationService, mockAetherRepositorySystem(), null, changeRecorder.asTestMap());
@@ -96,14 +103,7 @@ public class UseReleasesMojoTest extends AbstractMojoTestCase {
                 });
             }
         };
-        mojo.session = mockMavenSession();
-        artifactHandlerManager = mockArtifactHandlerManager();
-        artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
-        ruleService = new RulesServiceBuilder()
-                .withLog(log)
-                .withMavenSession(mockMavenSession())
-                .build();
-        pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
+        mojo.session = mavenSession;
     }
 
     @Test

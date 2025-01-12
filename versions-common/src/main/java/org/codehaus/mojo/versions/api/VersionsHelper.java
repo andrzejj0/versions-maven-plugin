@@ -35,7 +35,6 @@ import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.ordering.VersionComparator;
-import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 
 /**
  * Helper class that provides common functionality required by both the mojos and the reports.
@@ -175,15 +174,6 @@ public interface VersionsHelper {
      * @since 1.0-beta-1
      */
     PluginUpdatesDetails lookupPluginUpdates(Plugin plugin, boolean allowSnapshots) throws VersionRetrievalException;
-
-    /**
-     * Returns an {@link ExpressionEvaluator} for the specified project.
-     *
-     * @param project The project.
-     * @return an {@link ExpressionEvaluator} for the specified project.
-     * @since 1.0-beta-1
-     */
-    ExpressionEvaluator getExpressionEvaluator(MavenProject project);
 
     /**
      * Returns a map of {@link org.codehaus.mojo.versions.api.PropertyVersions} values keyed by

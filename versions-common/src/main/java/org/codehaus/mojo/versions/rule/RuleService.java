@@ -1,5 +1,9 @@
 package org.codehaus.mojo.versions.rule;
 
+import javax.annotation.Nullable;
+import javax.inject.Inject;
+import javax.inject.Named;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +15,7 @@ import java.util.stream.Stream;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.logging.Log;
+import org.apache.maven.plugin.logging.SystemStreamLog;
 import org.codehaus.mojo.versions.api.IgnoreVersionHelper;
 import org.codehaus.mojo.versions.model.IgnoreVersion;
 import org.codehaus.mojo.versions.model.Rule;
@@ -21,6 +26,7 @@ import org.codehaus.mojo.versions.utils.RegexUtils;
 
 import static java.util.Optional.ofNullable;
 
+@Named
 public class RuleService {
     Log log;
 
@@ -28,8 +34,9 @@ public class RuleService {
 
     private final RuleSet ruleSet;
 
-    RuleService(Log log, RuleSet ruleSet) {
-        this.log = log;
+    @Inject
+    RuleService(@Nullable Log log, RuleSet ruleSet) {
+        this.log = ofNullable(log).orElse(new SystemStreamLog());
         this.ruleSet = ruleSet;
     }
 

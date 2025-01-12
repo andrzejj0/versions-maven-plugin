@@ -1,5 +1,6 @@
 package org.codehaus.mojo.versions.utils;
 
+import javax.inject.Inject;
 import javax.inject.Named;
 
 import java.io.File;
@@ -20,6 +21,7 @@ public class ArtifactCreationService {
      * Constructs a new instance
      * @param artifactHandlerManager {@link ArtifactHandlerManager} instance
      */
+    @Inject
     public ArtifactCreationService(ArtifactHandlerManager artifactHandlerManager) {
         this.artifactHandlerManager = artifactHandlerManager;
     }
