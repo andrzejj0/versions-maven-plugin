@@ -23,7 +23,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.doxia.sink.Sink;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -32,10 +31,12 @@ import org.apache.maven.reporting.AbstractMavenReport;
 import org.apache.maven.reporting.MavenReportException;
 import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.DefaultVersionsHelper;
+import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionsHelper;
 import org.codehaus.mojo.versions.model.RuleSet;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactory;
-import org.codehaus.mojo.versions.rules.RulesServiceBuilder;
+import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.plexus.i18n.I18N;
 import org.eclipse.aether.RepositorySystem;
 
@@ -53,8 +54,6 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
      * @since 1.0-alpha-3
      */
     protected I18N i18n;
-
-    protected ArtifactHandlerManager artifactHandlerManager;
 
     /**
      * Skip entire check.
@@ -159,16 +158,22 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
      */
     protected Map<String, Wagon> wagonMap;
 
+    private final PomHelper pomHelper;
+
+    private final ArtifactCreationService artifactCreationService;
+
     // --------------------- GETTER / SETTER METHODS ---------------------
 
     protected AbstractVersionsReport(
             I18N i18n,
-            ArtifactHandlerManager artifactHandlerManager,
+            PomHelper pomHelper,
+            ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             ReportRendererFactory rendererFactory) {
         this.i18n = i18n;
-        this.artifactHandlerManager = artifactHandlerManager;
+        this.pomHelper = pomHelper;
+        this.artifactCreationService = artifactCreationService;
         this.repositorySystem = repositorySystem;
         this.wagonMap = wagonMap;
         this.rendererFactory = rendererFactory;
@@ -178,7 +183,8 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
         if (helper == null) {
             try {
                 helper = new DefaultVersionsHelper.Builder()
-                        .withArtifactHandlerManager(artifactHandlerManager)
+                        .withPomHelper(pomHelper)
+                        .withArtifactCreationService(artifactCreationService)
                         .withRepositorySystem(repositorySystem)
                         .withLog(getLog())
                         .withMavenSession(session)

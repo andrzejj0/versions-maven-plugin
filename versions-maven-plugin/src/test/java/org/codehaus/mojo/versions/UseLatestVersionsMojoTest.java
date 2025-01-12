@@ -34,7 +34,6 @@ import org.junit.Test;
 import static java.util.Collections.emptyList;
 import static org.apache.maven.artifact.Artifact.SCOPE_COMPILE;
 import static org.apache.maven.plugin.testing.ArtifactStubFactory.setVariableValueToObject;
-import static org.codehaus.mojo.versions.utils.MockUtils.mockArtifactHandlerManager;
 import static org.codehaus.mojo.versions.utils.MockUtils.mockMavenSession;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
@@ -44,7 +43,7 @@ public class UseLatestVersionsMojoTest extends UseLatestVersionsMojoTestBase {
     @Override
     protected UseLatestVersionsMojoBase createMojo() throws IllegalAccessException {
         return new UseLatestVersionsMojo(
-                mockArtifactHandlerManager(), createRepositorySystem(), null, changeRecorder.asTestMap()) {
+                pomHelper, artifactCreationService, createRepositorySystem(), null, changeRecorder.asTestMap()) {
             {
                 reactorProjects = emptyList();
                 MavenProject project = new MavenProject() {

@@ -30,6 +30,8 @@ import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.plugin.logging.Log;
 import org.codehaus.mojo.versions.ordering.VersionComparator;
+import org.codehaus.mojo.versions.rule.RuleService;
+import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 
 /**
  * Builds {@link org.codehaus.mojo.versions.api.PropertyVersions} instances.
@@ -44,17 +46,19 @@ public class PropertyVersionsBuilder {
 
     private final Set<ArtifactAssociation> associations;
 
-    private final VersionsHelper helper;
-
     private final Map<String, Boolean> upperBounds = new LinkedHashMap<>();
 
     private final Map<String, Boolean> lowerBounds = new LinkedHashMap<>();
 
     private final Log log;
 
+    private final VersionsHelper helper;
+
     private ArtifactVersion currentVersion;
 
     private VersionRange currentVersionRange;
+
+    private RuleService ruleService;
 
     /**
      * Constructs a new {@link org.codehaus.mojo.versions.api.PropertyVersions}.
@@ -63,12 +67,13 @@ public class PropertyVersionsBuilder {
      * @param name The property name.
      * @param helper The {@link org.codehaus.mojo.versions.api.DefaultVersionsHelper}.
      */
-    PropertyVersionsBuilder(String profileId, String name, Log log, VersionsHelper helper) {
+    PropertyVersionsBuilder(VersionsHelper helper, RuleService ruleService, String profileId, String name, Log log) {
+        this.helper = helper;
+        this.ruleService = ruleService;
         this.profileId = profileId;
         this.name = name;
         this.associations = new TreeSet<>();
         this.log = log;
-        this.helper = helper;
     }
 
     public PropertyVersionsBuilder withAssociation(Artifact artifact, boolean usePluginRepositories) {
@@ -89,7 +94,7 @@ public class PropertyVersionsBuilder {
     }
 
     public PropertyVersions build() throws VersionRetrievalException {
-        PropertyVersions instance = new PropertyVersions(profileId, name, log, helper, associations);
+        PropertyVersions instance = new PropertyVersions(helper, ruleService, profileId, name, log, associations);
         instance.setCurrentVersion(currentVersion);
         instance.setCurrentVersionRange(currentVersionRange);
         return instance;
@@ -107,7 +112,7 @@ public class PropertyVersionsBuilder {
         ArtifactVersion lowerBound = null;
         boolean includeLower = true;
         for (Map.Entry<String, Boolean> entry : lowerBounds.entrySet()) {
-            ArtifactVersion candidate = helper.createArtifactVersion(entry.getKey());
+            ArtifactVersion candidate = ArtifactVersionService.getArtifactVersion(entry.getKey());
             if (lowerBound == null) {
                 lowerBound = candidate;
                 includeLower = entry.getValue();
@@ -124,7 +129,7 @@ public class PropertyVersionsBuilder {
         ArtifactVersion upperBound = null;
         boolean includeUpper = true;
         for (Map.Entry<String, Boolean> entry : upperBounds.entrySet()) {
-            ArtifactVersion candidate = helper.createArtifactVersion(entry.getKey());
+            ArtifactVersion candidate = ArtifactVersionService.getArtifactVersion(entry.getKey());
             if (upperBound == null) {
                 upperBound = candidate;
                 includeUpper = entry.getValue();
@@ -183,7 +188,7 @@ public class PropertyVersionsBuilder {
 
     private VersionComparator[] lookupComparators() {
         return associations.stream()
-                .map(association -> helper.getVersionComparator(association.getArtifact()))
+                .map(association -> ruleService.getVersionComparator(association.getArtifact()))
                 .distinct()
                 .toArray(VersionComparator[]::new);
     }

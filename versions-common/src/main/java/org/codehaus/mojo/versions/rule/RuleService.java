@@ -1,4 +1,4 @@
-package org.codehaus.mojo.versions.rules;
+package org.codehaus.mojo.versions.rule;
 
 import java.util.Collection;
 import java.util.List;
@@ -15,7 +15,11 @@ import org.codehaus.mojo.versions.api.IgnoreVersionHelper;
 import org.codehaus.mojo.versions.model.IgnoreVersion;
 import org.codehaus.mojo.versions.model.Rule;
 import org.codehaus.mojo.versions.model.RuleSet;
+import org.codehaus.mojo.versions.ordering.VersionComparator;
+import org.codehaus.mojo.versions.ordering.VersionComparators;
 import org.codehaus.mojo.versions.utils.RegexUtils;
+
+import static java.util.Optional.ofNullable;
 
 public class RuleService {
     Log log;
@@ -121,6 +125,30 @@ public class RuleService {
      */
     public RuleSet getRuleSet() {
         return ruleSet;
+    }
+
+    /**
+     * Returns the version comparator to use for the specified artifact.
+     *
+     * @param artifact the artifact.
+     * @return {@link VersionComparator} to use.
+     */
+    public VersionComparator getVersionComparator(Artifact artifact) {
+        return getVersionComparator(artifact.getGroupId(), artifact.getArtifactId());
+    }
+
+    /**
+     * Returns the version comparator to use for the specified groupId and artifactId.
+     *
+     * @param groupId the groupId.
+     * @param artifactId the artifactId.
+     * @return {@link VersionComparator} to use.
+     */
+    public VersionComparator getVersionComparator(String groupId, String artifactId) {
+        String comparisonMethod = ofNullable(getBestFitRule(groupId, artifactId))
+                .map(Rule::getComparisonMethod)
+                .orElse(getRuleSet().getComparisonMethod());
+        return VersionComparators.getVersionComparator(comparisonMethod);
     }
 
     static boolean exactMatch(String wildcardRule, String value) {

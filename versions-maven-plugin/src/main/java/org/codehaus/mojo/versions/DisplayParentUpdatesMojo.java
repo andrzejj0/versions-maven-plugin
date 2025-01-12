@@ -28,7 +28,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.artifact.versioning.VersionRange;
@@ -38,12 +37,14 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
+import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.Segment;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.mojo.versions.utils.SegmentUtils;
 import org.eclipse.aether.RepositorySystem;
@@ -143,11 +144,12 @@ public class DisplayParentUpdatesMojo extends AbstractVersionsDisplayMojo {
 
     @Inject
     public DisplayParentUpdatesMojo(
-            ArtifactHandlerManager artifactHandlerManager,
+            PomHelper pomHelper,
+            ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders) {
-        super(artifactHandlerManager, repositorySystem, wagonMap, changeRecorders);
+        super(pomHelper, artifactCreationService, repositorySystem, wagonMap, changeRecorders);
     }
 
     @Override
@@ -176,7 +178,7 @@ public class DisplayParentUpdatesMojo extends AbstractVersionsDisplayMojo {
         ArtifactVersion artifactVersion;
         try {
             artifactVersion = skipResolution
-                    ? DefaultArtifactVersionCache.of(parentVersion)
+                    ? ArtifactVersionService.getArtifactVersion(parentVersion)
                     : resolveTargetVersion(initialVersion);
         } catch (VersionRetrievalException | InvalidVersionSpecificationException | InvalidSegmentException e) {
             throw new MojoExecutionException(e.getMessage(), e);
@@ -223,13 +225,12 @@ public class DisplayParentUpdatesMojo extends AbstractVersionsDisplayMojo {
     protected ArtifactVersion resolveTargetVersion(String initialVersion)
             throws MojoExecutionException, VersionRetrievalException, InvalidVersionSpecificationException,
                     InvalidSegmentException {
-        Artifact artifact = getHelper()
-                .createDependencyArtifact(DependencyBuilder.newBuilder()
-                        .withGroupId(getProject().getParent().getGroupId())
-                        .withArtifactId(getProject().getParent().getArtifactId())
-                        .withVersion(initialVersion)
-                        .withType("pom")
-                        .build());
+        Artifact artifact = artifactCreationService.createArtifact(DependencyBuilder.newBuilder()
+                .withGroupId(getProject().getParent().getGroupId())
+                .withArtifactId(getProject().getParent().getArtifactId())
+                .withVersion(initialVersion)
+                .withType("pom")
+                .build());
 
         VersionRange targetVersionRange = VersionRange.createFromVersionSpec(initialVersion);
         if (targetVersionRange.getRecommendedVersion() != null) {

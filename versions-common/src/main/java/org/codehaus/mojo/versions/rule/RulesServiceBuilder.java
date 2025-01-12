@@ -1,4 +1,4 @@
-package org.codehaus.mojo.versions.rules;
+package org.codehaus.mojo.versions.rule;
 
 import javax.xml.stream.XMLStreamException;
 

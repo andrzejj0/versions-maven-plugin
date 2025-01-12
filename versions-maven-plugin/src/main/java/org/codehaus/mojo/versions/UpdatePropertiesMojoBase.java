@@ -15,16 +15,11 @@ package org.codehaus.mojo.versions;
  *  limitations under the License.
  */
 
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-import static org.codehaus.mojo.versions.api.Segment.INCREMENTAL;
-import static org.codehaus.mojo.versions.api.Segment.MAJOR;
-import static org.codehaus.mojo.versions.api.Segment.MINOR;
+import javax.xml.stream.XMLStreamException;
 
 import java.util.Map;
 import java.util.Optional;
-import javax.xml.stream.XMLStreamException;
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
+
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -32,6 +27,7 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.ArtifactAssociation;
+import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.Property;
 import org.codehaus.mojo.versions.api.PropertyVersions;
 import org.codehaus.mojo.versions.api.Segment;
@@ -41,7 +37,14 @@ import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.recording.DefaultDependencyChangeRecord;
 import org.codehaus.mojo.versions.recording.DefaultPropertyChangeRecord;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.eclipse.aether.RepositorySystem;
+
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static org.codehaus.mojo.versions.api.Segment.INCREMENTAL;
+import static org.codehaus.mojo.versions.api.Segment.MAJOR;
+import static org.codehaus.mojo.versions.api.Segment.MINOR;
 
 /**
  * Common base class for {@link UpdatePropertiesMojo}
@@ -138,11 +141,12 @@ public abstract class UpdatePropertiesMojoBase extends AbstractVersionsDependenc
     private boolean processParent = false;
 
     public UpdatePropertiesMojoBase(
-            ArtifactHandlerManager artifactHandlerManager,
+            PomHelper pomHelper,
+            ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders) {
-        super(artifactHandlerManager, repositorySystem, wagonMap, changeRecorders);
+        super(pomHelper, artifactCreationService, repositorySystem, wagonMap, changeRecorders);
     }
 
     @Override

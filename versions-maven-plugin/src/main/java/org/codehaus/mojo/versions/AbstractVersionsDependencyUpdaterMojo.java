@@ -15,6 +15,9 @@ package org.codehaus.mojo.versions;
  *  limitations under the License.
  */
 
+import javax.inject.Inject;
+import javax.xml.stream.XMLStreamException;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -22,11 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
-import javax.inject.Inject;
-import javax.xml.stream.XMLStreamException;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Parent;
@@ -42,6 +43,7 @@ import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.api.recording.DependencyChangeRecord;
 import org.codehaus.mojo.versions.recording.DefaultDependencyChangeRecord;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.mojo.versions.utils.DependencyComparator;
 import org.eclipse.aether.RepositorySystem;
@@ -135,11 +137,12 @@ public abstract class AbstractVersionsDependencyUpdaterMojo extends AbstractVers
 
     @Inject
     protected AbstractVersionsDependencyUpdaterMojo(
-            ArtifactHandlerManager artifactHandlerManager,
+            PomHelper pomHelper,
+            ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders) {
-        super(artifactHandlerManager, repositorySystem, wagonMap, changeRecorders);
+        super(pomHelper, artifactCreationService, repositorySystem, wagonMap, changeRecorders);
     }
 
     /**
@@ -196,13 +199,12 @@ public abstract class AbstractVersionsDependencyUpdaterMojo extends AbstractVers
      * @return Artifact
      * @since 1.0-alpha-3
      */
-    protected Artifact findArtifact(Dependency dependency) {
+    protected Optional<Artifact> findArtifact(Dependency dependency) {
         return Optional.ofNullable(getProject().getDependencyArtifacts())
                 // no mutation, so parallelStream is safe
                 .flatMap(artifacts -> artifacts.parallelStream()
                         .filter(artifact -> compare(artifact, dependency))
-                        .findAny())
-                .orElse(null);
+                        .findAny());
     }
 
     /**
@@ -214,11 +216,7 @@ public abstract class AbstractVersionsDependencyUpdaterMojo extends AbstractVers
      * @since 1.0-alpha-3
      */
     protected Artifact toArtifact(Dependency dependency) throws MojoExecutionException {
-        Artifact artifact = findArtifact(dependency);
-        if (artifact == null) {
-            return getHelper().createDependencyArtifact(dependency);
-        }
-        return artifact;
+        return findArtifact(dependency).orElse(artifactCreationService.createArtifact(dependency));
     }
 
     protected Artifact toArtifact(Parent model) throws MojoExecutionException {

@@ -20,7 +20,6 @@ import javax.xml.stream.XMLStreamException;
 import java.util.Collections;
 import java.util.HashMap;
 
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.model.Model;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -30,10 +29,7 @@ import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.change.DefaultDependencyVersionChange;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
-import org.codehaus.mojo.versions.utils.TestChangeRecorder;
-import org.eclipse.aether.RepositorySystem;
 import org.hamcrest.Matchers;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.MockedStatic;
 
@@ -42,7 +38,6 @@ import static java.util.Collections.singletonList;
 import static org.apache.maven.artifact.Artifact.SCOPE_COMPILE;
 import static org.apache.maven.plugin.testing.ArtifactStubFactory.setVariableValueToObject;
 import static org.codehaus.mojo.versions.utils.MockUtils.mockAetherRepositorySystem;
-import static org.codehaus.mojo.versions.utils.MockUtils.mockArtifactHandlerManager;
 import static org.codehaus.mojo.versions.utils.MockUtils.mockMavenSession;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
@@ -55,23 +50,23 @@ import static org.mockito.Mockito.mockStatic;
 /**
  * Unit tests for {@link UseNextVersionsMojo}
  */
-public class UseNextVersionsMojoTest {
+public class UseNextVersionsMojoTest extends UseLatestVersionsMojoTestBase {
 
-    private UseNextVersionsMojo mojo;
-
-    private TestChangeRecorder changeRecorder;
-
-    @Before
-    public void setUp() throws Exception {
-        ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
-        RepositorySystem repositorySystem = mockAetherRepositorySystem(new HashMap<String, String[]>() {
+    @Override
+    protected UseLatestVersionsMojoBase createMojo() throws IllegalAccessException {
+        return new UseNextVersionsMojo(
+                pomHelper,
+                artifactCreationService,
+                mockAetherRepositorySystem(new HashMap<String, String[]>() {
+                    {
+                        put("dependency-artifact", new String[] {"1.0.0", "1.1.0-SNAPSHOT"});
+                        put("other-artifact", new String[] {"1.0", "2.0", "2.0-SNAPSHOT"});
+                    }
+                }),
+                null,
+                changeRecorder.asTestMap()) {
             {
-                put("dependency-artifact", new String[] {"1.0.0", "1.1.0-SNAPSHOT"});
-            }
-        });
-        changeRecorder = new TestChangeRecorder();
-        mojo = new UseNextVersionsMojo(artifactHandlerManager, repositorySystem, null, changeRecorder.asTestMap()) {
-            {
+                setVariableValueToObject(this, "processDependencyManagement", false);
                 reactorProjects = emptyList();
                 session = mockMavenSession();
                 mojoExecution = mock(MojoExecution.class);
@@ -96,7 +91,6 @@ public class UseNextVersionsMojoTest {
                 };
             }
         };
-        setVariableValueToObject(mojo, "processDependencyManagement", false);
     }
 
     @Test
@@ -142,7 +136,8 @@ public class UseNextVersionsMojoTest {
 
     @Test
     public void testAllowDowngrade()
-            throws MojoExecutionException, XMLStreamException, MojoFailureException, VersionRetrievalException {
+            throws MojoExecutionException, XMLStreamException, MojoFailureException, VersionRetrievalException,
+                    IllegalAccessException {
         mojo.repositorySystem = mockAetherRepositorySystem(new HashMap<String, String[]>() {
             {
                 put("artifactA", new String[] {"1.0.0", "1.0.1-SNAPSHOT"});
@@ -154,7 +149,7 @@ public class UseNextVersionsMojoTest {
                         .withArtifactId("artifactA")
                         .withVersion("1.0.1-SNAPSHOT")
                         .build()));
-        mojo.allowDowngrade = true;
+        setVariableValueToObject(mojo, "allowDowngrade", true);
 
         try (MockedStatic<PomHelper> pomHelper = mockStatic(PomHelper.class)) {
             pomHelper

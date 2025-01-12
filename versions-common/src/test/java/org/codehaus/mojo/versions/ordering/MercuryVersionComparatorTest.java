@@ -19,7 +19,7 @@ package org.codehaus.mojo.versions.ordering;
  * under the License.
  */
 
-import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
+import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,11 +31,11 @@ class MercuryVersionComparatorTest extends VersionComparatorTestBase {
 
     @Test
     void testSegmentCounting() {
-        assertEquals(1, instance.getSegmentCount(DefaultArtifactVersionCache.of("5")));
-        assertEquals(2, instance.getSegmentCount(DefaultArtifactVersionCache.of("5.0")));
-        assertEquals(2, instance.getSegmentCount(DefaultArtifactVersionCache.of("5-0")));
-        assertEquals(3, instance.getSegmentCount(DefaultArtifactVersionCache.of("5.3.a")));
-        assertEquals(6, instance.getSegmentCount(DefaultArtifactVersionCache.of("5.0.a.1.4.5")));
-        assertEquals(0, instance.getSegmentCount(DefaultArtifactVersionCache.of("")));
+        assertEquals(1, instance.getSegmentCount(ArtifactVersionService.getArtifactVersion("5")));
+        assertEquals(2, instance.getSegmentCount(ArtifactVersionService.getArtifactVersion("5.0")));
+        assertEquals(2, instance.getSegmentCount(ArtifactVersionService.getArtifactVersion("5-0")));
+        assertEquals(3, instance.getSegmentCount(ArtifactVersionService.getArtifactVersion("5.3.a")));
+        assertEquals(6, instance.getSegmentCount(ArtifactVersionService.getArtifactVersion("5.0.a.1.4.5")));
+        assertEquals(0, instance.getSegmentCount(ArtifactVersionService.getArtifactVersion("")));
     }
 }

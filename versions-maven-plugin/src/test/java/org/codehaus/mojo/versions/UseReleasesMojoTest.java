@@ -3,19 +3,26 @@ package org.codehaus.mojo.versions;
 import javax.xml.stream.XMLStreamException;
 
 import org.apache.maven.artifact.DefaultArtifact;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.model.Model;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.change.DefaultDependencyVersionChange;
+import org.codehaus.mojo.versions.rule.RuleService;
+import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.mojo.versions.utils.TestChangeRecorder;
+import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
 import org.mockito.MockedStatic;
 
 import static java.util.Collections.emptyList;
@@ -32,6 +39,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.MockitoAnnotations.openMocks;
 
 /*
  * Copyright MojoHaus and Contributors
@@ -55,11 +63,26 @@ public class UseReleasesMojoTest extends AbstractMojoTestCase {
     private TestChangeRecorder changeRecorder;
     private UseReleasesMojo mojo;
 
+    @Mock
+    private Log log;
+
+    private RuleService ruleService;
+
+    private PomHelper pomHelper;
+
+    private ArtifactHandlerManager artifactHandlerManager;
+
+    private ArtifactCreationService artifactCreationService;
+
+    @Mock
+    private ExpressionEvaluator expressionEvaluator;
+
     @Before
-    public void setUp() throws IllegalAccessException {
+    public void setUp() throws IllegalAccessException, MojoExecutionException {
+        openMocks(this);
         changeRecorder = new TestChangeRecorder();
         mojo = new UseReleasesMojo(
-                mockArtifactHandlerManager(), mockAetherRepositorySystem(), null, changeRecorder.asTestMap());
+                pomHelper, artifactCreationService, mockAetherRepositorySystem(), null, changeRecorder.asTestMap());
         setVariableValueToObject(mojo, "reactorProjects", emptyList());
         mojo.mojoExecution = mock(MojoExecution.class);
         mojo.project = new MavenProject() {
@@ -74,6 +97,13 @@ public class UseReleasesMojoTest extends AbstractMojoTestCase {
             }
         };
         mojo.session = mockMavenSession();
+        artifactHandlerManager = mockArtifactHandlerManager();
+        artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
+        ruleService = new RulesServiceBuilder()
+                .withLog(log)
+                .withMavenSession(mockMavenSession())
+                .build();
+        pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
     }
 
     @Test

@@ -23,7 +23,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.ComparableVersion;
 import org.codehaus.mojo.versions.api.Segment;
-import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
+import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 
 /**
  * A comparator which uses Maven's version rules, i.e. 1.3.34 &gt; 1.3.9 but 1.3.4.3.2.34 &lt; 1.3.4.3.2.9.
@@ -90,7 +90,7 @@ public class MavenVersionComparator extends AbstractVersionComparator {
         if (innerGetSegmentCount(v) == 1) {
             // only the qualifier
             version = VersionComparators.alphaNumIncrement(version);
-            return DefaultArtifactVersionCache.of(version);
+            return ArtifactVersionService.getArtifactVersion(version);
         } else {
             int major = v.getMajorVersion();
             int minor = v.getMinorVersion();
@@ -155,7 +155,7 @@ public class MavenVersionComparator extends AbstractVersionComparator {
                 result.append('-');
                 result.append(build);
             }
-            return DefaultArtifactVersionCache.of(result.toString());
+            return ArtifactVersionService.getArtifactVersion(result.toString());
         }
     }
 

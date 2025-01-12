@@ -6,25 +6,34 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.change.DefaultDependencyVersionChange;
+import org.codehaus.mojo.versions.rule.RuleService;
+import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.mojo.versions.utils.TestChangeRecorder;
+import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.eclipse.aether.RepositorySystem;
 import org.hamcrest.core.Is;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import static org.apache.maven.artifact.Artifact.SCOPE_COMPILE;
 import static org.apache.maven.plugin.testing.ArtifactStubFactory.setVariableValueToObject;
 import static org.codehaus.mojo.versions.utils.MockUtils.mockAetherRepositorySystem;
+import static org.codehaus.mojo.versions.utils.MockUtils.mockArtifactHandlerManager;
+import static org.codehaus.mojo.versions.utils.MockUtils.mockMavenSession;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasItem;
@@ -33,19 +42,38 @@ import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.MockitoAnnotations.openMocks;
 
 public abstract class UseLatestVersionsMojoTestBase {
     protected UseLatestVersionsMojoBase mojo;
 
     protected TestChangeRecorder changeRecorder;
 
+    @Mock
+    protected Log log;
+
+    protected PomHelper pomHelper;
+
+    protected ArtifactCreationService artifactCreationService;
+
+    @Mock
+    protected ExpressionEvaluator expressionEvaluator;
+
     protected abstract UseLatestVersionsMojoBase createMojo() throws IllegalAccessException;
 
     @Before
     public void setUp() throws Exception {
+        openMocks(this);
         changeRecorder = new TestChangeRecorder();
         mojo = createMojo();
         mojo.mojoExecution = Mockito.mock(MojoExecution.class);
+        ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
+        artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
+        RuleService ruleService = new RulesServiceBuilder()
+                .withLog(log)
+                .withMavenSession(mockMavenSession())
+                .build();
+        pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
     }
 
     protected RepositorySystem createRepositorySystem() {

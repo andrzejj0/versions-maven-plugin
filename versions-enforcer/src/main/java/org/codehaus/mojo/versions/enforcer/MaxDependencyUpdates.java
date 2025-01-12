@@ -46,7 +46,8 @@ import org.codehaus.mojo.versions.api.Segment;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.api.VersionsHelper;
 import org.codehaus.mojo.versions.model.RuleSet;
-import org.codehaus.mojo.versions.rules.RulesServiceBuilder;
+import org.codehaus.mojo.versions.rule.RuleService;
+import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
 import org.codehaus.mojo.versions.utils.DependencyComparator;
 import org.eclipse.aether.RepositorySystem;
 
@@ -65,6 +66,8 @@ import static org.codehaus.mojo.versions.utils.MavenProjectUtils.extractPluginDe
 
 @Named("maxDependencyUpdates")
 public class MaxDependencyUpdates extends AbstractEnforcerRule {
+    private final ArtifactHandlerManager artifactHandlerManager;
+
     /**
      * Maximum allowed number of updates.
      *
@@ -258,8 +261,6 @@ public class MaxDependencyUpdates extends AbstractEnforcerRule {
 
     private final MavenProject project;
 
-    private final ArtifactHandlerManager artifactHandlerManager;
-
     private final RepositorySystem repositorySystem;
 
     private final Map<String, Wagon> wagonMap;
@@ -268,14 +269,18 @@ public class MaxDependencyUpdates extends AbstractEnforcerRule {
 
     private final MojoExecution mojoExecution;
 
+    private final RuleService ruleService;
+
     @Inject
     public MaxDependencyUpdates(
+            RuleService ruleService,
             MavenProject project,
             ArtifactHandlerManager artifactHandlerManager,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             MavenSession mavenSession,
             MojoExecution mojoExecution) {
+        this.ruleService = ruleService;
         this.project = project;
         this.artifactHandlerManager = artifactHandlerManager;
         this.repositorySystem = repositorySystem;
@@ -292,7 +297,7 @@ public class MaxDependencyUpdates extends AbstractEnforcerRule {
             throws EnforcerRuleError {
         try {
             return new DefaultVersionsHelper.Builder()
-                    .withArtifactHandlerManager(artifactHandlerManager)
+                    .withRuleService(ruleService)
                     .withRepositorySystem(repositorySystem)
                     .withLog(new PluginLogWrapper(getLog()))
                     .withMavenSession(mavenSession)

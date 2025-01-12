@@ -22,7 +22,6 @@ package org.codehaus.mojo.versions.api;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -42,8 +41,10 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.ordering.VersionComparator;
-import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
+import org.codehaus.mojo.versions.rule.RuleService;
+import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 
+import static java.lang.Integer.signum;
 import static java.util.Optional.empty;
 import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 
@@ -60,7 +61,7 @@ public class PropertyVersions extends AbstractVersionDetails {
 
     private final Set<ArtifactAssociation> associations;
 
-    private final VersionsHelper helper;
+    private final RuleService ruleService;
 
     /**
      * The available versions.
@@ -73,52 +74,24 @@ public class PropertyVersions extends AbstractVersionDetails {
 
     private final Log log;
 
+    private final VersionsHelper helper;
+
     PropertyVersions(
-            String profileId, String name, Log log, VersionsHelper helper, Set<ArtifactAssociation> associations)
+            VersionsHelper helper,
+            RuleService ruleService,
+            String profileId,
+            String name,
+            Log log,
+            Set<ArtifactAssociation> associations)
             throws VersionRetrievalException {
+        this.helper = helper;
+        this.ruleService = ruleService;
         this.profileId = profileId;
         this.name = name;
         this.log = log;
-        this.helper = helper;
         this.associations = new TreeSet<>(associations);
         this.comparator = new PropertyVersionComparator();
-        this.versions = resolveAssociatedVersions(helper, associations, comparator);
-    }
-
-    private static SortedSet<ArtifactVersion> resolveAssociatedVersions(
-            VersionsHelper helper, Set<ArtifactAssociation> associations, VersionComparator versionComparator)
-            throws VersionRetrievalException {
-        SortedSet<ArtifactVersion> versions = null;
-        for (ArtifactAssociation association : associations) {
-            final ArtifactVersions associatedVersions =
-                    helper.lookupArtifactVersions(association.getArtifact(), association.isUsePluginRepositories());
-            if (versions != null) {
-                final ArtifactVersion[] artifactVersions = associatedVersions.getVersions(true);
-                // since ArtifactVersion does not override equals, we have to do this the hard way
-                // result.retainAll( Arrays.asList( artifactVersions ) );
-                Iterator<ArtifactVersion> j = versions.iterator();
-                while (j.hasNext()) {
-                    boolean contains = false;
-                    ArtifactVersion version = j.next();
-                    for (ArtifactVersion artifactVersion : artifactVersions) {
-                        if (version.compareTo(artifactVersion) == 0) {
-                            contains = true;
-                            break;
-                        }
-                    }
-                    if (!contains) {
-                        j.remove();
-                    }
-                }
-            } else {
-                versions = new TreeSet<>(versionComparator);
-                versions.addAll(Arrays.asList(associatedVersions.getVersions(true)));
-            }
-        }
-        if (versions == null) {
-            versions = new TreeSet<>(versionComparator);
-        }
-        return Collections.unmodifiableSortedSet(versions);
+        this.versions = helper.resolveAssociatedVersions(associations, comparator);
     }
 
     /**
@@ -137,7 +110,7 @@ public class PropertyVersions extends AbstractVersionDetails {
 
     private VersionComparator[] lookupComparators() {
         return associations.stream()
-                .map(association -> helper.getVersionComparator(association.getArtifact()))
+                .map(association -> ruleService.getVersionComparator(association.getArtifact()))
                 .distinct()
                 .toArray(VersionComparator[]::new);
     }
@@ -147,8 +120,8 @@ public class PropertyVersions extends AbstractVersionDetails {
      *
      * @param artifacts The {@link Collection} of {@link Artifact} instances .
      * @return The versions that can be resolved from the supplied Artifact instances or an empty array if no version
-     * can be resolved (i.e. the property is not associated with any of the supplied artifacts or the property
-     * is also associated to an artifact that has not been provided).
+     *         can be resolved (i.e. the property is not associated with any of the supplied artifacts or the property
+     *         is also associated to an artifact that has not been provided).
      * @since 1.0-alpha-3
      */
     public ArtifactVersion[] getVersions(Collection<Artifact> artifacts) {
@@ -281,16 +254,17 @@ public class PropertyVersions extends AbstractVersionDetails {
      * Retrieves the newest artifact version for the given property-denoted artifact or {@code null} if no newer
      * version could be found.
      *
-     * @param versionString current version of the artifact
-     * @param property property name indicating the artifact
-     * @param allowSnapshots whether snapshots should be considered
-     * @param reactorProjects collection of reactor projects
-     * @param helper VersionHelper object
-     * @param allowDowngrade whether downgrades should be allowed
+     * @param versionString     current version of the artifact
+     * @param property          property name indicating the artifact
+     * @param allowSnapshots    whether snapshots should be considered
+     * @param reactorProjects   collection of reactor projects
+     * @param helper            VersionHelper object
+     * @param allowDowngrade    whether downgrades should be allowed
      * @param upperBoundSegment the upper bound segment; empty() means no upper bound
      * @return newest artifact version fulfilling the criteria or null if no newer version could be found
-     * @throws InvalidSegmentException thrown if the {@code unchangedSegment} is not valid (e.g. greater than the number
-     * of segments in the version string)
+     * @throws InvalidSegmentException              thrown if the {@code unchangedSegment} is not valid (e.g. greater
+     *                                              than the number
+     *                                              of segments in the version string)
      * @throws InvalidVersionSpecificationException thrown if the version string in the property is not valid
      */
     public ArtifactVersion getNewestVersion(
@@ -310,10 +284,10 @@ public class PropertyVersions extends AbstractVersionDetails {
                 property.getVersion() != null ? VersionRange.createFromVersionSpec(property.getVersion()) : null;
         log.debug("Property ${" + property.getName() + "}: Restricting results to " + range);
 
-        ArtifactVersion currentVersion = DefaultArtifactVersionCache.of(versionString);
+        ArtifactVersion currentVersion = ArtifactVersionService.getArtifactVersion(versionString);
         ArtifactVersion lowerBound = allowDowngrade
                 ? getLowerBound(currentVersion, upperBoundSegment)
-                        .map(DefaultArtifactVersionCache::of)
+                        .map(ArtifactVersionService::getArtifactVersion)
                         .orElse(null)
                 : currentVersion;
         if (log.isDebugEnabled()) {
@@ -384,20 +358,21 @@ public class PropertyVersions extends AbstractVersionDetails {
             }
             VersionComparator[] comparators = lookupComparators();
             assert comparators.length >= 1 : "we have at least one association => at least one comparator";
-            int result = comparators[0].compare(v1, v2);
-            for (int i = 1; i < comparators.length; i++) {
-                int alt = comparators[i].compare(v1, v2);
-                if (result != alt && (result >= 0 && alt < 0) || (result <= 0 && alt > 0)) {
-                    throw new IllegalStateException("Property " + name + " is associated with multiple artifacts"
-                            + " and these artifacts use different version sorting rules and these rules are effectively"
-                            + " incompatible for the two of versions being compared.\nFirst rule says compare(\""
-                            + v1
-                            + "\", \"" + v2 + "\") = " + result
-                            + "\nSecond rule says compare(\"" + v1 + "\", \"" + v2
-                            + "\") = " + alt);
-                }
-            }
-            return result;
+            int firstResult = comparators[0].compare(v1, v2);
+            Arrays.stream(comparators, 1, comparators.length)
+                    .map(comparator -> comparator.compare(v1, v2))
+                    .filter(result -> signum(firstResult) != signum(result))
+                    .findAny()
+                    .ifPresent(result -> {
+                        throw new IllegalStateException("Property " + name + " is associated with multiple artifacts"
+                                + " and these artifacts use different version sorting rules and these rules are effectively"
+                                + " incompatible for the two of versions being compared.\nFirst rule says compare(\""
+                                + v1
+                                + "\", \"" + v2 + "\") = " + firstResult
+                                + "\nSecond rule says compare(\"" + v1 + "\", \"" + v2
+                                + "\") = " + result);
+                    });
+            return firstResult;
         }
 
         public int getSegmentCount(ArtifactVersion v) {
@@ -406,20 +381,20 @@ public class PropertyVersions extends AbstractVersionDetails {
             }
             VersionComparator[] comparators = lookupComparators();
             assert comparators.length >= 1 : "we have at least one association => at least one comparator";
-            int result = comparators[0].getSegmentCount(v);
-            for (int i = 1; i < comparators.length; i++) {
-                int alt = comparators[i].getSegmentCount(v);
-                if (result != alt) {
-                    throw new IllegalStateException("Property " + name + " is associated with multiple artifacts"
-                            + " and these artifacts use different version sorting rules and these rules are effectively"
-                            + " incompatible for the two of versions being compared.\n"
-                            + "First rule says getSegmentCount(\""
-                            + v + "\") = " + result
-                            + "\nSecond rule says getSegmentCount(\"" + v + "\") = "
-                            + alt);
-                }
-            }
-            return result;
+            int firstSegmentCount = comparators[0].getSegmentCount(v);
+            Arrays.stream(comparators, 1, comparators.length)
+                    .map(comparator -> comparator.getSegmentCount(v))
+                    .filter(segmentCount -> segmentCount != firstSegmentCount)
+                    .findAny()
+                    .ifPresent(segmentCount -> {
+                        throw new IllegalStateException("Property " + name + " is associated with multiple artifacts"
+                                + " and these artifacts use different version sorting rules and these rules are effectively"
+                                + " incompatible for the two of versions being compared.\n"
+                                + "First rule says getSegmentCount(\""
+                                + v + "\") = " + firstSegmentCount
+                                + "\nSecond rule says getSegmentCount(\"" + v + "\") = " + segmentCount);
+                    });
+            return firstSegmentCount;
         }
     }
 }

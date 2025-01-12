@@ -28,17 +28,26 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Set;
 
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.doxia.module.xhtml5.Xhtml5SinkFactory;
 import org.apache.maven.doxia.sink.SinkFactory;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginManagement;
 import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.reporting.MavenReportException;
+import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.model.RuleSet;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactoryImpl;
+import org.codehaus.mojo.versions.rule.RuleService;
+import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.MockUtils;
+import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.codehaus.plexus.i18n.I18N;
 import org.eclipse.aether.RepositorySystem;
 import org.junit.Test;
@@ -63,10 +72,39 @@ public class PluginUpdatesReportTest {
     private static class TestPluginUpdatesReport extends PluginUpdatesReport {
         static final I18N MOCK_I18N = mockI18N();
 
+        private static final Log MOCK_LOG;
+
+        private static final PomHelper MOCK_POM_HELPER;
+
+        private static final ArtifactCreationService MOCK_ARTIFACT_CREATION_SERVICE;
+
+        private static final ExpressionEvaluator MOCK_EXPRESSION_EVALUATOR;
+
+        private static final MavenSession MOCK_MAVEN_SESSION;
+
+        static {
+            MOCK_LOG = mock(Log.class);
+            MOCK_MAVEN_SESSION = mockMavenSession();
+            ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
+            MOCK_ARTIFACT_CREATION_SERVICE = new ArtifactCreationService(artifactHandlerManager);
+            RuleService ruleService = null;
+            try {
+                ruleService = new RulesServiceBuilder()
+                        .withLog(MOCK_LOG)
+                        .withMavenSession(MOCK_MAVEN_SESSION)
+                        .build();
+            } catch (MojoExecutionException e) {
+                throw new RuntimeException(e);
+            }
+            MOCK_EXPRESSION_EVALUATOR = mock(ExpressionEvaluator.class);
+            MOCK_POM_HELPER = new PomHelper(ruleService, MOCK_ARTIFACT_CREATION_SERVICE, MOCK_EXPRESSION_EVALUATOR);
+        }
+
         TestPluginUpdatesReport() {
             super(
                     MOCK_I18N,
-                    mockArtifactHandlerManager(),
+                    MOCK_POM_HELPER,
+                    MOCK_ARTIFACT_CREATION_SERVICE,
                     mockAetherRepositorySystem(),
                     null,
                     new ReportRendererFactoryImpl(MOCK_I18N));

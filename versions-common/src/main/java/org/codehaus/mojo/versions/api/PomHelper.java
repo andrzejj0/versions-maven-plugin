@@ -19,6 +19,7 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
+import javax.inject.Named;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.TransformerException;
@@ -77,6 +78,8 @@ import org.apache.maven.project.ProjectBuildingRequest;
 import org.apache.maven.project.ProjectBuildingResult;
 import org.apache.maven.shared.utils.io.IOUtil;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
+import org.codehaus.mojo.versions.rule.RuleService;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.ModelNode;
 import org.codehaus.mojo.versions.utils.RegexUtils;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluationException;
@@ -96,7 +99,8 @@ import static org.codehaus.mojo.versions.api.PomHelper.Marks.PARENT_START;
  * @author Stephen Connolly
  * @since 1.0-alpha-3
  */
-public final class PomHelper {
+@Named
+public class PomHelper {
     public static final String APACHE_MAVEN_PLUGINS_GROUPID = "org.apache.maven.plugins";
 
     public static final Pattern PATTERN_PROJECT_PROPERTIES = Pattern.compile("/project/properties");
@@ -125,8 +129,22 @@ public final class PomHelper {
             + "((/build(/pluginManagement)?)|(/reporting))/plugins/plugin"
             + "((/groupId)|(/artifactId)|(/version))");
 
-    private PomHelper() {
-        // utility class
+    private final ArtifactCreationService artifactCreationService;
+
+    private final ExpressionEvaluator expressionEvaluator;
+
+    private final RuleService ruleService;
+
+    /**
+     * Creates a new instance
+     */
+    public PomHelper(
+            RuleService ruleService,
+            ArtifactCreationService artifactCreationService,
+            ExpressionEvaluator expressionEvaluator) {
+        this.ruleService = ruleService;
+        this.artifactCreationService = artifactCreationService;
+        this.expressionEvaluator = expressionEvaluator;
     }
 
     /**
@@ -689,7 +707,7 @@ public final class PomHelper {
      * @return true if both versions have an overlap
      * @throws InvalidVersionSpecificationException if the versions can't be parsed to a range
      */
-    public static boolean isVersionOverlap(String leftVersionOrRange, String rightVersionOrRange)
+    static boolean isVersionOverlap(String leftVersionOrRange, String rightVersionOrRange)
             throws InvalidVersionSpecificationException {
         VersionRange pomVersionRange = createVersionRange(leftVersionOrRange);
         if (!pomVersionRange.hasRestrictions()) {
@@ -830,7 +848,7 @@ public final class PomHelper {
     /**
      * Examines the project to find any properties which are associated with versions of artifacts in the project.
      *
-     * @param helper        Our versions helper.
+     * @param helper        {@link VersionsHelper} instance
      * @param project       The project to examine.
      * @param includeParent whether parent POMs should be included
      * @return An array of properties that are associated within the project.
@@ -838,10 +856,9 @@ public final class PomHelper {
      * @throws IOException                   if the project's pom file cannot be parsed.
      * @since 1.0-alpha-3
      */
-    public static PropertyVersionsBuilder[] getPropertyVersionsBuilders(
-            Log log, VersionsHelper helper, MavenProject project, boolean includeParent)
+    public PropertyVersionsBuilder[] getPropertyVersionsBuilders(
+            VersionsHelper helper, Log log, MavenProject project, boolean includeParent)
             throws ExpressionEvaluationException, IOException {
-        ExpressionEvaluator expressionEvaluator = helper.getExpressionEvaluator(project);
         Map<MavenProject, Model> reactorModels =
                 includeParent ? getRawModelWithParents(project) : singletonMap(project, getRawModel(project));
 
@@ -860,36 +877,23 @@ public final class PomHelper {
                 it.hasNext(); ) {
             Profile profile = it.next();
             try {
-                addProperties(log, helper, propertiesMap, profile.getId(), profile.getProperties());
+                addProperties(helper, log, propertiesMap, profile.getId(), profile.getProperties());
                 if (profile.getDependencyManagement() != null) {
                     addDependencyAssocations(
-                            helper,
-                            expressionEvaluator,
-                            propertiesMap,
-                            profile.getDependencyManagement().getDependencies(),
-                            false);
+                            propertiesMap, profile.getDependencyManagement().getDependencies(), false);
                 }
-                addDependencyAssocations(helper, expressionEvaluator, propertiesMap, profile.getDependencies(), false);
+                addDependencyAssocations(propertiesMap, profile.getDependencies(), false);
                 if (profile.getBuild() != null) {
                     if (profile.getBuild().getPluginManagement() != null) {
                         addPluginAssociations(
-                                helper,
-                                expressionEvaluator,
                                 propertiesMap,
                                 profile.getBuild().getPluginManagement().getPlugins());
                     }
-                    addPluginAssociations(
-                            helper,
-                            expressionEvaluator,
-                            propertiesMap,
-                            profile.getBuild().getPlugins());
+                    addPluginAssociations(propertiesMap, profile.getBuild().getPlugins());
                 }
                 if (profile.getReporting() != null) {
                     addReportPluginAssociations(
-                            helper,
-                            expressionEvaluator,
-                            propertiesMap,
-                            profile.getReporting().getPlugins());
+                            propertiesMap, profile.getReporting().getPlugins());
                 }
             } catch (ExpressionEvaluationException e) {
                 throw new RuntimeException(e);
@@ -897,7 +901,7 @@ public final class PomHelper {
         }
 
         // second, we add all the properties in the pom
-        reactorModels.values().forEach(model -> addProperties(log, helper, propertiesMap, null, model.getProperties()));
+        reactorModels.values().forEach(model -> addProperties(helper, log, propertiesMap, null, model.getProperties()));
 
         for (MavenProject currentPrj = project;
                 currentPrj != null;
@@ -906,33 +910,19 @@ public final class PomHelper {
 
             if (model.getDependencyManagement() != null) {
                 addDependencyAssocations(
-                        helper,
-                        expressionEvaluator,
-                        propertiesMap,
-                        model.getDependencyManagement().getDependencies(),
-                        false);
+                        propertiesMap, model.getDependencyManagement().getDependencies(), false);
             }
-            addDependencyAssocations(helper, expressionEvaluator, propertiesMap, model.getDependencies(), false);
+            addDependencyAssocations(propertiesMap, model.getDependencies(), false);
             if (model.getBuild() != null) {
                 if (model.getBuild().getPluginManagement() != null) {
                     addPluginAssociations(
-                            helper,
-                            expressionEvaluator,
                             propertiesMap,
                             model.getBuild().getPluginManagement().getPlugins());
                 }
-                addPluginAssociations(
-                        helper,
-                        expressionEvaluator,
-                        propertiesMap,
-                        model.getBuild().getPlugins());
+                addPluginAssociations(propertiesMap, model.getBuild().getPlugins());
             }
             if (model.getReporting() != null) {
-                addReportPluginAssociations(
-                        helper,
-                        expressionEvaluator,
-                        propertiesMap,
-                        model.getReporting().getPlugins());
+                addReportPluginAssociations(propertiesMap, model.getReporting().getPlugins());
             }
 
             // third, we add any associations from the active profiles
@@ -942,40 +932,26 @@ public final class PomHelper {
                 }
                 if (profile.getDependencyManagement() != null) {
                     addDependencyAssocations(
-                            helper,
-                            expressionEvaluator,
-                            propertiesMap,
-                            profile.getDependencyManagement().getDependencies(),
-                            false);
+                            propertiesMap, profile.getDependencyManagement().getDependencies(), false);
                 }
-                addDependencyAssocations(helper, expressionEvaluator, propertiesMap, profile.getDependencies(), false);
+                addDependencyAssocations(propertiesMap, profile.getDependencies(), false);
                 if (profile.getBuild() != null) {
                     if (profile.getBuild().getPluginManagement() != null) {
                         addPluginAssociations(
-                                helper,
-                                expressionEvaluator,
                                 propertiesMap,
                                 profile.getBuild().getPluginManagement().getPlugins());
                     }
-                    addPluginAssociations(
-                            helper,
-                            expressionEvaluator,
-                            propertiesMap,
-                            profile.getBuild().getPlugins());
+                    addPluginAssociations(propertiesMap, profile.getBuild().getPlugins());
                 }
                 if (profile.getReporting() != null) {
                     addReportPluginAssociations(
-                            helper,
-                            expressionEvaluator,
-                            propertiesMap,
-                            profile.getReporting().getPlugins());
+                            propertiesMap, profile.getReporting().getPlugins());
                 }
             }
         }
 
         // finally, remove any properties without associations
-        purgeProperties(propertiesMap);
-
+        propertiesMap.values().removeIf(versions -> versions.getAssociations().length == 0);
         return propertiesMap.values().toArray(new PropertyVersionsBuilder[0]);
     }
 
@@ -983,18 +959,12 @@ public final class PomHelper {
      * Takes a list of {@link org.apache.maven.model.Plugin} instances and adds associations to properties used to
      * define versions of the plugin artifact or any of the plugin dependencies specified in the pom.
      *
-     * @param helper              Our helper.
-     * @param expressionEvaluator Our expression evaluator.
      * @param result              The map of {@link org.codehaus.mojo.versions.api.PropertyVersionsBuilder} keyed by
      *                            property name.
      * @param plugins             The list of {@link org.apache.maven.model.Plugin}.
      * @throws ExpressionEvaluationException if an expression cannot be evaluated.
      */
-    private static void addPluginAssociations(
-            VersionsHelper helper,
-            ExpressionEvaluator expressionEvaluator,
-            Map<String, PropertyVersionsBuilder> result,
-            List<Plugin> plugins)
+    private void addPluginAssociations(Map<String, PropertyVersionsBuilder> result, List<Plugin> plugins)
             throws ExpressionEvaluationException {
         if (plugins == null) {
             return;
@@ -1024,22 +994,21 @@ public final class PomHelper {
                         // might as well capture the current value
                         String evaluatedVersion = (String) expressionEvaluator.evaluate(plugin.getVersion());
                         property.withAssociation(
-                                helper.createPluginArtifact(groupId, artifactId, evaluatedVersion), true);
+                                artifactCreationService.createMavenPluginArtifact(
+                                        groupId, artifactId, evaluatedVersion),
+                                true);
                         if (!propertyRef.equals(version)) {
                             addBounds(property, version, propertyRef);
                         }
                     }
                 }
             }
-            addDependencyAssocations(helper, expressionEvaluator, result, plugin.getDependencies(), true);
+            addDependencyAssocations(result, plugin.getDependencies(), true);
         }
     }
 
-    private static void addReportPluginAssociations(
-            VersionsHelper helper,
-            ExpressionEvaluator expressionEvaluator,
-            Map<String, PropertyVersionsBuilder> result,
-            List<ReportPlugin> reportPlugins)
+    private void addReportPluginAssociations(
+            Map<String, PropertyVersionsBuilder> result, List<ReportPlugin> reportPlugins)
             throws ExpressionEvaluationException {
         if (reportPlugins == null) {
             return;
@@ -1069,7 +1038,9 @@ public final class PomHelper {
                         // might as well capture the current value
                         String versionEvaluated = (String) expressionEvaluator.evaluate(plugin.getVersion());
                         property.withAssociation(
-                                helper.createPluginArtifact(groupId, artifactId, versionEvaluated), true);
+                                artifactCreationService.createMavenPluginArtifact(
+                                        groupId, artifactId, versionEvaluated),
+                                true);
                         if (!propertyRef.equals(version)) {
                             addBounds(property, version, propertyRef);
                         }
@@ -1079,12 +1050,8 @@ public final class PomHelper {
         }
     }
 
-    private static void addDependencyAssocations(
-            VersionsHelper helper,
-            ExpressionEvaluator expressionEvaluator,
-            Map<String, PropertyVersionsBuilder> result,
-            List<Dependency> dependencies,
-            boolean usePluginRepositories)
+    private void addDependencyAssocations(
+            Map<String, PropertyVersionsBuilder> result, List<Dependency> dependencies, boolean usePluginRepositories)
             throws ExpressionEvaluationException {
         if (dependencies == null) {
             return;
@@ -1114,7 +1081,7 @@ public final class PomHelper {
                         // might as well capture the current value
                         String versionEvaluated = (String) expressionEvaluator.evaluate(dependency.getVersion());
                         property.withAssociation(
-                                helper.createDependencyArtifact(
+                                artifactCreationService.createArtifact(
                                         groupId,
                                         artifactId,
                                         versionEvaluated,
@@ -1153,9 +1120,9 @@ public final class PomHelper {
         }
     }
 
-    private static void addProperties(
-            Log log,
+    private void addProperties(
             VersionsHelper helper,
+            Log log,
             Map<String, PropertyVersionsBuilder> result,
             String profileId,
             Properties properties) {
@@ -1164,13 +1131,10 @@ public final class PomHelper {
         }
         for (String propertyName : properties.stringPropertyNames()) {
             if (!result.containsKey(propertyName)) {
-                result.put(propertyName, new PropertyVersionsBuilder(profileId, propertyName, log, helper));
+                result.put(
+                        propertyName, new PropertyVersionsBuilder(helper, ruleService, profileId, propertyName, log));
             }
         }
-    }
-
-    private static void purgeProperties(Map<String, PropertyVersionsBuilder> result) {
-        result.values().removeIf(versions -> versions.getAssociations().length == 0);
     }
 
     /**

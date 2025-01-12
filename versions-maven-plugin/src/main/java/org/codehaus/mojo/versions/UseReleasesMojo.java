@@ -15,7 +15,8 @@ package org.codehaus.mojo.versions;
  *  limitations under the License.
  */
 
-import static java.util.Collections.singletonList;
+import javax.inject.Inject;
+import javax.xml.stream.XMLStreamException;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -23,10 +24,8 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
-import javax.inject.Inject;
-import javax.xml.stream.XMLStreamException;
+
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.DependencyManagement;
@@ -41,7 +40,10 @@ import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.api.recording.DependencyChangeRecord;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.eclipse.aether.RepositorySystem;
+
+import static java.util.Collections.singletonList;
 
 /**
  * Replaces any -SNAPSHOT versions with the corresponding release version (if it has been released).
@@ -120,11 +122,12 @@ public class UseReleasesMojo extends AbstractVersionsDependencyUpdaterMojo {
 
     @Inject
     public UseReleasesMojo(
-            ArtifactHandlerManager artifactHandlerManager,
+            PomHelper pomHelper,
+            ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders) {
-        super(artifactHandlerManager, repositorySystem, wagonMap, changeRecorders);
+        super(pomHelper, artifactCreationService, repositorySystem, wagonMap, changeRecorders);
     }
 
     /**

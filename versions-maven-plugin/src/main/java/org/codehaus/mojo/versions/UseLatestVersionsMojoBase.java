@@ -15,7 +15,7 @@ package org.codehaus.mojo.versions;
  *  limitations under the License.
  */
 
-import static java.util.Collections.singletonList;
+import javax.xml.stream.XMLStreamException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,9 +28,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Stream;
-import javax.xml.stream.XMLStreamException;
+
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.DependencyManagement;
@@ -46,9 +45,12 @@ import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.api.recording.DependencyChangeRecord;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 import org.codehaus.mojo.versions.utils.SegmentUtils;
 import org.eclipse.aether.RepositorySystem;
+
+import static java.util.Collections.singletonList;
 
 /**
  * Common base class for {@link UseLatestVersionsMojo}
@@ -80,11 +82,12 @@ public abstract class UseLatestVersionsMojoBase extends AbstractVersionsDependen
     private final ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
     public UseLatestVersionsMojoBase(
-            ArtifactHandlerManager artifactHandlerManager,
+            PomHelper pomHelper,
+            ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders) {
-        super(artifactHandlerManager, repositorySystem, wagonMap, changeRecorders);
+        super(pomHelper, artifactCreationService, repositorySystem, wagonMap, changeRecorders);
     }
 
     /**
@@ -228,7 +231,7 @@ public abstract class UseLatestVersionsMojoBase extends AbstractVersionsDependen
                                         return;
                                     } else if (getLog().isDebugEnabled()) {
                                         ArtifactVersion selectedVersion =
-                                                DefaultArtifactVersionCache.of(dep.getVersion());
+                                                ArtifactVersionService.getArtifactVersion(dep.getVersion());
                                         getLog().debug("Selected version:" + selectedVersion);
                                         getLog().debug("Looking for newer versions of " + toString(dep));
                                     }

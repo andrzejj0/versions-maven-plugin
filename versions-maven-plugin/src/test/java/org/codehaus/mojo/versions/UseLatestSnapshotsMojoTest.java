@@ -14,14 +14,13 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.apache.maven.artifact.Artifact.SCOPE_COMPILE;
 import static org.apache.maven.plugin.testing.ArtifactStubFactory.setVariableValueToObject;
-import static org.codehaus.mojo.versions.utils.MockUtils.mockArtifactHandlerManager;
 import static org.codehaus.mojo.versions.utils.MockUtils.mockMavenSession;
 
 public class UseLatestSnapshotsMojoTest extends UseLatestVersionsMojoTestBase {
     @Override
     protected UseLatestVersionsMojoBase createMojo() throws IllegalAccessException {
         return new UseLatestSnapshotsMojo(
-                mockArtifactHandlerManager(), createRepositorySystem(), null, changeRecorder.asTestMap()) {
+                pomHelper, artifactCreationService, createRepositorySystem(), null, changeRecorder.asTestMap()) {
             {
                 reactorProjects = emptyList();
                 MavenProject project = new MavenProject() {

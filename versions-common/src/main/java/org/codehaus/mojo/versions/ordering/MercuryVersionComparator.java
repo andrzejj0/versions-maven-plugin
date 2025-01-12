@@ -25,7 +25,7 @@ import java.util.StringTokenizer;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.ComparableVersion;
 import org.codehaus.mojo.versions.api.Segment;
-import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
+import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 
 /**
  * A comparator which uses Mercury's version rules.
@@ -115,6 +115,6 @@ public class MercuryVersionComparator extends AbstractVersionComparator {
                 index++;
             }
         }
-        return DefaultArtifactVersionCache.of(result.toString());
+        return ArtifactVersionService.getArtifactVersion(result.toString());
     }
 }

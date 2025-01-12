@@ -22,21 +22,30 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.model.InputLocation;
 import org.apache.maven.model.InputSource;
 import org.apache.maven.model.Model;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
+import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.filtering.WildcardMatcher;
 import org.codehaus.mojo.versions.model.TestIgnoreVersions;
+import org.codehaus.mojo.versions.rule.RuleService;
+import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.CloseableTempFile;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
+import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.hamcrest.Matchers;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mock;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
@@ -55,6 +64,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.MockitoAnnotations.openMocks;
 
 /**
  * Basic tests for {@linkplain DisplayDependencyUpdatesMojo}.
@@ -62,6 +72,28 @@ import static org.mockito.Mockito.mock;
 public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
     @Rule
     public final MojoRule mojoRule = new MojoRule(this);
+
+    @Mock
+    private Log log;
+
+    private PomHelper pomHelper;
+
+    private ArtifactCreationService artifactCreationService;
+
+    @Mock
+    private ExpressionEvaluator expressionEvaluator;
+
+    @Before
+    public void setUp() throws MojoExecutionException {
+        openMocks(this);
+        ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
+        artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
+        RuleService ruleService = new RulesServiceBuilder()
+                .withLog(log)
+                .withMavenSession(mockMavenSession())
+                .build();
+        pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
+    }
 
     @Test
     public void testValidateGAVListSuccessful() throws MojoExecutionException {
@@ -144,7 +176,8 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
     public void testVersionsWithQualifiersNotConsideredAsMinorUpdates() throws Exception {
         try (CloseableTempFile tempFile = new CloseableTempFile("display-dependency-updates")) {
             new DisplayDependencyUpdatesMojo(
-                    mockArtifactHandlerManager(),
+                    pomHelper,
+                    artifactCreationService,
                     mockAetherRepositorySystem(new HashMap<String, String[]>() {
                         {
                             put(
@@ -183,7 +216,8 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
     public void testAllowMajorUpdatesFalse() throws Exception {
         try (CloseableTempFile tempFile = new CloseableTempFile("display-dependency-updates")) {
             new DisplayDependencyUpdatesMojo(
-                    mockArtifactHandlerManager(),
+                    pomHelper,
+                    artifactCreationService,
                     mockAetherRepositorySystem(new HashMap<String, String[]>() {
                         {
                             put("default-dependency", new String[] {"1.0.0", "1.1.0", "2.0.0"});
@@ -217,7 +251,8 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
     public void testAllowMinorUpdatesFalse() throws Exception {
         try (CloseableTempFile tempFile = new CloseableTempFile("display-dependency-updates")) {
             new DisplayDependencyUpdatesMojo(
-                    mockArtifactHandlerManager(),
+                    pomHelper,
+                    artifactCreationService,
                     mockAetherRepositorySystem(new HashMap<String, String[]>() {
                         {
                             put("default-dependency", new String[] {"1.0.0", "1.0.1", "1.1.0", "2.0.0"});
@@ -252,7 +287,8 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
     public void testAllowIncrementalUpdatesFalse() throws Exception {
         try (CloseableTempFile tempFile = new CloseableTempFile("display-dependency-updates")) {
             new DisplayDependencyUpdatesMojo(
-                    mockArtifactHandlerManager(),
+                    pomHelper,
+                    artifactCreationService,
                     mockAetherRepositorySystem(new HashMap<String, String[]>() {
                         {
                             put("default-dependency", new String[] {"1.0.0", "1.0.0-1", "1.0.1", "1.1.0", "2.0.0"});
@@ -288,7 +324,8 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
     public void testVersionsWithQualifiersNotConsideredAsIncrementalUpdates() throws Exception {
         try (CloseableTempFile tempFile = new CloseableTempFile("display-dependency-updates")) {
             new DisplayDependencyUpdatesMojo(
-                    mockArtifactHandlerManager(),
+                    pomHelper,
+                    artifactCreationService,
                     mockAetherRepositorySystem(new HashMap<String, String[]>() {
                         {
                             put(
@@ -388,7 +425,8 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
     public void testAllowSnapshots() throws Exception {
         try (CloseableTempFile tempFile = new CloseableTempFile("display-dependency-updates")) {
             new DisplayDependencyUpdatesMojo(
-                    mockArtifactHandlerManager(),
+                    pomHelper,
+                    artifactCreationService,
                     mockAetherRepositorySystem(new HashMap<String, String[]>() {
                         {
                             put("default-dependency", new String[] {"2.0.0-SNAPSHOT"});
@@ -420,7 +458,8 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
     private void testAllowUpdatesFromLesserSegments(String availableVersion) throws Exception {
         try (CloseableTempFile tempFile = new CloseableTempFile("display-dependency-updates")) {
             new DisplayDependencyUpdatesMojo(
-                    mockArtifactHandlerManager(),
+                    pomHelper,
+                    artifactCreationService,
                     mockAetherRepositorySystem(new HashMap<String, String[]>() {
                         {
                             put("default-dependency", new String[] {availableVersion});

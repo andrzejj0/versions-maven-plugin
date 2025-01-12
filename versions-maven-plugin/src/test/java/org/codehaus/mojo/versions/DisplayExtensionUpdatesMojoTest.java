@@ -22,18 +22,25 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Model;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.api.PomHelper;
+import org.codehaus.mojo.versions.rule.RuleService;
+import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.ExtensionBuilder;
+import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
+import org.mockito.Mock;
 import org.mockito.MockedStatic;
 
 import static java.util.Collections.emptyList;
@@ -49,6 +56,7 @@ import static org.hamcrest.Matchers.empty;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.MockitoAnnotations.openMocks;
 
 /**
  * Basic tests for {@linkplain DisplayExtensionUpdatesMojo}.
@@ -59,9 +67,29 @@ public class DisplayExtensionUpdatesMojoTest {
     private DisplayExtensionUpdatesMojo mojo;
     private Path tempPath;
 
+    @Mock
+    private Log log;
+
+    private PomHelper pomHelper;
+
+    private ArtifactCreationService artifactCreationService;
+
+    @Mock
+    private ExpressionEvaluator expressionEvaluator;
+
     @Before
-    public void setUp() throws IllegalAccessException, IOException {
-        mojo = new DisplayExtensionUpdatesMojo(mockArtifactHandlerManager(), mockAetherRepositorySystem(), null, null);
+    public void setUp() throws IllegalAccessException, IOException, MojoExecutionException {
+        openMocks(this);
+        ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
+        artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
+        RuleService ruleService = new RulesServiceBuilder()
+                .withLog(log)
+                .withMavenSession(mockMavenSession())
+                .build();
+        pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
+
+        mojo = new DisplayExtensionUpdatesMojo(
+                pomHelper, artifactCreationService, mockAetherRepositorySystem(), null, null);
         mojo.project = new MavenProject() {
             {
                 setModel(new Model() {

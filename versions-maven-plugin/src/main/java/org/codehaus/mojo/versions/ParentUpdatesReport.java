@@ -24,16 +24,17 @@ import javax.inject.Inject;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.doxia.sink.Sink;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.reporting.MavenReportException;
 import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
+import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactory;
 import org.codehaus.mojo.versions.reporting.model.ParentUpdatesModel;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.plexus.i18n.I18N;
 import org.eclipse.aether.RepositorySystem;
@@ -50,11 +51,12 @@ public class ParentUpdatesReport extends AbstractVersionsReport<ParentUpdatesMod
     @Inject
     protected ParentUpdatesReport(
             I18N i18n,
-            ArtifactHandlerManager artifactHandlerManager,
+            PomHelper pomHelper,
+            ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             ReportRendererFactory rendererFactory) {
-        super(i18n, artifactHandlerManager, repositorySystem, wagonMap, rendererFactory);
+        super(i18n, pomHelper, artifactCreationService, repositorySystem, wagonMap, rendererFactory);
     }
 
     /**

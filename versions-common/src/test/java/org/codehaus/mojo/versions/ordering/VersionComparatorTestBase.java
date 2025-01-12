@@ -20,7 +20,7 @@ package org.codehaus.mojo.versions.ordering;
 
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.codehaus.mojo.versions.api.Segment;
-import org.codehaus.mojo.versions.utils.DefaultArtifactVersionCache;
+import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -39,7 +39,7 @@ abstract class VersionComparatorTestBase {
     }
 
     protected static ArtifactVersion version(String version) {
-        return DefaultArtifactVersionCache.of(version);
+        return ArtifactVersionService.getArtifactVersion(version);
     }
 
     @Test

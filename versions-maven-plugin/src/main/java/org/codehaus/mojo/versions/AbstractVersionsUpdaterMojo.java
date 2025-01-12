@@ -19,8 +19,9 @@ package org.codehaus.mojo.versions;
  * under the License.
  */
 
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static java.util.Optional.ofNullable;
+import javax.inject.Inject;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.transform.TransformerException;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,11 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import javax.inject.Inject;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.transform.TransformerException;
+
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
@@ -45,7 +43,6 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.wagon.Wagon;
@@ -61,8 +58,12 @@ import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.model.RuleSet;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.rules.RulesServiceBuilder;
+import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.eclipse.aether.RepositorySystem;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.util.Optional.ofNullable;
 
 /**
  * Abstract base class for Versions Mojos.
@@ -77,11 +78,6 @@ public abstract class AbstractVersionsUpdaterMojo extends AbstractMojo {
      */
     @Parameter(defaultValue = "${project}", required = true, readonly = true)
     protected MavenProject project;
-
-    /**
-     * The (injected) {@link ArtifactHandlerManager} instance.
-     */
-    protected final ArtifactHandlerManager artifactHandlerManager;
 
     /**
      * The (injected) {@link org.eclipse.aether.RepositorySystem} instance.
@@ -190,15 +186,21 @@ public abstract class AbstractVersionsUpdaterMojo extends AbstractMojo {
      */
     protected final Map<String, Wagon> wagonMap;
 
+    protected final ArtifactCreationService artifactCreationService;
+
+    private final PomHelper pomHelper;
+
     // --------------------- GETTER / SETTER METHODS ---------------------
 
     @Inject
     protected AbstractVersionsUpdaterMojo(
-            ArtifactHandlerManager artifactHandlerManager,
+            PomHelper pomHelper,
+            ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders) {
-        this.artifactHandlerManager = artifactHandlerManager;
+        this.pomHelper = pomHelper;
+        this.artifactCreationService = artifactCreationService;
         this.repositorySystem = repositorySystem;
         this.wagonMap = wagonMap;
         this.changeRecorders = changeRecorders;
@@ -209,7 +211,8 @@ public abstract class AbstractVersionsUpdaterMojo extends AbstractMojo {
     public VersionsHelper getHelper() throws MojoExecutionException {
         if (helper == null) {
             helper = new DefaultVersionsHelper.Builder()
-                    .withArtifactHandlerManager(artifactHandlerManager)
+                    .withPomHelper(pomHelper)
+                    .withArtifactCreationService(artifactCreationService)
                     .withRepositorySystem(repositorySystem)
                     .withLog(getLog())
                     .withMavenSession(session)

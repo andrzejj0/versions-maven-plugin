@@ -20,7 +20,6 @@ import javax.xml.stream.XMLStreamException;
 import java.util.Collections;
 import java.util.HashMap;
 
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.model.Model;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -30,8 +29,6 @@ import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.change.DefaultDependencyVersionChange;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
-import org.codehaus.mojo.versions.utils.TestChangeRecorder;
-import org.eclipse.aether.RepositorySystem;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.mockito.MockedStatic;
@@ -41,7 +38,6 @@ import static java.util.Collections.singletonList;
 import static org.apache.maven.artifact.Artifact.SCOPE_COMPILE;
 import static org.apache.maven.plugin.testing.ArtifactStubFactory.setVariableValueToObject;
 import static org.codehaus.mojo.versions.utils.MockUtils.mockAetherRepositorySystem;
-import static org.codehaus.mojo.versions.utils.MockUtils.mockArtifactHandlerManager;
 import static org.codehaus.mojo.versions.utils.MockUtils.mockMavenSession;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
@@ -56,21 +52,21 @@ import static org.mockito.Mockito.mockStatic;
  */
 public class UseNextReleasesMojoTest extends UseLatestVersionsMojoTestBase {
 
-    //    private UseNextReleasesMojo mojo;
-    //    private TestChangeRecorder changeRecorder;
-
     @Override
     protected UseLatestVersionsMojoBase createMojo() throws IllegalAccessException {
         return new UseNextReleasesMojo(
-                mockArtifactHandlerManager(),
+                pomHelper,
+                artifactCreationService,
                 mockAetherRepositorySystem(new HashMap<String, String[]>() {
                     {
                         put("dependency-artifact", new String[] {"1.0.0", "1.1.0", "1.1.1-SNAPSHOT"});
+                        put("other-artifact", new String[] {"1.0", "2.0", "2.0-SNAPSHOT"});
                     }
                 }),
                 null,
                 changeRecorder.asTestMap()) {
             {
+                setVariableValueToObject(this, "processDependencyManagement", false);
                 reactorProjects = emptyList();
                 session = mockMavenSession();
                 mojoExecution = mock(MojoExecution.class);
@@ -95,44 +91,6 @@ public class UseNextReleasesMojoTest extends UseLatestVersionsMojoTestBase {
                 };
             }
         };
-    }
-
-    //    @Before
-    public void setUp() throws Exception {
-        ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
-        RepositorySystem repositorySystem = mockAetherRepositorySystem(new HashMap<String, String[]>() {
-            {
-                put("dependency-artifact", new String[] {"1.0.0", "1.1.0", "1.1.1-SNAPSHOT"});
-            }
-        });
-        changeRecorder = new TestChangeRecorder();
-        mojo = new UseNextReleasesMojo(artifactHandlerManager, repositorySystem, null, changeRecorder.asTestMap()) {
-            {
-                reactorProjects = emptyList();
-                session = mockMavenSession();
-                mojoExecution = mock(MojoExecution.class);
-                project = new MavenProject() {
-                    {
-                        setModel(new Model() {
-                            {
-                                setGroupId("default-group");
-                                setArtifactId("project-artifact");
-                                setVersion("1.0.0-SNAPSHOT");
-                            }
-                        });
-                        setDependencies(Collections.singletonList(DependencyBuilder.newBuilder()
-                                .withGroupId("default-group")
-                                .withArtifactId("dependency-artifact")
-                                .withVersion("1.1.0")
-                                .withClassifier("default")
-                                .withType("pom")
-                                .withScope(SCOPE_COMPILE)
-                                .build()));
-                    }
-                };
-            }
-        };
-        setVariableValueToObject(mojo, "processDependencyManagement", false);
     }
 
     @Test

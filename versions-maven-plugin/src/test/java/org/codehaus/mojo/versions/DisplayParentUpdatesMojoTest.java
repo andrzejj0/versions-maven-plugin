@@ -33,16 +33,23 @@ import org.apache.maven.model.Model;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugin.testing.stubs.DefaultArtifactHandlerStub;
 import org.apache.maven.project.MavenProject;
+import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
+import org.codehaus.mojo.versions.rule.RuleService;
+import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.TestUtils;
+import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.eclipse.aether.RepositorySystem;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mock;
 
 import static java.util.Collections.singleton;
 import static org.apache.maven.artifact.Artifact.SCOPE_COMPILE;
@@ -56,6 +63,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.stringContainsInOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.MockitoAnnotations.openMocks;
 
 public class DisplayParentUpdatesMojoTest {
     private DisplayParentUpdatesMojo mojo;
@@ -64,13 +72,31 @@ public class DisplayParentUpdatesMojoTest {
 
     private static RepositorySystem repositorySystem;
 
+    private static ArtifactCreationService artifactCreationService;
+
+    private static RuleService ruleService;
+
+    private static PomHelper pomHelper;
+
+    @Mock
+    private static ExpressionEvaluator expressionEvaluator;
+
+    @Mock
+    private static Log log;
+
     private Path tempDir;
 
     private Path tempFile;
 
     @BeforeClass
-    public static void setUpStatic() {
+    public static void setUpStatic() throws MojoExecutionException {
         artifactHandlerManager = mockArtifactHandlerManager();
+        artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
+        ruleService = new RulesServiceBuilder()
+                .withLog(log)
+                .withMavenSession(mockMavenSession())
+                .build();
+        pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
         repositorySystem = mockAetherRepositorySystem(new HashMap<String, String[]>() {
             {
                 put("parent-artifact", new String[] {"0.9.0", "1.0.0", "1.0.1-SNAPSHOT"});
@@ -86,7 +112,7 @@ public class DisplayParentUpdatesMojoTest {
     public void setUp() throws IllegalAccessException, IOException {
         tempDir = TestUtils.createTempDir("display-property-updates");
         tempFile = Files.createTempFile(tempDir, "output", "");
-        mojo = new DisplayParentUpdatesMojo(artifactHandlerManager, repositorySystem, null, null) {
+        mojo = new DisplayParentUpdatesMojo(pomHelper, artifactCreationService, repositorySystem, null, null) {
             {
                 setProject(createProject());
                 reactorProjects = Collections.emptyList();
@@ -96,6 +122,7 @@ public class DisplayParentUpdatesMojoTest {
         };
         mojo.outputFile = tempFile.toFile();
         mojo.setPluginContext(new HashMap<>());
+        openMocks(this);
     }
 
     @After
