@@ -538,11 +538,17 @@ public class DefaultVersionsHelper implements VersionsHelper {
      */
     public static class Builder {
         private Log log;
+
         private MavenSession mavenSession;
+
         private MojoExecution mojoExecution;
+
         private RepositorySystem repositorySystem;
+
         private RuleService ruleService;
+
         private ArtifactCreationService artifactCreationService;
+
         private PomHelper pomHelper;
 
         public Builder() {}
@@ -632,6 +638,7 @@ public class DefaultVersionsHelper implements VersionsHelper {
 
         /**
          * Builds the constructed {@linkplain DefaultVersionsHelper} object
+         *
          * @return constructed {@linkplain DefaultVersionsHelper}
          * @throws MojoExecutionException should the constructor with the RuleSet retrieval doesn't succeed
          */

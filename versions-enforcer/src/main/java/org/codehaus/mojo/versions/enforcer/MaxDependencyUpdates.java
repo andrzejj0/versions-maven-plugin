@@ -18,39 +18,6 @@ package org.codehaus.mojo.versions.enforcer;
  * under the License.
  */
 
-import javax.inject.Inject;
-import javax.inject.Named;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
-
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
-import org.apache.maven.artifact.versioning.ArtifactVersion;
-import org.apache.maven.enforcer.rule.api.AbstractEnforcerRule;
-import org.apache.maven.enforcer.rule.api.EnforcerRuleError;
-import org.apache.maven.enforcer.rule.api.EnforcerRuleException;
-import org.apache.maven.execution.MavenSession;
-import org.apache.maven.model.Dependency;
-import org.apache.maven.plugin.MojoExecution;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.project.MavenProject;
-import org.apache.maven.wagon.Wagon;
-import org.codehaus.mojo.versions.api.ArtifactVersions;
-import org.codehaus.mojo.versions.api.DefaultVersionsHelper;
-import org.codehaus.mojo.versions.api.Segment;
-import org.codehaus.mojo.versions.api.VersionRetrievalException;
-import org.codehaus.mojo.versions.api.VersionsHelper;
-import org.codehaus.mojo.versions.model.RuleSet;
-import org.codehaus.mojo.versions.rule.RuleService;
-import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
-import org.codehaus.mojo.versions.utils.DependencyComparator;
-import org.eclipse.aether.RepositorySystem;
-
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.Optional.empty;
@@ -64,8 +31,45 @@ import static org.codehaus.mojo.versions.utils.MavenProjectUtils.extractDependen
 import static org.codehaus.mojo.versions.utils.MavenProjectUtils.extractDependenciesFromPlugins;
 import static org.codehaus.mojo.versions.utils.MavenProjectUtils.extractPluginDependenciesFromPluginsInPluginManagement;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+import javax.inject.Inject;
+import javax.inject.Named;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
+import org.apache.maven.artifact.versioning.ArtifactVersion;
+import org.apache.maven.enforcer.rule.api.AbstractEnforcerRule;
+import org.apache.maven.enforcer.rule.api.EnforcerRuleError;
+import org.apache.maven.enforcer.rule.api.EnforcerRuleException;
+import org.apache.maven.execution.MavenSession;
+import org.apache.maven.model.Dependency;
+import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.logging.Log;
+import org.apache.maven.project.MavenProject;
+import org.apache.maven.wagon.Wagon;
+import org.codehaus.mojo.versions.api.ArtifactVersions;
+import org.codehaus.mojo.versions.api.DefaultVersionsHelper;
+import org.codehaus.mojo.versions.api.PomHelper;
+import org.codehaus.mojo.versions.api.Segment;
+import org.codehaus.mojo.versions.api.VersionRetrievalException;
+import org.codehaus.mojo.versions.api.VersionsHelper;
+import org.codehaus.mojo.versions.model.RuleSet;
+import org.codehaus.mojo.versions.rule.RuleService;
+import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.DependencyComparator;
+import org.codehaus.mojo.versions.utils.VersionsExpressionEvaluator;
+import org.eclipse.aether.RepositorySystem;
+
 @Named("maxDependencyUpdates")
 public class MaxDependencyUpdates extends AbstractEnforcerRule {
+    private final ArtifactCreationService artifactCreationService;
+
     private final ArtifactHandlerManager artifactHandlerManager;
 
     /**
@@ -269,19 +273,17 @@ public class MaxDependencyUpdates extends AbstractEnforcerRule {
 
     private final MojoExecution mojoExecution;
 
-    private final RuleService ruleService;
-
     @Inject
     public MaxDependencyUpdates(
-            RuleService ruleService,
             MavenProject project,
+            ArtifactCreationService artifactCreationService,
             ArtifactHandlerManager artifactHandlerManager,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             MavenSession mavenSession,
             MojoExecution mojoExecution) {
-        this.ruleService = ruleService;
         this.project = project;
+        this.artifactCreationService = artifactCreationService;
         this.artifactHandlerManager = artifactHandlerManager;
         this.repositorySystem = repositorySystem;
         this.wagonMap = wagonMap;
@@ -296,19 +298,25 @@ public class MaxDependencyUpdates extends AbstractEnforcerRule {
     private VersionsHelper createVersionsHelper(String serverId, String rulesUri, RuleSet ruleSet)
             throws EnforcerRuleError {
         try {
+            Log log = new PluginLogWrapper(getLog());
+            RuleService ruleService = new RulesServiceBuilder()
+                    .withWagonMap(wagonMap)
+                    .withServerId(serverId)
+                    .withRulesUri(rulesUri)
+                    .withRuleSet(ruleSet)
+                    .withIgnoredVersions(null)
+                    .withLog(log)
+                    .build();
+            PomHelper pomHelper = new PomHelper(
+                    ruleService, artifactCreationService, new VersionsExpressionEvaluator(mavenSession, mojoExecution));
             return new DefaultVersionsHelper.Builder()
-                    .withRuleService(ruleService)
+                    .withArtifactCreationService(artifactCreationService)
                     .withRepositorySystem(repositorySystem)
-                    .withLog(new PluginLogWrapper(getLog()))
+                    .withLog(log)
                     .withMavenSession(mavenSession)
                     .withMojoExecution(mojoExecution)
-                    .withRuleService(new RulesServiceBuilder()
-                            .withWagonMap(wagonMap)
-                            .withServerId(serverId)
-                            .withRulesUri(rulesUri)
-                            .withRuleSet(ruleSet)
-                            .withLog(new PluginLogWrapper(getLog()))
-                            .build())
+                    .withPomHelper(pomHelper)
+                    .withRuleService(ruleService)
                     .build();
         } catch (MojoExecutionException e) {
             throw new EnforcerRuleError("Cannot resolve dependency", e);

@@ -35,6 +35,7 @@ import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionsHelper;
 import org.codehaus.mojo.versions.model.RuleSet;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactory;
+import org.codehaus.mojo.versions.rule.RuleService;
 import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
 import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.VersionsExpressionEvaluator;
@@ -179,24 +180,24 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
     public VersionsHelper getHelper() throws MavenReportException {
         if (helper == null) {
             try {
+                RuleService ruleService = new RulesServiceBuilder()
+                        .withWagonMap(wagonMap)
+                        .withServerId(serverId)
+                        .withRulesUri(rulesUri)
+                        .withRuleSet(ruleSet)
+                        .withIgnoredVersions(ignoredVersions)
+                        .withLog(getLog())
+                        .build();
+                PomHelper pomHelper = new PomHelper(
+                        ruleService, artifactCreationService, new VersionsExpressionEvaluator(session, mojoExecution));
                 helper = new DefaultVersionsHelper.Builder()
                         .withArtifactCreationService(artifactCreationService)
                         .withRepositorySystem(repositorySystem)
                         .withLog(getLog())
                         .withMavenSession(session)
                         .withMojoExecution(mojoExecution)
-                        .withPomHelper(new PomHelper(
-                                new RulesServiceBuilder().build(),
-                                artifactCreationService,
-                                new VersionsExpressionEvaluator(session, mojoExecution)))
-                        .withRuleService(new RulesServiceBuilder()
-                                .withWagonMap(wagonMap)
-                                .withServerId(serverId)
-                                .withRulesUri(rulesUri)
-                                .withRuleSet(ruleSet)
-                                .withIgnoredVersions(ignoredVersions)
-                                .withLog(getLog())
-                                .build())
+                        .withPomHelper(pomHelper)
+                        .withRuleService(ruleService)
                         .build();
             } catch (MojoExecutionException e) {
                 throw new MavenReportException(e.getMessage(), e);

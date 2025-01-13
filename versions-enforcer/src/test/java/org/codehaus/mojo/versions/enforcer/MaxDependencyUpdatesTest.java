@@ -18,24 +18,6 @@ package org.codehaus.mojo.versions.enforcer;
  * under the License.
  */
 
-import java.util.HashMap;
-
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
-import org.apache.maven.enforcer.rule.api.EnforcerLogger;
-import org.apache.maven.enforcer.rule.api.EnforcerRuleException;
-import org.apache.maven.execution.MavenSession;
-import org.apache.maven.plugin.MojoExecution;
-import org.apache.maven.project.MavenProject;
-import org.codehaus.mojo.versions.utils.DependencyBuilder;
-import org.codehaus.mojo.versions.utils.MockUtils;
-import org.eclipse.aether.RepositorySystem;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
@@ -45,6 +27,25 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Properties;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
+import org.apache.maven.enforcer.rule.api.EnforcerLogger;
+import org.apache.maven.enforcer.rule.api.EnforcerRuleException;
+import org.apache.maven.execution.MavenSession;
+import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.project.MavenProject;
+import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.DependencyBuilder;
+import org.codehaus.mojo.versions.utils.MockUtils;
+import org.eclipse.aether.RepositorySystem;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class MaxDependencyUpdatesTest {
@@ -64,13 +65,26 @@ class MaxDependencyUpdatesTest {
     @Mock
     private MojoExecution mojoExecution;
 
-    private ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
+    private ArtifactCreationService artifactCreationService;
 
-    @InjectMocks
+    private ArtifactHandlerManager artifactHandlerManager;
+
     private MaxDependencyUpdates maxDependencyUpdates;
 
     @BeforeEach
     public void setup() {
+        Properties emptyProperties = new Properties();
+        when(mavenSession.getUserProperties()).thenReturn(emptyProperties);
+        when(mavenSession.getSystemProperties()).thenReturn(emptyProperties);
+        artifactHandlerManager = mockArtifactHandlerManager();
+        artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
+        maxDependencyUpdates = new MaxDependencyUpdates(project,
+                artifactCreationService,
+                artifactHandlerManager,
+                repositorySystem,
+                Collections.emptyMap(),
+                mavenSession,
+                mojoExecution);
         maxDependencyUpdates.setLog(enforcerLogger);
     }
 

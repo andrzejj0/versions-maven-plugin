@@ -58,6 +58,7 @@ import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.model.RuleSet;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
+import org.codehaus.mojo.versions.rule.RuleService;
 import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
 import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.VersionsExpressionEvaluator;
@@ -208,24 +209,24 @@ public abstract class AbstractVersionsUpdaterMojo extends AbstractMojo {
 
     public VersionsHelper getHelper() throws MojoExecutionException {
         if (helper == null) {
+            RuleService ruleService = new RulesServiceBuilder()
+                    .withWagonMap(wagonMap)
+                    .withServerId(serverId)
+                    .withRulesUri(rulesUri)
+                    .withRuleSet(ruleSet)
+                    .withIgnoredVersions(ignoredVersions)
+                    .withLog(getLog())
+                    .build();
+            PomHelper pomHelper = new PomHelper(
+                    ruleService, artifactCreationService, new VersionsExpressionEvaluator(session, mojoExecution));
             helper = new DefaultVersionsHelper.Builder()
                     .withArtifactCreationService(artifactCreationService)
                     .withRepositorySystem(repositorySystem)
                     .withLog(getLog())
                     .withMavenSession(session)
                     .withMojoExecution(mojoExecution)
-                    .withPomHelper(new PomHelper(
-                            new RulesServiceBuilder().build(),
-                            artifactCreationService,
-                            new VersionsExpressionEvaluator(session, mojoExecution)))
-                    .withRuleService(new RulesServiceBuilder()
-                            .withWagonMap(wagonMap)
-                            .withServerId(serverId)
-                            .withRulesUri(rulesUri)
-                            .withRuleSet(ruleSet)
-                            .withLog(getLog())
-                            .withIgnoredVersions(ignoredVersions)
-                            .build())
+                    .withPomHelper(pomHelper)
+                    .withRuleService(ruleService)
                     .build();
         }
         return helper;
