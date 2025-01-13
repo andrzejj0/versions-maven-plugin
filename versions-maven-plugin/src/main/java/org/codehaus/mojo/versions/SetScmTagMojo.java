@@ -74,12 +74,12 @@ public class SetScmTagMojo extends AbstractVersionsUpdaterMojo {
 
     @Inject
     public SetScmTagMojo(
-            PomHelper pomHelper,
             ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
-            Map<String, ChangeRecorder> changeRecorders) {
-        super(pomHelper, artifactCreationService, repositorySystem, wagonMap, changeRecorders);
+            Map<String, ChangeRecorder> changeRecorders)
+            throws MojoExecutionException {
+        super(artifactCreationService, repositorySystem, wagonMap, changeRecorders);
     }
 
     @Override

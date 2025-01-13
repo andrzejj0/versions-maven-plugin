@@ -19,12 +19,9 @@ import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.api.PomHelper;
-import org.codehaus.mojo.versions.rule.RuleService;
-import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
 import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.TestLog;
 import org.codehaus.mojo.versions.utils.TestUtils;
-import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -33,7 +30,6 @@ import org.mockito.Mock;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.codehaus.mojo.versions.utils.MockUtils.mockArtifactHandlerManager;
-import static org.codehaus.mojo.versions.utils.MockUtils.mockMavenSession;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
@@ -55,9 +51,6 @@ public class SetMojoTest extends AbstractMojoTestCase {
 
     protected ArtifactCreationService artifactCreationService;
 
-    @Mock
-    protected ExpressionEvaluator expressionEvaluator;
-
     @Before
     public void setUp() throws Exception {
         super.setUp();
@@ -65,11 +58,6 @@ public class SetMojoTest extends AbstractMojoTestCase {
         tempDir = TestUtils.createTempDir("set");
         ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
         artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
-        RuleService ruleService = new RulesServiceBuilder()
-                .withLog(log)
-                .withMavenSession(mockMavenSession())
-                .build();
-        pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
     }
 
     @After
@@ -79,7 +67,7 @@ public class SetMojoTest extends AbstractMojoTestCase {
 
     @Test
     public void testGetIncrementedVersion() throws MojoExecutionException {
-        new SetMojo(pomHelper, artifactCreationService, null, null, null, null, null) {
+        new SetMojo(artifactCreationService, null, null, null, null, null) {
             {
                 assertThat(getIncrementedVersion("1", null), is("2-SNAPSHOT"));
                 assertThat(getIncrementedVersion("1.0", null), is("1.1-SNAPSHOT"));
@@ -94,8 +82,8 @@ public class SetMojoTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void testNextSnapshotIndexLowerBound() {
-        new SetMojo(pomHelper, artifactCreationService, null, null, null, null, null) {
+    public void testNextSnapshotIndexLowerBound() throws MojoExecutionException {
+        new SetMojo(artifactCreationService, null, null, null, null, null) {
             {
                 try {
                     getIncrementedVersion("1.0.0", 0);
@@ -108,8 +96,8 @@ public class SetMojoTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void testNextSnapshotIndexUpperBound() {
-        new SetMojo(pomHelper, artifactCreationService, null, null, null, null, null) {
+    public void testNextSnapshotIndexUpperBound() throws MojoExecutionException {
+        new SetMojo(artifactCreationService, null, null, null, null, null) {
             {
                 try {
                     getIncrementedVersion("1.0.0", 4);
@@ -127,7 +115,7 @@ public class SetMojoTest extends AbstractMojoTestCase {
     @Test
     public void testNextSnapshotIndexWithoutNextSnapshot() throws MojoFailureException {
         try {
-            new SetMojo(pomHelper, artifactCreationService, null, null, null, null, null) {
+            new SetMojo(artifactCreationService, null, null, null, null, null) {
                 {
                     project = new MavenProject();
                     project.setParent(new MavenProject());

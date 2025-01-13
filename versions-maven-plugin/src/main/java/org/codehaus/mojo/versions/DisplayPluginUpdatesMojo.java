@@ -184,7 +184,6 @@ public class DisplayPluginUpdatesMojo extends AbstractVersionsDisplayMojo {
     @Inject
     @SuppressWarnings("checkstyle:ParameterNumber")
     public DisplayPluginUpdatesMojo(
-            PomHelper pomHelper,
             ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             ProjectBuilder projectBuilder,
@@ -192,8 +191,9 @@ public class DisplayPluginUpdatesMojo extends AbstractVersionsDisplayMojo {
             LifecycleExecutor lifecycleExecutor,
             ModelInterpolator modelInterpolator,
             RuntimeInformation runtimeInformation,
-            Map<String, ChangeRecorder> changeRecorders) {
-        super(pomHelper, artifactCreationService, repositorySystem, wagonMap, changeRecorders);
+            Map<String, ChangeRecorder> changeRecorders)
+            throws MojoExecutionException {
+        super(artifactCreationService, repositorySystem, wagonMap, changeRecorders);
         this.projectBuilder = projectBuilder;
         this.lifecycleExecutor = lifecycleExecutor;
         this.modelInterpolator = modelInterpolator;

@@ -77,7 +77,8 @@ public class UseReleasesMojoTest extends AbstractMojoTestCase {
     private ExpressionEvaluator expressionEvaluator;
 
     @Before
-    public void setUp() throws IllegalAccessException, MojoExecutionException {
+    public void setUp() throws Exception {
+        super.setUp();
         openMocks(this);
         ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
         artifactCreationService = new ArtifactCreationService(artifactHandlerManager);

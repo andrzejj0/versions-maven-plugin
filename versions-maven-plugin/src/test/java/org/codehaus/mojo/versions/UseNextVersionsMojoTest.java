@@ -53,9 +53,8 @@ import static org.mockito.Mockito.mockStatic;
 public class UseNextVersionsMojoTest extends UseLatestVersionsMojoTestBase {
 
     @Override
-    protected UseLatestVersionsMojoBase createMojo() throws IllegalAccessException {
+    protected UseLatestVersionsMojoBase createMojo() throws IllegalAccessException, MojoExecutionException {
         return new UseNextVersionsMojo(
-                pomHelper,
                 artifactCreationService,
                 mockAetherRepositorySystem(new HashMap<String, String[]>() {
                     {

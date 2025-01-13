@@ -44,7 +44,7 @@ public class SeparatePatternsForIncludesAnExcludesTest {
                 .build();
         pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
 
-        mojo = new AbstractVersionsDependencyUpdaterMojo(pomHelper, artifactCreationService, null, null, null) {
+        mojo = new AbstractVersionsDependencyUpdaterMojo(artifactCreationService, null, null, null) {
             @Override
             protected boolean getProcessDependencies() {
                 return true;

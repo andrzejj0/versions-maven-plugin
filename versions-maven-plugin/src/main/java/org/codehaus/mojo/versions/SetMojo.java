@@ -261,14 +261,14 @@ public class SetMojo extends AbstractVersionsUpdaterMojo {
 
     @Inject
     public SetMojo(
-            PomHelper pomHelper,
             ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             ProjectBuilder projectBuilder,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders,
-            Prompter prompter) {
-        super(pomHelper, artifactCreationService, repositorySystem, wagonMap, changeRecorders);
+            Prompter prompter)
+            throws MojoExecutionException {
+        super(artifactCreationService, repositorySystem, wagonMap, changeRecorders);
         this.projectBuilder = projectBuilder;
         this.prompter = prompter;
     }

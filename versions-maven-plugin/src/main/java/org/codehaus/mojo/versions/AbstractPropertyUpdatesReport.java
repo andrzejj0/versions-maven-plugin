@@ -31,7 +31,6 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.reporting.MavenReportException;
 import org.apache.maven.wagon.Wagon;
-import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.Property;
 import org.codehaus.mojo.versions.api.PropertyVersions;
 import org.codehaus.mojo.versions.api.VersionsHelper.VersionPropertiesMapRequest;
@@ -101,12 +100,11 @@ public abstract class AbstractPropertyUpdatesReport extends AbstractVersionsRepo
 
     protected AbstractPropertyUpdatesReport(
             I18N i18n,
-            PomHelper pomHelper,
             ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             ReportRendererFactory rendererFactory) {
-        super(i18n, pomHelper, artifactCreationService, repositorySystem, wagonMap, rendererFactory);
+        super(i18n, artifactCreationService, repositorySystem, wagonMap, rendererFactory);
     }
 
     /**

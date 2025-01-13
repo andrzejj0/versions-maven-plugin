@@ -36,11 +36,8 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugin.testing.stubs.DefaultArtifactHandlerStub;
 import org.apache.maven.project.MavenProject;
-import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
-import org.codehaus.mojo.versions.rule.RuleService;
-import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
 import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.TestUtils;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
@@ -74,10 +71,6 @@ public class DisplayParentUpdatesMojoTest {
 
     private static ArtifactCreationService artifactCreationService;
 
-    private static RuleService ruleService;
-
-    private static PomHelper pomHelper;
-
     @Mock
     private static ExpressionEvaluator expressionEvaluator;
 
@@ -92,11 +85,6 @@ public class DisplayParentUpdatesMojoTest {
     public static void setUpStatic() throws MojoExecutionException {
         artifactHandlerManager = mockArtifactHandlerManager();
         artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
-        ruleService = new RulesServiceBuilder()
-                .withLog(log)
-                .withMavenSession(mockMavenSession())
-                .build();
-        pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
         repositorySystem = mockAetherRepositorySystem(new HashMap<String, String[]>() {
             {
                 put("parent-artifact", new String[] {"0.9.0", "1.0.0", "1.0.1-SNAPSHOT"});
@@ -109,10 +97,10 @@ public class DisplayParentUpdatesMojoTest {
     }
 
     @Before
-    public void setUp() throws IllegalAccessException, IOException {
+    public void setUp() throws IllegalAccessException, IOException, MojoExecutionException {
         tempDir = TestUtils.createTempDir("display-property-updates");
         tempFile = Files.createTempFile(tempDir, "output", "");
-        mojo = new DisplayParentUpdatesMojo(pomHelper, artifactCreationService, repositorySystem, null, null) {
+        mojo = new DisplayParentUpdatesMojo(artifactCreationService, repositorySystem, null, null) {
             {
                 setProject(createProject());
                 reactorProjects = Collections.emptyList();

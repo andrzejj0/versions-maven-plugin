@@ -151,13 +151,13 @@ public class CompareDependenciesMojo extends AbstractVersionsDependencyUpdaterMo
 
     @Inject
     public CompareDependenciesMojo(
-            PomHelper pomHelper,
             ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             ProjectBuilder projectBuilder,
-            Map<String, ChangeRecorder> changeRecorders) {
-        super(pomHelper, artifactCreationService, repositorySystem, wagonMap, changeRecorders);
+            Map<String, ChangeRecorder> changeRecorders)
+            throws MojoExecutionException {
+        super(artifactCreationService, repositorySystem, wagonMap, changeRecorders);
         this.projectBuilder = projectBuilder;
     }
 

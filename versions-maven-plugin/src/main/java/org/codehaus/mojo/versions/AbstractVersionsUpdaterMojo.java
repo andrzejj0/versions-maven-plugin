@@ -20,7 +20,6 @@ package org.codehaus.mojo.versions;
  */
 
 import javax.inject.Inject;
-import javax.inject.Named;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.transform.TransformerException;
 
@@ -44,7 +43,6 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.wagon.Wagon;
@@ -63,7 +61,6 @@ import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
 import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
 import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.VersionsExpressionEvaluator;
-import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.eclipse.aether.RepositorySystem;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
@@ -192,32 +189,19 @@ public abstract class AbstractVersionsUpdaterMojo extends AbstractMojo {
 
     protected final ArtifactCreationService artifactCreationService;
 
-    private final PomHelper pomHelper;
-
     // --------------------- GETTER / SETTER METHODS ---------------------
 
     @Inject
     protected AbstractVersionsUpdaterMojo(
-            PomHelper pomHelper,
             ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
-            Map<String, ChangeRecorder> changeRecorders) {
-        this.pomHelper = pomHelper;
+            Map<String, ChangeRecorder> changeRecorders)
+            throws MojoExecutionException {
         this.artifactCreationService = artifactCreationService;
         this.repositorySystem = repositorySystem;
         this.wagonMap = wagonMap;
         this.changeRecorders = changeRecorders;
-    }
-
-    @Named
-    public Log provideLog() {
-        return getLog();
-    }
-
-    @Named
-    public ExpressionEvaluator provideExpressionEvaluator() {
-        return new VersionsExpressionEvaluator(session, mojoExecution);
     }
 
     protected abstract boolean getAllowSnapshots();
@@ -225,12 +209,15 @@ public abstract class AbstractVersionsUpdaterMojo extends AbstractMojo {
     public VersionsHelper getHelper() throws MojoExecutionException {
         if (helper == null) {
             helper = new DefaultVersionsHelper.Builder()
-                    .withPomHelper(pomHelper)
                     .withArtifactCreationService(artifactCreationService)
                     .withRepositorySystem(repositorySystem)
                     .withLog(getLog())
                     .withMavenSession(session)
                     .withMojoExecution(mojoExecution)
+                    .withPomHelper(new PomHelper(
+                            new RulesServiceBuilder().build(),
+                            artifactCreationService,
+                            new VersionsExpressionEvaluator(session, mojoExecution)))
                     .withRuleService(new RulesServiceBuilder()
                             .withWagonMap(wagonMap)
                             .withServerId(serverId)

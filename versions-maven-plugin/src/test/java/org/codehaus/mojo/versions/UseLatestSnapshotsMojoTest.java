@@ -18,9 +18,9 @@ import static org.codehaus.mojo.versions.utils.MockUtils.mockMavenSession;
 
 public class UseLatestSnapshotsMojoTest extends UseLatestVersionsMojoTestBase {
     @Override
-    protected UseLatestVersionsMojoBase createMojo() throws IllegalAccessException {
+    protected UseLatestVersionsMojoBase createMojo() throws IllegalAccessException, MojoExecutionException {
         return new UseLatestSnapshotsMojo(
-                pomHelper, artifactCreationService, createRepositorySystem(), null, changeRecorder.asTestMap()) {
+                artifactCreationService, createRepositorySystem(), null, changeRecorder.asTestMap()) {
             {
                 reactorProjects = emptyList();
                 MavenProject project = new MavenProject() {

@@ -41,9 +41,9 @@ import static org.hamcrest.Matchers.hasItem;
 public class UseLatestVersionsMojoTest extends UseLatestVersionsMojoTestBase {
 
     @Override
-    protected UseLatestVersionsMojoBase createMojo() throws IllegalAccessException {
+    protected UseLatestVersionsMojoBase createMojo() throws IllegalAccessException, MojoExecutionException {
         return new UseLatestVersionsMojo(
-                pomHelper, artifactCreationService, createRepositorySystem(), null, changeRecorder.asTestMap()) {
+                artifactCreationService, createRepositorySystem(), null, changeRecorder.asTestMap()) {
             {
                 reactorProjects = emptyList();
                 MavenProject project = new MavenProject() {

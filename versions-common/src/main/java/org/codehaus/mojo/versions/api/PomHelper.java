@@ -19,8 +19,6 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
-import javax.inject.Inject;
-import javax.inject.Named;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.TransformerException;
@@ -94,7 +92,6 @@ import static org.codehaus.mojo.versions.api.PomHelper.Marks.CHILD_START;
 import static org.codehaus.mojo.versions.api.PomHelper.Marks.END_ELEMENT;
 import static org.codehaus.mojo.versions.api.PomHelper.Marks.PARENT_START;
 
-@Named
 public class PomHelper {
     public static final String APACHE_MAVEN_PLUGINS_GROUPID = "org.apache.maven.plugins";
 
@@ -133,7 +130,6 @@ public class PomHelper {
     /**
      * Creates a new instance
      */
-    @Inject
     public PomHelper(
             RuleService ruleService,
             ArtifactCreationService artifactCreationService,

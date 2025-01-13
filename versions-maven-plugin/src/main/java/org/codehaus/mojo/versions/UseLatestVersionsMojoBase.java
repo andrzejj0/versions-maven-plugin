@@ -82,12 +82,12 @@ public abstract class UseLatestVersionsMojoBase extends AbstractVersionsDependen
     private final ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
     public UseLatestVersionsMojoBase(
-            PomHelper pomHelper,
             ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
-            Map<String, ChangeRecorder> changeRecorders) {
-        super(pomHelper, artifactCreationService, repositorySystem, wagonMap, changeRecorders);
+            Map<String, ChangeRecorder> changeRecorders)
+            throws MojoExecutionException {
+        super(artifactCreationService, repositorySystem, wagonMap, changeRecorders);
     }
 
     /**

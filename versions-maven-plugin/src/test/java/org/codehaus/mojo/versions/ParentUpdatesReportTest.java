@@ -35,7 +35,6 @@ import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.testing.stubs.DefaultArtifactHandlerStub;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.reporting.MavenReportException;
-import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactoryImpl;
 import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.plexus.i18n.I18N;
@@ -63,7 +62,6 @@ public class ParentUpdatesReportTest {
         SinkFactory sinkFactory = new Xhtml5SinkFactory();
         new ParentUpdatesReport(
                 MOCK_I18N,
-                mock(PomHelper.class),
                 mock(ArtifactCreationService.class),
                 mockAetherRepositorySystem(new HashMap<String, String[]>() {
                     {

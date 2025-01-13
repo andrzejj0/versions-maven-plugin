@@ -30,7 +30,6 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.reporting.MavenReportException;
 import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
-import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactory;
 import org.codehaus.mojo.versions.reporting.model.ParentUpdatesModel;
@@ -51,12 +50,11 @@ public class ParentUpdatesReport extends AbstractVersionsReport<ParentUpdatesMod
     @Inject
     protected ParentUpdatesReport(
             I18N i18n,
-            PomHelper pomHelper,
             ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             ReportRendererFactory rendererFactory) {
-        super(i18n, pomHelper, artifactCreationService, repositorySystem, wagonMap, rendererFactory);
+        super(i18n, artifactCreationService, repositorySystem, wagonMap, rendererFactory);
     }
 
     /**

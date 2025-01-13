@@ -37,6 +37,7 @@ import org.codehaus.mojo.versions.model.RuleSet;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactory;
 import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
 import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.VersionsExpressionEvaluator;
 import org.codehaus.plexus.i18n.I18N;
 import org.eclipse.aether.RepositorySystem;
 
@@ -158,21 +159,17 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
      */
     protected Map<String, Wagon> wagonMap;
 
-    private final PomHelper pomHelper;
-
     private final ArtifactCreationService artifactCreationService;
 
     // --------------------- GETTER / SETTER METHODS ---------------------
 
     protected AbstractVersionsReport(
             I18N i18n,
-            PomHelper pomHelper,
             ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             ReportRendererFactory rendererFactory) {
         this.i18n = i18n;
-        this.pomHelper = pomHelper;
         this.artifactCreationService = artifactCreationService;
         this.repositorySystem = repositorySystem;
         this.wagonMap = wagonMap;
@@ -183,12 +180,15 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
         if (helper == null) {
             try {
                 helper = new DefaultVersionsHelper.Builder()
-                        .withPomHelper(pomHelper)
                         .withArtifactCreationService(artifactCreationService)
                         .withRepositorySystem(repositorySystem)
                         .withLog(getLog())
                         .withMavenSession(session)
                         .withMojoExecution(mojoExecution)
+                        .withPomHelper(new PomHelper(
+                                new RulesServiceBuilder().build(),
+                                artifactCreationService,
+                                new VersionsExpressionEvaluator(session, mojoExecution)))
                         .withRuleService(new RulesServiceBuilder()
                                 .withWagonMap(wagonMap)
                                 .withServerId(serverId)

@@ -27,7 +27,6 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.wagon.Wagon;
-import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactory;
 import org.codehaus.mojo.versions.reporting.util.AggregateReportUtils;
 import org.codehaus.mojo.versions.utils.ArtifactCreationService;
@@ -49,12 +48,11 @@ public class PluginUpdatesAggregateReport extends AbstractPluginUpdatesReport {
     @Inject
     protected PluginUpdatesAggregateReport(
             I18N i18n,
-            PomHelper pomHelper,
             ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             ReportRendererFactory rendererFactory) {
-        super(i18n, pomHelper, artifactCreationService, repositorySystem, wagonMap, rendererFactory);
+        super(i18n, artifactCreationService, repositorySystem, wagonMap, rendererFactory);
     }
 
     @Override

@@ -59,14 +59,12 @@ public abstract class UseLatestVersionsMojoTestBase {
     @Mock
     protected ExpressionEvaluator expressionEvaluator;
 
-    protected abstract UseLatestVersionsMojoBase createMojo() throws IllegalAccessException;
+    protected abstract UseLatestVersionsMojoBase createMojo() throws IllegalAccessException, MojoExecutionException;
 
     @Before
     public void setUp() throws Exception {
         openMocks(this);
         changeRecorder = new TestChangeRecorder();
-        mojo = createMojo();
-        mojo.mojoExecution = Mockito.mock(MojoExecution.class);
         ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
         artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
         RuleService ruleService = new RulesServiceBuilder()
@@ -74,6 +72,8 @@ public abstract class UseLatestVersionsMojoTestBase {
                 .withMavenSession(mockMavenSession())
                 .build();
         pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
+        mojo = createMojo();
+        mojo.mojoExecution = Mockito.mock(MojoExecution.class);
     }
 
     protected RepositorySystem createRepositorySystem() {

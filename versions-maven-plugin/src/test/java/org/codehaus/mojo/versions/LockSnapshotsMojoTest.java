@@ -85,8 +85,8 @@ public class LockSnapshotsMojoTest {
         pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
     }
 
-    private LockSnapshotsMojo createMojo(RepositorySystem repositorySystem) {
-        return new LockSnapshotsMojo(pomHelper, artifactCreationService, repositorySystem, null, null) {
+    private LockSnapshotsMojo createMojo(RepositorySystem repositorySystem) throws MojoExecutionException {
+        return new LockSnapshotsMojo(artifactCreationService, repositorySystem, null, null) {
             {
                 reactorProjects = emptyList();
                 project = new MavenProject(new Model() {

@@ -37,7 +37,6 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.reporting.MavenReportException;
 import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
-import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactory;
 import org.codehaus.mojo.versions.reporting.model.DependencyUpdatesModel;
@@ -114,12 +113,11 @@ public abstract class AbstractDependencyUpdatesReport extends AbstractVersionsRe
 
     protected AbstractDependencyUpdatesReport(
             I18N i18n,
-            PomHelper pomHelper,
             ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             ReportRendererFactory rendererFactory) {
-        super(i18n, pomHelper, artifactCreationService, repositorySystem, wagonMap, rendererFactory);
+        super(i18n, artifactCreationService, repositorySystem, wagonMap, rendererFactory);
     }
 
     /**

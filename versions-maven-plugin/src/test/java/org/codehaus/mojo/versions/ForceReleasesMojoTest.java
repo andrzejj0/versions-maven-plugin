@@ -15,8 +15,6 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.change.DefaultDependencyVersionChange;
-import org.codehaus.mojo.versions.rule.RuleService;
-import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
 import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.mojo.versions.utils.TestChangeRecorder;
@@ -75,18 +73,16 @@ public class ForceReleasesMojoTest extends AbstractMojoTestCase {
     private ExpressionEvaluator expressionEvaluator;
 
     @Before
-    public void setUp() throws IllegalAccessException, MojoExecutionException {
+    public void setUp() throws Exception {
+        super.setUp();
         openMocks(this);
         ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
         artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
         MavenSession session = mockMavenSession();
-        RuleService ruleService =
-                new RulesServiceBuilder().withLog(log).withMavenSession(session).build();
-        pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
 
         changeRecorder = new TestChangeRecorder();
         mojo = new ForceReleasesMojo(
-                pomHelper, artifactCreationService, mockAetherRepositorySystem(), null, changeRecorder.asTestMap());
+                artifactCreationService, mockAetherRepositorySystem(), null, changeRecorder.asTestMap());
         setVariableValueToObject(mojo, "reactorProjects", emptyList());
         mojo.project = new MavenProject() {
             {

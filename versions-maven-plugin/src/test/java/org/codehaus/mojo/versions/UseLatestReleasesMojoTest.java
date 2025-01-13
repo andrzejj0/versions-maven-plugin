@@ -44,9 +44,9 @@ import static org.mockito.Mockito.mock;
 public class UseLatestReleasesMojoTest extends UseLatestVersionsMojoTestBase {
 
     @Override
-    protected UseLatestReleasesMojo createMojo() throws IllegalAccessException {
+    protected UseLatestReleasesMojo createMojo() throws IllegalAccessException, MojoExecutionException {
         return new UseLatestReleasesMojo(
-                pomHelper, artifactCreationService, createRepositorySystem(), null, changeRecorder.asTestMap()) {
+                artifactCreationService, createRepositorySystem(), null, changeRecorder.asTestMap()) {
             {
                 reactorProjects = emptyList();
                 mojoExecution = mock(MojoExecution.class);
