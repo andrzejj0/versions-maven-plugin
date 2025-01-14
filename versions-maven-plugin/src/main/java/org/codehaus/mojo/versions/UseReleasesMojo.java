@@ -122,7 +122,6 @@ public class UseReleasesMojo extends AbstractVersionsDependencyUpdaterMojo {
 
     @Inject
     public UseReleasesMojo(
-            PomHelper pomHelper,
             ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,

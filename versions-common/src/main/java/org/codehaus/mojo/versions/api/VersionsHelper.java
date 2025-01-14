@@ -19,8 +19,6 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
-import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
@@ -43,16 +41,6 @@ import org.codehaus.mojo.versions.ordering.VersionComparator;
  * @since 1.0-alpha-3
  */
 public interface VersionsHelper {
-
-    /**
-     * Takes a {@link List} of {@link org.apache.maven.project.MavenProject} instances and converts it into a
-     * {@link Set} of {@link Artifact} instances.
-     *
-     * @param mavenProjects the {@link List} of {@link org.apache.maven.project.MavenProject} instances.
-     * @return a {@link Set} of {@link Artifact} instances.
-     * @since 1.0-alpha-3
-     */
-    Set<Artifact> extractArtifacts(Collection<MavenProject> mavenProjects);
 
     /**
      * Looks up the versions of the specified artifact that are available in either the local repository, or the

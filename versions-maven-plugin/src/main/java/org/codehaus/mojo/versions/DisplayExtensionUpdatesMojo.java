@@ -35,7 +35,6 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
-import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.Segment;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
@@ -156,7 +155,6 @@ public class DisplayExtensionUpdatesMojo extends AbstractVersionsDisplayMojo {
 
     @Inject
     public DisplayExtensionUpdatesMojo(
-            PomHelper pomHelper,
             ArtifactCreationService artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,

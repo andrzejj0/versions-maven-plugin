@@ -24,7 +24,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -145,56 +144,38 @@ public class DefaultVersionsHelper implements VersionsHelper {
         this.remoteProjectRepositories = of(mavenSession)
                 .map(MavenSession::getCurrentProject)
                 .map(MavenProject::getRemoteProjectRepositories)
-                .map(DefaultVersionsHelper::adjustRemoteRepositoriesRefreshPolicy)
+                .map(DefaultVersionsHelper::forceDailyRemoteRepositoriesRefreshPolicy)
                 .orElseGet(Collections::emptyList);
 
         this.remotePluginRepositories = of(mavenSession)
                 .map(MavenSession::getCurrentProject)
                 .map(MavenProject::getRemotePluginRepositories)
-                .map(DefaultVersionsHelper::adjustRemoteRepositoriesRefreshPolicy)
+                .map(DefaultVersionsHelper::forceDailyRemoteRepositoriesRefreshPolicy)
                 .orElseGet(Collections::emptyList);
     }
 
-    static List<RemoteRepository> adjustRemoteRepositoriesRefreshPolicy(List<RemoteRepository> remoteRepositories) {
+    static List<RemoteRepository> forceDailyRemoteRepositoriesRefreshPolicy(List<RemoteRepository> remoteRepositories) {
         return remoteRepositories.stream()
-                .map(DefaultVersionsHelper::adjustRemoteRepositoryRefreshPolicy)
+                .map(remoteRepository -> {
+                    RepositoryPolicy snapshotPolicy = forceDailyUpdatePolicy(remoteRepository.getPolicy(true));
+                    RepositoryPolicy releasePolicy = forceDailyUpdatePolicy(remoteRepository.getPolicy(false));
+                    if (snapshotPolicy != null || releasePolicy != null) {
+                        RemoteRepository.Builder builder = new RemoteRepository.Builder(remoteRepository);
+                        Optional.ofNullable(snapshotPolicy).ifPresent(builder::setSnapshotPolicy);
+                        Optional.ofNullable(releasePolicy).ifPresent(builder::setReleasePolicy);
+                        return builder.build();
+                    } else {
+                        return remoteRepository;
+                    }
+                })
                 .collect(Collectors.toList());
     }
 
-    static RemoteRepository adjustRemoteRepositoryRefreshPolicy(RemoteRepository remoteRepository) {
-        RepositoryPolicy snapshotPolicy = remoteRepository.getPolicy(true);
-        RepositoryPolicy releasePolicy = remoteRepository.getPolicy(false);
-
-        RepositoryPolicy newSnapshotPolicy = null;
-        RepositoryPolicy newReleasePolicy = null;
-
-        if (snapshotPolicy.isEnabled()
-                && RepositoryPolicy.UPDATE_POLICY_NEVER.equals(snapshotPolicy.getUpdatePolicy())) {
-            newSnapshotPolicy = new RepositoryPolicy(
-                    true, RepositoryPolicy.UPDATE_POLICY_DAILY, snapshotPolicy.getChecksumPolicy());
+    private static RepositoryPolicy forceDailyUpdatePolicy(RepositoryPolicy policy) {
+        if (policy.isEnabled() && RepositoryPolicy.UPDATE_POLICY_NEVER.equals(policy.getUpdatePolicy())) {
+            return new RepositoryPolicy(true, RepositoryPolicy.UPDATE_POLICY_DAILY, policy.getChecksumPolicy());
         }
-
-        if (releasePolicy.isEnabled() && RepositoryPolicy.UPDATE_POLICY_NEVER.equals(releasePolicy.getUpdatePolicy())) {
-            newReleasePolicy =
-                    new RepositoryPolicy(true, RepositoryPolicy.UPDATE_POLICY_DAILY, releasePolicy.getChecksumPolicy());
-        }
-
-        if (newSnapshotPolicy != null || newReleasePolicy != null) {
-            RemoteRepository.Builder builder = new RemoteRepository.Builder(remoteRepository);
-            if (newSnapshotPolicy != null) {
-                builder.setSnapshotPolicy(newSnapshotPolicy);
-            }
-            if (newReleasePolicy != null) {
-                builder.setReleasePolicy(newReleasePolicy);
-            }
-            return builder.build();
-        } else {
-            return remoteRepository;
-        }
-    }
-
-    static boolean isClasspathUri(String uri) {
-        return (uri != null && uri.startsWith(CLASSPATH_PROTOCOL + ":"));
+        return null;
     }
 
     @Override
@@ -214,29 +195,23 @@ public class DefaultVersionsHelper implements VersionsHelper {
                 log.debug("Found ignored versions: " + ignoredVersions + " for artifact" + artifact);
             }
 
+            VersionRangeRequest versionRangeRequest = new VersionRangeRequest(
+                    toArtifact(artifact)
+                            .setVersion(ofNullable(versionRange)
+                                    .map(VersionRange::getRestrictions)
+                                    .flatMap(list -> list.stream().findFirst().map(Restriction::toString))
+                                    .orElse("(,)")),
+                    Stream.concat(
+                                    usePluginRepositories ? remotePluginRepositories.stream() : Stream.empty(),
+                                    useProjectRepositories ? remoteProjectRepositories.stream() : Stream.empty())
+                            .distinct()
+                            .collect(Collectors.toList()),
+                    "lookupArtifactVersions");
+
             return new ArtifactVersions(
                     artifact,
                     repositorySystem
-                            .resolveVersionRange(
-                                    mavenSession.getRepositorySession(),
-                                    new VersionRangeRequest(
-                                            toArtifact(artifact)
-                                                    .setVersion(ofNullable(versionRange)
-                                                            .map(VersionRange::getRestrictions)
-                                                            .flatMap(list -> list.stream()
-                                                                    .findFirst()
-                                                                    .map(Restriction::toString))
-                                                            .orElse("(,)")),
-                                            Stream.concat(
-                                                            usePluginRepositories
-                                                                    ? remotePluginRepositories.stream()
-                                                                    : Stream.empty(),
-                                                            useProjectRepositories
-                                                                    ? remoteProjectRepositories.stream()
-                                                                    : Stream.empty())
-                                                    .distinct()
-                                                    .collect(Collectors.toList()),
-                                            "lookupArtifactVersions"))
+                            .resolveVersionRange(mavenSession.getRepositorySession(), versionRangeRequest)
                             .getVersions()
                             .stream()
                             .filter(v -> ignoredVersions.stream().noneMatch(i -> {
@@ -319,16 +294,6 @@ public class DefaultVersionsHelper implements VersionsHelper {
         } catch (org.eclipse.aether.resolution.ArtifactResolutionException e) {
             throw new ArtifactResolutionException(e.getMessage(), artifact);
         }
-    }
-
-    @Override
-    public Set<Artifact> extractArtifacts(Collection<MavenProject> mavenProjects) {
-        Set<Artifact> result = new HashSet<>();
-        for (MavenProject project : mavenProjects) {
-            result.add(project.getArtifact());
-        }
-
-        return result;
     }
 
     public Map<Dependency, ArtifactVersions> lookupDependenciesUpdates(
@@ -434,102 +399,116 @@ public class DefaultVersionsHelper implements VersionsHelper {
     public Map<Property, PropertyVersions> getVersionPropertiesMap(VersionPropertiesMapRequest request)
             throws MojoExecutionException {
         Map<String, Property> properties = new HashMap<>();
+        // Populate properties map from request
         if (request.getPropertyDefinitions() != null) {
             Arrays.stream(request.getPropertyDefinitions()).forEach(p -> properties.put(p.getName(), p));
         }
+
         Map<String, PropertyVersionsBuilder> builders = new HashMap<>();
+
+        // Auto-link items if required
         if (request.isAutoLinkItems()) {
-            final PropertyVersionsBuilder[] propertyVersionsBuilders;
             try {
-                propertyVersionsBuilders = pomHelper.getPropertyVersionsBuilders(
+                PropertyVersionsBuilder[] propertyVersionsBuilders = pomHelper.getPropertyVersionsBuilders(
                         this, log, request.getMavenProject(), request.isIncludeParent());
+
+                for (PropertyVersionsBuilder builder : propertyVersionsBuilders) {
+                    String propertyName = builder.getName();
+                    builders.put(propertyName, builder);
+
+                    properties.computeIfAbsent(propertyName, name -> {
+                        Property property = new Property(name);
+                        log.debug(String.format(
+                                "Property ${%s}: Adding inferred version range of %s",
+                                name, builder.getVersionRange()));
+                        property.setVersion(builder.getVersionRange());
+                        return property;
+                    });
+                }
             } catch (ExpressionEvaluationException | IOException e) {
                 throw new MojoExecutionException(e.getMessage(), e);
             }
-
-            for (PropertyVersionsBuilder propertyVersionsBuilder : propertyVersionsBuilders) {
-                final String propertyName = propertyVersionsBuilder.getName();
-                builders.put(propertyName, propertyVersionsBuilder);
-                if (!properties.containsKey(propertyName)) {
-                    final Property property = new Property(propertyName);
-                    log.debug("Property ${" + propertyName + "}: Adding inferred version range of "
-                            + propertyVersionsBuilder.getVersionRange());
-                    property.setVersion(propertyVersionsBuilder.getVersionRange());
-                    properties.put(propertyName, property);
-                }
-            }
         }
 
-        List<String> includePropertiesList = request.getIncludeProperties() != null
-                ? Arrays.asList(request.getIncludeProperties().split("\\s*,\\s*"))
-                : Collections.emptyList();
-        List<String> excludePropertiesList = request.getExcludeProperties() != null
-                ? Arrays.asList(request.getExcludeProperties().split("\\s*,\\s*"))
-                : Collections.emptyList();
+        // Create include and exclude properties lists
+        List<String> includePropertiesList = Optional.ofNullable(request.getIncludeProperties())
+                .map(s -> Arrays.asList(s.split("\\s*,\\s*")))
+                .orElse(Collections.emptyList());
 
-        log.debug("Searching for properties associated with builders");
-        Iterator<Property> i = properties.values().iterator();
-        while (i.hasNext()) {
-            Property property = i.next();
+        List<String> excludePropertiesList = Optional.ofNullable(request.getExcludeProperties())
+                .map(s -> Arrays.asList(s.split("\\s*,\\s*")))
+                .orElse(Collections.emptyList());
 
-            log.debug("includePropertiesList:" + includePropertiesList + " property: " + property.getName());
-            log.debug("excludePropertiesList:" + excludePropertiesList + " property: " + property.getName());
-            if (!includePropertiesList.isEmpty() && !includePropertiesList.contains(property.getName())) {
-                log.debug("Skipping property ${" + property.getName() + "}");
-                i.remove();
-            } else if (!excludePropertiesList.isEmpty() && excludePropertiesList.contains(property.getName())) {
-                log.debug("Ignoring property ${" + property.getName() + "}");
-                i.remove();
+        // Filter properties based on include/exclude lists
+        properties.values().removeIf(property -> {
+            String name = property.getName();
+            if (!includePropertiesList.isEmpty() && !includePropertiesList.contains(name)) {
+                log.debug("Skipping property ${" + name + "}");
+                return true;
             }
-        }
-        i = properties.values().iterator();
+            if (excludePropertiesList.contains(name)) {
+                log.debug("Ignoring property ${" + name + "}");
+                return true;
+            }
+            return false;
+        });
+
+        log.debug("Processing properties to build PropertyVersions");
         Map<Property, PropertyVersions> propertyVersions = new LinkedHashMap<>(properties.size());
-        while (i.hasNext()) {
-            Property property = i.next();
-            log.debug("Property ${" + property.getName() + "}");
-            PropertyVersionsBuilder builder = builders.get(property.getName());
+
+        for (Property property : properties.values()) {
+            String propertyName = property.getName();
+            log.debug("Property ${" + propertyName + "}");
+
+            PropertyVersionsBuilder builder = builders.get(propertyName);
             if (builder == null || !builder.isAssociated()) {
-                log.debug("Property ${" + property.getName() + "}: Looks like this property is not "
-                        + "associated with any dependency...");
-                builder = new PropertyVersionsBuilder(this, ruleService, null, property.getName(), log);
+                log.debug(String.format("Property ${%s}: Not associated with any dependency.", propertyName));
+                builder = new PropertyVersionsBuilder(this, ruleService, null, propertyName, log);
             }
+
             if (!property.isAutoLinkDependencies()) {
-                log.debug("Property ${" + property.getName() + "}: Removing any autoLinkDependencies");
+                log.debug(String.format("Property ${%s}: Clearing auto-link dependencies", propertyName));
                 builder.clearAssociations();
             }
+
+            // Add specified dependencies to the builder
             Dependency[] dependencies = property.getDependencies();
             if (dependencies != null) {
                 for (Dependency dependency : dependencies) {
-                    log.debug("Property ${" + property.getName() + "}: Adding association to " + dependency);
+                    log.debug(String.format("Property ${%s}: Adding association to %s", propertyName, dependency));
                     builder.withAssociation(artifactCreationService.createArtifact(dependency), false);
                 }
             }
+
             try {
+                String currentVersion =
+                        request.getMavenProject().getProperties().getProperty(propertyName);
+                property.setValue(currentVersion);
+
                 if (property.isAutoLinkDependencies()
                         && StringUtils.isEmpty(property.getVersion())
                         && !StringUtils.isEmpty(builder.getVersionRange())) {
-                    log.debug("Property ${" + property.getName() + "}: Adding inferred version range of "
-                            + builder.getVersionRange());
+                    log.debug(String.format(
+                            "Property ${%s}: Adding inferred version range of %s",
+                            propertyName, builder.getVersionRange()));
                     property.setVersion(builder.getVersionRange());
                 }
-                final String currentVersion =
-                        request.getMavenProject().getProperties().getProperty(property.getName());
-                property.setValue(currentVersion);
-                final PropertyVersions versions;
-                try {
-                    if (currentVersion != null) {
-                        builder.withCurrentVersion(ArtifactVersionService.getArtifactVersion(currentVersion))
-                                .withCurrentVersionRange(VersionRange.createFromVersionSpec(currentVersion));
-                    }
-                } catch (InvalidVersionSpecificationException e) {
-                    throw new RuntimeException(e);
+
+                if (currentVersion != null) {
+                    builder.withCurrentVersion(ArtifactVersionService.getArtifactVersion(currentVersion))
+                            .withCurrentVersionRange(VersionRange.createFromVersionSpec(currentVersion));
                 }
-                versions = builder.build();
+
+                PropertyVersions versions = builder.build();
                 propertyVersions.put(property, versions);
+
             } catch (VersionRetrievalException e) {
                 throw new MojoExecutionException(e.getMessage(), e);
+            } catch (InvalidVersionSpecificationException e) {
+                throw new RuntimeException(e);
             }
         }
+
         return propertyVersions;
     }
 

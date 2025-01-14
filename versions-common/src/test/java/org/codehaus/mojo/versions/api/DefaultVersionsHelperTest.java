@@ -56,7 +56,6 @@ import org.eclipse.aether.resolution.VersionRangeResult;
 import org.eclipse.aether.util.version.GenericVersionScheme;
 import org.eclipse.aether.version.InvalidVersionSpecificationException;
 import org.eclipse.aether.version.Version;
-import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -195,20 +194,6 @@ class DefaultVersionsHelperTest {
         assertTrue(result.isEmpty());
     }
 
-    @Test
-    void testIsClasspathUriDetectsClassPathProtocol() throws Exception {
-        String uri = "classpath:/p/a/c/k/a/g/e/resource.res";
-
-        assertThat(DefaultVersionsHelper.isClasspathUri(uri), CoreMatchers.is(true));
-    }
-
-    @Test
-    void testIsClasspathUriDetectsThatItIsDifferentProtocol() throws Exception {
-        String uri = "http://10.10.10.10/p/a/c/k/a/g/e/resource.res";
-
-        assertThat(DefaultVersionsHelper.isClasspathUri(uri), CoreMatchers.is(false));
-    }
-
     private DefaultVersionsHelper createHelper() throws Exception {
         return createHelper(mock(RepositorySystem.class));
     }
@@ -281,7 +266,7 @@ class DefaultVersionsHelperTest {
                 .build();
 
         List<RemoteRepository> remoteRepositories =
-                DefaultVersionsHelper.adjustRemoteRepositoriesRefreshPolicy(Arrays.asList(repo1, repo2, repo3));
+                DefaultVersionsHelper.forceDailyRemoteRepositoriesRefreshPolicy(Arrays.asList(repo1, repo2, repo3));
 
         assertThat(remoteRepositories, hasSize(3));
         assertThat(remoteRepositories.get(0), not(is(repo1)));

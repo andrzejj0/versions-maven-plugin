@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
@@ -311,7 +312,8 @@ public class PropertyVersions extends AbstractVersionDetails {
 
         if (property.isSearchReactor()) {
             log.debug("Property ${" + property.getName() + "}: Searching reactor for a valid version...");
-            Set<Artifact> reactorArtifacts = helper.extractArtifacts(reactorProjects);
+            Set<Artifact> reactorArtifacts =
+                    reactorProjects.stream().map(MavenProject::getArtifact).collect(Collectors.toSet());
             ArtifactVersion[] reactorVersions = getVersions(reactorArtifacts);
             log.debug("Property ${" + property.getName()
                     + "}: Set of valid available versions from the reactor is "

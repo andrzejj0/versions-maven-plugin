@@ -31,8 +31,6 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.api.PomHelper;
-import org.codehaus.mojo.versions.rule.RuleService;
-import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
 import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.ExtensionBuilder;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
@@ -82,14 +80,8 @@ public class DisplayExtensionUpdatesMojoTest {
         openMocks(this);
         ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
         artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
-        RuleService ruleService = new RulesServiceBuilder()
-                .withLog(log)
-                .withMavenSession(mockMavenSession())
-                .build();
-        pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
 
-        mojo = new DisplayExtensionUpdatesMojo(
-                pomHelper, artifactCreationService, mockAetherRepositorySystem(), null, null);
+        mojo = new DisplayExtensionUpdatesMojo(artifactCreationService, mockAetherRepositorySystem(), null, null);
         mojo.project = new MavenProject() {
             {
                 setModel(new Model() {
