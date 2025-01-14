@@ -187,6 +187,7 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
                         .withRuleSet(ruleSet)
                         .withIgnoredVersions(ignoredVersions)
                         .withLog(getLog())
+                        .withMavenSession(session)
                         .build();
                 PomHelper pomHelper = new PomHelper(
                         ruleService, artifactCreationService, new VersionsExpressionEvaluator(session, mojoExecution));

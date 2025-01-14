@@ -232,6 +232,7 @@ class DefaultVersionsHelperTest {
                 .withMavenSession(mavenSession)
                 .withMojoExecution(mock(MojoExecution.class))
                 .withRuleService(new RulesServiceBuilder()
+                        .withMavenSession(mavenSession)
                         .withWagonMap(singletonMap("file", mockFileWagon(new URI(rulesUri))))
                         .withServerId("")
                         .withRulesUri(rulesUri)

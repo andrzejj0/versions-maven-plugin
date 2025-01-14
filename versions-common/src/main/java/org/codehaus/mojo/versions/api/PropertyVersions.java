@@ -75,8 +75,6 @@ public class PropertyVersions extends AbstractVersionDetails {
 
     private final Log log;
 
-    private final VersionsHelper helper;
-
     PropertyVersions(
             VersionsHelper helper,
             RuleService ruleService,
@@ -85,7 +83,6 @@ public class PropertyVersions extends AbstractVersionDetails {
             Log log,
             Set<ArtifactAssociation> associations)
             throws VersionRetrievalException {
-        this.helper = helper;
         this.ruleService = ruleService;
         this.profileId = profileId;
         this.name = name;
@@ -248,7 +245,7 @@ public class PropertyVersions extends AbstractVersionDetails {
             List<MavenProject> reactorProjects,
             VersionsHelper helper)
             throws InvalidVersionSpecificationException, InvalidSegmentException {
-        return getNewestVersion(currentVersion, property, allowSnapshots, reactorProjects, helper, false, empty());
+        return getNewestVersion(currentVersion, property, allowSnapshots, reactorProjects, false, empty());
     }
 
     /**
@@ -259,7 +256,6 @@ public class PropertyVersions extends AbstractVersionDetails {
      * @param property          property name indicating the artifact
      * @param allowSnapshots    whether snapshots should be considered
      * @param reactorProjects   collection of reactor projects
-     * @param helper            VersionHelper object
      * @param allowDowngrade    whether downgrades should be allowed
      * @param upperBoundSegment the upper bound segment; empty() means no upper bound
      * @return newest artifact version fulfilling the criteria or null if no newer version could be found
@@ -273,7 +269,6 @@ public class PropertyVersions extends AbstractVersionDetails {
             Property property,
             boolean allowSnapshots,
             Collection<MavenProject> reactorProjects,
-            VersionsHelper helper,
             boolean allowDowngrade,
             Optional<Segment> upperBoundSegment)
             throws InvalidSegmentException, InvalidVersionSpecificationException {

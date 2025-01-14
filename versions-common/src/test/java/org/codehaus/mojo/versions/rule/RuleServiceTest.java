@@ -60,6 +60,7 @@ public class RuleServiceTest {
     @Test
     void testDefaultsShouldBePresentInAnEmptyRuleSet() throws MojoExecutionException {
         RuleService service = new RulesServiceBuilder()
+                .withMavenSession(mavenSession)
                 .withLog(log)
                 .withIgnoredVersions(singletonList(".*-M."))
                 .build();
@@ -70,6 +71,7 @@ public class RuleServiceTest {
     @Test
     void testIgnoredVersionsShouldExtendTheRuleSet() throws MojoExecutionException, IllegalAccessException {
         RuleService service = new RulesServiceBuilder()
+                .withMavenSession(mavenSession)
                 .withLog(log)
                 .withRuleSet(new RuleSet() {
                     {
@@ -106,6 +108,7 @@ public class RuleServiceTest {
     @Test
     void testIgnoredVersionsShouldBeTheOnlyPresentInAnEmptyRuleSet() throws MojoExecutionException {
         RuleService service = new RulesServiceBuilder()
+                .withMavenSession(mavenSession)
                 .withLog(log)
                 .withIgnoredVersions(Arrays.asList(".*-M.", ".*-SNAPSHOT"))
                 .build();
@@ -150,6 +153,7 @@ public class RuleServiceTest {
                 .withRulesUri(rulesUri)
                 .withMavenSession(mavenSession)
                 .withLog(log)
+                .withMavenSession(mavenSession)
                 .build();
 
         assertEquals(

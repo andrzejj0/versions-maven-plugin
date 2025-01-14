@@ -210,6 +210,7 @@ public abstract class AbstractVersionsUpdaterMojo extends AbstractMojo {
     public VersionsHelper getHelper() throws MojoExecutionException {
         if (helper == null) {
             RuleService ruleService = new RulesServiceBuilder()
+                    .withMavenSession(session)
                     .withWagonMap(wagonMap)
                     .withServerId(serverId)
                     .withRulesUri(rulesUri)
@@ -434,13 +435,7 @@ public abstract class AbstractVersionsUpdaterMojo extends AbstractMojo {
             throws XMLStreamException, InvalidVersionSpecificationException, InvalidSegmentException,
                     MojoExecutionException {
         ArtifactVersion winner = version.getNewestVersion(
-                currentVersion,
-                property,
-                getAllowSnapshots(),
-                this.reactorProjects,
-                this.getHelper(),
-                allowDowngrade,
-                unchangedSegment);
+                currentVersion, property, getAllowSnapshots(), this.reactorProjects, allowDowngrade, unchangedSegment);
 
         if (winner == null || currentVersion.equals(winner.toString())) {
             getLog().info("Property ${" + property.getName() + "}: Leaving unchanged as " + currentVersion);

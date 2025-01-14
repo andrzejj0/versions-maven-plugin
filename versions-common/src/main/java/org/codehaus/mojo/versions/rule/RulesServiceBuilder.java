@@ -81,6 +81,9 @@ public class RulesServiceBuilder {
     }
 
     public RuleService build() throws MojoExecutionException {
+        assert mavenSession != null;
+        assert log != null;
+
         RuleSet ruleSet;
         if (this.ruleSet != null) {
             if (!isBlank(rulesUri)) {
