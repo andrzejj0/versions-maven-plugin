@@ -51,6 +51,7 @@ import org.junit.jupiter.api.Test;
 import static java.nio.charset.Charset.defaultCharset;
 import static org.apache.commons.io.IOUtils.toInputStream;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.hamcrest.Matchers.hasSize;
@@ -323,5 +324,26 @@ class PomHelperTest {
                 .toString();
         assertThat(string, containsStringIgnoringCase("\"utf-16\""));
         assertThat(string, containsString("ąęśćńźĄŚĘŻĆ"));
+    }
+
+    @Test
+    void testGetRawModelWithParents() throws IOException {
+        MavenProject grandfather = new MavenProject();
+        grandfather.getModel().setArtifactId("grandfather");
+
+        MavenProject father = new MavenProject();
+        father.setParent(grandfather);
+        grandfather.getModel().setArtifactId("father");
+
+        MavenProject child = new MavenProject();
+        child.setParent(father);
+        child.getModel().setArtifactId("child");
+
+        MavenProject grandchild = new MavenProject();
+        grandchild.setParent(child);
+        child.getModel().setArtifactId("grandchild");
+
+        Map<MavenProject, ?> map = PomHelper.getRawModelWithParents(grandchild);
+        assertThat(map.keySet(), contains(grandchild, child, father, grandfather));
     }
 }

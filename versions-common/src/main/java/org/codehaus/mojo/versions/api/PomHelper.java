@@ -822,7 +822,7 @@ public class PomHelper {
      * @param project maven project of the child for which the models need to be gathered
      * @return gathered map of raw models per project
      */
-    private static Map<MavenProject, Model> getRawModelWithParents(MavenProject project) throws IOException {
+    static Map<MavenProject, Model> getRawModelWithParents(MavenProject project) throws IOException {
         // constructs a tree sorted from children to parents
         Map<MavenProject, Model> models = new TreeMap<>((p1, p2) -> {
             for (MavenProject p = p1; p != null; p = p.getParent()) {
