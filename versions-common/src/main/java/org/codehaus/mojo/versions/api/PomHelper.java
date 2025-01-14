@@ -19,9 +19,10 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
-import javax.xml.transform.TransformerException;
+import static java.util.Optional.ofNullable;
+import static org.codehaus.mojo.versions.api.PomHelper.Marks.CHILD_START;
+import static org.codehaus.mojo.versions.api.PomHelper.Marks.END_ELEMENT;
+import static org.codehaus.mojo.versions.api.PomHelper.Marks.PARENT_START;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -38,9 +39,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,18 +55,23 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.transform.TransformerException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.execution.MavenSession;
+import org.apache.maven.model.BuildBase;
 import org.apache.maven.model.Dependency;
+import org.apache.maven.model.DependencyManagement;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.Profile;
 import org.apache.maven.model.ReportPlugin;
+import org.apache.maven.model.Reporting;
 import org.apache.maven.model.building.ModelBuildingRequest;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.plugin.logging.Log;
@@ -85,12 +91,6 @@ import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluatio
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.codehaus.stax2.XMLInputFactory2;
-
-import static java.util.Collections.singletonMap;
-import static java.util.Optional.ofNullable;
-import static org.codehaus.mojo.versions.api.PomHelper.Marks.CHILD_START;
-import static org.codehaus.mojo.versions.api.PomHelper.Marks.END_ELEMENT;
-import static org.codehaus.mojo.versions.api.PomHelper.Marks.PARENT_START;
 
 public class PomHelper {
     public static final String APACHE_MAVEN_PLUGINS_GROUPID = "org.apache.maven.plugins";
@@ -851,100 +851,103 @@ public class PomHelper {
     public PropertyVersionsBuilder[] getPropertyVersionsBuilders(
             VersionsHelper helper, Log log, MavenProject project, boolean includeParent)
             throws ExpressionEvaluationException, IOException {
-        Map<MavenProject, Model> reactorModels =
-                includeParent ? getRawModelWithParents(project) : singletonMap(project, getRawModel(project));
+
+        Map<MavenProject, Model> reactorModels = includeParent
+                ? getRawModelWithParents(project)
+                : Collections.singletonMap(project, getRawModel(project));
 
         Map<String, PropertyVersionsBuilder> propertiesMap = new TreeMap<>();
 
-        Set<String> activeProfiles = new TreeSet<>();
-        for (Profile profile : project.getActiveProfiles()) {
-            activeProfiles.add(profile.getId());
-        }
+        Set<String> activeProfileIds = project.getActiveProfiles().stream()
+                .map(Profile::getId)
+                .collect(Collectors.toSet());
 
-        // add any properties from profiles first (as they override properties from the project
-        for (Iterator<Profile> it = reactorModels.values().stream()
-                        .flatMap(model -> model.getProfiles().stream())
-                        .filter(profile -> activeProfiles.contains(profile.getId()))
-                        .iterator();
-                it.hasNext(); ) {
-            Profile profile = it.next();
-            try {
-                addProperties(helper, log, propertiesMap, profile.getId(), profile.getProperties());
-                if (profile.getDependencyManagement() != null) {
-                    addDependencyAssocations(
-                            propertiesMap, profile.getDependencyManagement().getDependencies(), false);
-                }
-                addDependencyAssocations(propertiesMap, profile.getDependencies(), false);
-                if (profile.getBuild() != null) {
-                    if (profile.getBuild().getPluginManagement() != null) {
-                        addPluginAssociations(
-                                propertiesMap,
-                                profile.getBuild().getPluginManagement().getPlugins());
-                    }
-                    addPluginAssociations(propertiesMap, profile.getBuild().getPlugins());
-                }
-                if (profile.getReporting() != null) {
-                    addReportPluginAssociations(
-                            propertiesMap, profile.getReporting().getPlugins());
-                }
-            } catch (ExpressionEvaluationException e) {
-                throw new RuntimeException(e);
+        // First, add properties from active profiles (they override project properties)
+        reactorModels.values().forEach(model ->
+                processProfiles(helper, log, propertiesMap, model, activeProfileIds));
+
+        // Second, add all properties in the POMs
+        reactorModels.values().forEach(model ->
+                addProperties(helper, log, propertiesMap, null, model.getProperties()));
+
+        // Process the project and its parent hierarchy
+        for (MavenProject currentProject = project;
+             currentProject != null;
+             currentProject = includeParent ? currentProject.getParent() : null) {
+
+            Model model = reactorModels.get(currentProject);
+            if (model != null) {
+                processModel(propertiesMap, model, activeProfileIds);
             }
         }
 
-        // second, we add all the properties in the pom
-        reactorModels.values().forEach(model -> addProperties(helper, log, propertiesMap, null, model.getProperties()));
-
-        for (MavenProject currentPrj = project;
-                currentPrj != null;
-                currentPrj = includeParent ? currentPrj.getParent() : null) {
-            Model model = reactorModels.get(currentPrj);
-
-            if (model.getDependencyManagement() != null) {
-                addDependencyAssocations(
-                        propertiesMap, model.getDependencyManagement().getDependencies(), false);
-            }
-            addDependencyAssocations(propertiesMap, model.getDependencies(), false);
-            if (model.getBuild() != null) {
-                if (model.getBuild().getPluginManagement() != null) {
-                    addPluginAssociations(
-                            propertiesMap,
-                            model.getBuild().getPluginManagement().getPlugins());
-                }
-                addPluginAssociations(propertiesMap, model.getBuild().getPlugins());
-            }
-            if (model.getReporting() != null) {
-                addReportPluginAssociations(propertiesMap, model.getReporting().getPlugins());
-            }
-
-            // third, we add any associations from the active profiles
-            for (Profile profile : model.getProfiles()) {
-                if (!activeProfiles.contains(profile.getId())) {
-                    continue;
-                }
-                if (profile.getDependencyManagement() != null) {
-                    addDependencyAssocations(
-                            propertiesMap, profile.getDependencyManagement().getDependencies(), false);
-                }
-                addDependencyAssocations(propertiesMap, profile.getDependencies(), false);
-                if (profile.getBuild() != null) {
-                    if (profile.getBuild().getPluginManagement() != null) {
-                        addPluginAssociations(
-                                propertiesMap,
-                                profile.getBuild().getPluginManagement().getPlugins());
-                    }
-                    addPluginAssociations(propertiesMap, profile.getBuild().getPlugins());
-                }
-                if (profile.getReporting() != null) {
-                    addReportPluginAssociations(
-                            propertiesMap, profile.getReporting().getPlugins());
-                }
-            }
-        }
-
-        // finally, remove any properties without associations
+        // Finally, remove any properties without associations
         propertiesMap.values().removeIf(versions -> versions.getAssociations().length == 0);
+
         return propertiesMap.values().toArray(new PropertyVersionsBuilder[0]);
+    }
+
+    private void processProfiles(
+            VersionsHelper helper, Log log, Map<String, PropertyVersionsBuilder> propertiesMap,
+            Model model, Set<String> activeProfileIds) {
+
+        model.getProfiles().stream()
+                .filter(profile -> activeProfileIds.contains(profile.getId()))
+                .forEach(profile -> {
+                    try {
+                        addProperties(helper, log, propertiesMap, profile.getId(), profile.getProperties());
+                        processDependencies(propertiesMap, profile.getDependencyManagement(), profile.getDependencies());
+                        processBuild(propertiesMap, profile.getBuild());
+                        processReporting(propertiesMap, profile.getReporting());
+                    } catch (ExpressionEvaluationException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+    }
+
+    private void processModel(
+            Map<String, PropertyVersionsBuilder> propertiesMap, Model model, Set<String> activeProfileIds)
+            throws ExpressionEvaluationException {
+
+        processDependencies(propertiesMap, model.getDependencyManagement(), model.getDependencies());
+        processBuild(propertiesMap, model.getBuild());
+        processReporting(propertiesMap, model.getReporting());
+
+        // Process active profiles within the model
+        for (Profile profile : model.getProfiles()) {
+            if (activeProfileIds.contains(profile.getId())) {
+                processDependencies(propertiesMap, profile.getDependencyManagement(), profile.getDependencies());
+            }
+        }
+    }
+
+    private void processDependencies(
+            Map<String, PropertyVersionsBuilder> propertiesMap,
+            DependencyManagement depMgmt, List<Dependency> dependencies) throws ExpressionEvaluationException {
+        if (depMgmt != null) {
+            addDependencyAssocations(propertiesMap, depMgmt.getDependencies(), false);
+        }
+        addDependencyAssocations(propertiesMap, dependencies, false);
+    }
+
+    private void processBuild(
+            Map<String, PropertyVersionsBuilder> propertiesMap, BuildBase build) throws ExpressionEvaluationException {
+
+        if (build != null) {
+            if (build.getPluginManagement() != null) {
+                addPluginAssociations(propertiesMap, build.getPluginManagement().getPlugins());
+            }
+            addPluginAssociations(propertiesMap, build.getPlugins());
+        }
+    }
+
+    private void processReporting(
+            Map<String, PropertyVersionsBuilder> propertiesMap, Reporting reporting)
+            throws ExpressionEvaluationException {
+
+        if (reporting != null) {
+            addReportPluginAssociations(propertiesMap, reporting.getPlugins());
+        }
     }
 
     /**
