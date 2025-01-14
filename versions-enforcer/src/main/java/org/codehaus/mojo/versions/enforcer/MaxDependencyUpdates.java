@@ -18,18 +18,8 @@ package org.codehaus.mojo.versions.enforcer;
  * under the License.
  */
 
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-import static org.codehaus.mojo.versions.api.Segment.INCREMENTAL;
-import static org.codehaus.mojo.versions.api.Segment.MINOR;
-import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
-import static org.codehaus.mojo.versions.filtering.DependencyFilter.filterDependencies;
-import static org.codehaus.mojo.versions.filtering.WildcardMatcher.WILDCARD;
-import static org.codehaus.mojo.versions.utils.MavenProjectUtils.extractDependenciesFromDependencyManagement;
-import static org.codehaus.mojo.versions.utils.MavenProjectUtils.extractDependenciesFromPlugins;
-import static org.codehaus.mojo.versions.utils.MavenProjectUtils.extractPluginDependenciesFromPluginsInPluginManagement;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import java.util.Arrays;
 import java.util.List;
@@ -38,8 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
-import javax.inject.Inject;
-import javax.inject.Named;
+
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.enforcer.rule.api.AbstractEnforcerRule;
@@ -65,6 +54,19 @@ import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.DependencyComparator;
 import org.codehaus.mojo.versions.utils.VersionsExpressionEvaluator;
 import org.eclipse.aether.RepositorySystem;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static org.codehaus.mojo.versions.api.Segment.INCREMENTAL;
+import static org.codehaus.mojo.versions.api.Segment.MINOR;
+import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
+import static org.codehaus.mojo.versions.filtering.DependencyFilter.filterDependencies;
+import static org.codehaus.mojo.versions.filtering.WildcardMatcher.WILDCARD;
+import static org.codehaus.mojo.versions.utils.MavenProjectUtils.extractDependenciesFromDependencyManagement;
+import static org.codehaus.mojo.versions.utils.MavenProjectUtils.extractDependenciesFromPlugins;
+import static org.codehaus.mojo.versions.utils.MavenProjectUtils.extractPluginDependenciesFromPluginsInPluginManagement;
 
 @Named("maxDependencyUpdates")
 public class MaxDependencyUpdates extends AbstractEnforcerRule {

@@ -18,19 +18,10 @@ package org.codehaus.mojo.versions.enforcer;
  * under the License.
  */
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
-import static java.util.Collections.singletonMap;
-import static org.codehaus.mojo.versions.utils.MockUtils.mockArtifactHandlerManager;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.when;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Properties;
+
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.enforcer.rule.api.EnforcerLogger;
 import org.apache.maven.enforcer.rule.api.EnforcerRuleException;
@@ -46,6 +37,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
+import static java.util.Collections.singletonMap;
+import static org.codehaus.mojo.versions.utils.MockUtils.mockArtifactHandlerManager;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class MaxDependencyUpdatesTest {
@@ -78,7 +79,8 @@ class MaxDependencyUpdatesTest {
         when(mavenSession.getSystemProperties()).thenReturn(emptyProperties);
         artifactHandlerManager = mockArtifactHandlerManager();
         artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
-        maxDependencyUpdates = new MaxDependencyUpdates(project,
+        maxDependencyUpdates = new MaxDependencyUpdates(
+                project,
                 artifactCreationService,
                 artifactHandlerManager,
                 repositorySystem,
