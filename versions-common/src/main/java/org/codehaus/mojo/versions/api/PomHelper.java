@@ -19,10 +19,9 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
-import static java.util.Optional.ofNullable;
-import static org.codehaus.mojo.versions.api.PomHelper.Marks.CHILD_START;
-import static org.codehaus.mojo.versions.api.PomHelper.Marks.END_ELEMENT;
-import static org.codehaus.mojo.versions.api.PomHelper.Marks.PARENT_START;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.transform.TransformerException;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -55,9 +54,7 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
-import javax.xml.transform.TransformerException;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
@@ -92,6 +89,11 @@ import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.codehaus.stax2.XMLInputFactory2;
 
+import static java.util.Optional.ofNullable;
+import static org.codehaus.mojo.versions.api.PomHelper.Marks.CHILD_START;
+import static org.codehaus.mojo.versions.api.PomHelper.Marks.END_ELEMENT;
+import static org.codehaus.mojo.versions.api.PomHelper.Marks.PARENT_START;
+
 public class PomHelper {
     public static final String APACHE_MAVEN_PLUGINS_GROUPID = "org.apache.maven.plugins";
 
@@ -114,10 +116,11 @@ public class PomHelper {
             + "((/dependencyManagement)|(/build(/pluginManagement)?/plugins/plugin))?"
             + "/dependencies/dependency");
 
-    private static final Pattern PATTERN_PROJECT_DEPENDENCY_VERSION = Pattern.compile("/project" + "(/profiles/profile)?"
-            + "((/dependencyManagement)|(/build(/pluginManagement)?/plugins/plugin))?"
-            + "/dependencies/dependency"
-            + "((/groupId)|(/artifactId)|(/version))");
+    private static final Pattern PATTERN_PROJECT_DEPENDENCY_VERSION =
+            Pattern.compile("/project" + "(/profiles/profile)?"
+                    + "((/dependencyManagement)|(/build(/pluginManagement)?/plugins/plugin))?"
+                    + "/dependencies/dependency"
+                    + "((/groupId)|(/artifactId)|(/version))");
 
     private static final Pattern PATTERN_PROJECT_PLUGIN = Pattern.compile(
             "/project" + "(/profiles/profile)?" + "((/build(/pluginManagement)?)|(/reporting))/plugins/plugin");
