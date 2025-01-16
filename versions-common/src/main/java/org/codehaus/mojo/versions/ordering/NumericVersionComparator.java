@@ -23,8 +23,6 @@ import java.math.BigInteger;
 import java.util.StringTokenizer;
 
 import org.apache.maven.artifact.versioning.ArtifactVersion;
-import org.codehaus.mojo.versions.api.Segment;
-import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 
 /**
  * A comparator which will compare all segments of a dot separated version string as numbers if possible, i.e. 1.3.34
@@ -36,8 +34,6 @@ import org.codehaus.mojo.versions.utils.ArtifactVersionService;
  */
 public class NumericVersionComparator extends AbstractVersionComparator {
     private static final BigInteger BIG_INTEGER_ZERO = new BigInteger("0");
-
-    private static final BigInteger BIG_INTEGER_ONE = new BigInteger("1");
 
     /**
      * {@inheritDoc}
@@ -130,119 +126,5 @@ public class NumericVersionComparator extends AbstractVersionComparator {
         final String version = v.toString();
         StringTokenizer tok = new StringTokenizer(version, ".");
         return tok.countTokens();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @SuppressWarnings("checkstyle:MethodLength")
-    protected ArtifactVersion innerIncrementSegment(ArtifactVersion v, Segment segment) throws InvalidSegmentException {
-        final String version = v.toString();
-        StringBuilder buf = new StringBuilder();
-        StringTokenizer tok = new StringTokenizer(version, ".");
-        boolean first = true;
-        for (int segmentIdx = segment.value(); segmentIdx >= 0 && tok.hasMoreTokens(); --segmentIdx) {
-            if (first) {
-                first = false;
-            } else {
-                buf.append('.');
-            }
-            String p = tok.nextToken();
-            String q = null;
-            if (p.indexOf('-') >= 0) {
-                int index = p.indexOf('-');
-                q = p.substring(index + 1);
-                p = p.substring(0, index);
-            }
-
-            if (segmentIdx == 0) {
-                try {
-                    BigInteger n = new BigInteger(p);
-                    p = n.add(BIG_INTEGER_ONE).toString();
-                    q = null;
-                } catch (NumberFormatException e) {
-                    // ok, let's try some common tricks
-                    if ("alpha".equalsIgnoreCase(p)) {
-                        if (q == null) {
-                            p = "beta";
-                        } else {
-                            try {
-                                BigInteger n = new BigInteger(q);
-                                q = n.add(BIG_INTEGER_ONE).toString();
-                            } catch (NumberFormatException e1) {
-                                p = "beta";
-                                q = null;
-                            }
-                        }
-                    } else if ("beta".equalsIgnoreCase(p)) {
-                        if (q == null) {
-                            p = "milestone";
-                        } else {
-                            try {
-                                BigInteger n = new BigInteger(q);
-                                q = n.add(BIG_INTEGER_ONE).toString();
-                            } catch (NumberFormatException e1) {
-                                p = "milestone";
-                                q = null;
-                            }
-                        }
-                    } else if ("milestone".equalsIgnoreCase(p)) {
-                        if (q == null) {
-                            p = "rc";
-                        } else {
-                            try {
-                                BigInteger n = new BigInteger(q);
-                                q = n.add(BIG_INTEGER_ONE).toString();
-                            } catch (NumberFormatException e1) {
-                                p = "rc";
-                                q = null;
-                            }
-                        }
-                    } else if ("cr".equalsIgnoreCase(p) || "rc".equalsIgnoreCase(p)) {
-                        if (q == null) {
-                            p = "ga";
-                        } else {
-                            try {
-                                BigInteger n = new BigInteger(q);
-                                q = n.add(BIG_INTEGER_ONE).toString();
-                            } catch (NumberFormatException e1) {
-                                p = "ga";
-                                q = null;
-                            }
-                        }
-                    } else if ("ga".equalsIgnoreCase(p) || "final".equalsIgnoreCase(p)) {
-                        if (q == null) {
-                            p = "sp";
-                            q = "1";
-                        } else {
-                            try {
-                                BigInteger n = new BigInteger(q);
-                                q = n.add(BIG_INTEGER_ONE).toString();
-                            } catch (NumberFormatException e1) {
-                                p = "sp";
-                                q = "1";
-                            }
-                        }
-                    } else {
-                        p = VersionComparators.alphaNumIncrement(p);
-                    }
-                }
-            }
-            buf.append(p);
-            if (q != null) {
-                buf.append('-');
-                buf.append(q);
-            }
-        }
-        while (tok.hasMoreTokens()) {
-            if (first) {
-                first = false;
-            } else {
-                buf.append('.');
-            }
-            tok.nextToken();
-            buf.append("0");
-        }
-        return ArtifactVersionService.getArtifactVersion(buf.toString());
     }
 }

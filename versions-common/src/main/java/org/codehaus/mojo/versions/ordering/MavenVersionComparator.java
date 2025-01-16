@@ -22,8 +22,6 @@ package org.codehaus.mojo.versions.ordering;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.ComparableVersion;
-import org.codehaus.mojo.versions.api.Segment;
-import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 
 /**
  * A comparator which uses Maven's version rules, i.e. 1.3.34 &gt; 1.3.9 but 1.3.4.3.2.34 &lt; 1.3.4.3.2.9.
@@ -80,100 +78,5 @@ public class MavenVersionComparator extends AbstractVersionComparator {
         } catch (NumberFormatException e) {
             return 1;
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    protected ArtifactVersion innerIncrementSegment(ArtifactVersion v, Segment segment) throws InvalidSegmentException {
-        String version = v.toString();
-        if (innerGetSegmentCount(v) == 1) {
-            // only the qualifier
-            version = VersionComparators.alphaNumIncrement(version);
-            return ArtifactVersionService.getArtifactVersion(version);
-        } else {
-            int major = v.getMajorVersion();
-            int minor = v.getMinorVersion();
-            int incremental = v.getIncrementalVersion();
-            int build = v.getBuildNumber();
-            String qualifier = v.getQualifier();
-
-            int minorIndex = version.indexOf('.');
-            boolean haveMinor = minorIndex != -1;
-            int incrementalIndex = haveMinor ? version.indexOf('.', minorIndex + 1) : -1;
-            boolean haveIncremental = incrementalIndex != -1;
-            int buildIndex = version.indexOf('-');
-            boolean haveBuild = buildIndex != -1 && qualifier == null;
-            boolean haveQualifier = buildIndex != -1 && qualifier != null;
-
-            switch (segment) {
-                case MAJOR:
-                    major++;
-                    minor = 0;
-                    incremental = 0;
-                    build = 0;
-                    qualifier = null;
-                    break;
-                case MINOR:
-                    minor++;
-                    incremental = 0;
-                    build = 0;
-                    if (haveQualifier && qualifier.endsWith("SNAPSHOT")) {
-                        qualifier = "SNAPSHOT";
-                    }
-                    break;
-                case INCREMENTAL:
-                    incremental++;
-                    build = 0;
-                    qualifier = null;
-                    break;
-                case SUBINCREMENTAL:
-                    if (haveQualifier) {
-                        qualifier = qualifierIncrement(qualifier);
-                    } else {
-                        build++;
-                    }
-                    break;
-                default:
-                    // no action
-                    break;
-            }
-            StringBuilder result = new StringBuilder();
-            result.append(major);
-            if (haveMinor || minor > 0 || incremental > 0) {
-                result.append('.');
-                result.append(minor);
-            }
-            if (haveIncremental || incremental > 0) {
-                result.append('.');
-                result.append(incremental);
-            }
-            if (haveQualifier && qualifier != null) {
-                result.append('-');
-                result.append(qualifier);
-            } else if (haveBuild || build > 0) {
-                result.append('-');
-                result.append(build);
-            }
-            return ArtifactVersionService.getArtifactVersion(result.toString());
-        }
-    }
-
-    private String qualifierIncrement(String qualifier) {
-        if (qualifier.toLowerCase().startsWith("alpha")) {
-            return qualifier.substring(0, 5) + VersionComparators.alphaNumIncrement(qualifier.substring(5));
-        }
-        if (qualifier.toLowerCase().startsWith("beta")) {
-            return qualifier.substring(0, 4) + VersionComparators.alphaNumIncrement(qualifier.substring(4));
-        }
-        if (qualifier.toLowerCase().startsWith("milestone")) {
-            return qualifier.substring(0, 8) + VersionComparators.alphaNumIncrement(qualifier.substring(8));
-        }
-        if (qualifier.toLowerCase().startsWith("cr")
-                || qualifier.toLowerCase().startsWith("rc")
-                || qualifier.toLowerCase().startsWith("sp")) {
-            return qualifier.substring(0, 2) + VersionComparators.alphaNumIncrement(qualifier.substring(2));
-        }
-        return VersionComparators.alphaNumIncrement(qualifier);
     }
 }
