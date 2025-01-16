@@ -21,7 +21,10 @@ package org.codehaus.mojo.versions.ordering;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
-import org.apache.maven.artifact.versioning.ComparableVersion;
+import org.eclipse.aether.util.version.GenericVersionScheme;
+import org.eclipse.aether.version.InvalidVersionSpecificationException;
+import org.eclipse.aether.version.Version;
+import org.eclipse.aether.version.VersionScheme;
 
 /**
  * A comparator which uses Maven's version rules, i.e. 1.3.34 &gt; 1.3.9 but 1.3.4.3.2.34 &lt; 1.3.4.3.2.9.
@@ -30,6 +33,7 @@ import org.apache.maven.artifact.versioning.ComparableVersion;
  * @since 1.0-alpha-3
  */
 public class MavenVersionComparator extends AbstractVersionComparator {
+    private static final VersionScheme VERSION_SCHEME = new GenericVersionScheme();
 
     /**
      * {@inheritDoc}
@@ -38,7 +42,14 @@ public class MavenVersionComparator extends AbstractVersionComparator {
         if (o1 instanceof BoundArtifactVersion) {
             return o1.compareTo(o2);
         }
-        return new ComparableVersion(o1.toString()).compareTo(new ComparableVersion(o2.toString()));
+
+        try {
+            Version v1 = VERSION_SCHEME.parseVersion(o1.toString());
+            Version v2 = VERSION_SCHEME.parseVersion(o2.toString());
+            return v1.compareTo(v2);
+        } catch (InvalidVersionSpecificationException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
