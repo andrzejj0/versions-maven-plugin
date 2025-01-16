@@ -48,7 +48,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
-import java.util.Stack;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Consumer;
@@ -136,6 +135,50 @@ public class PomHelper {
 
     private final RuleService ruleService;
 
+    private static class GAVMatcher {
+        private boolean groupIdMatch;
+        private boolean artifactIdMatch;
+        private boolean versionMatch;
+
+        public void clear() {
+            setGroupIdMatch(false);
+            setArtifactIdMatch(false);
+            setVersionMatch(false);
+        }
+
+        public boolean matches() {
+            return matches(true);
+        }
+
+        public boolean matches(boolean needGroupId) {
+            return (!needGroupId || getGroupIdMatch()) && getArtifactIdMatch() && getVersionMatch();
+        }
+
+        public boolean getGroupIdMatch() {
+            return groupIdMatch;
+        }
+
+        public void setGroupIdMatch(boolean groupIdMatch) {
+            this.groupIdMatch = groupIdMatch;
+        }
+
+        public boolean getArtifactIdMatch() {
+            return artifactIdMatch;
+        }
+
+        public void setArtifactIdMatch(boolean haveArtifactId) {
+            this.artifactIdMatch = haveArtifactId;
+        }
+
+        public boolean getVersionMatch() {
+            return versionMatch;
+        }
+
+        public void setVersionMatch(boolean haveVersion) {
+            this.versionMatch = haveVersion;
+        }
+    }
+
     /**
      * Creates a new instance
      */
@@ -219,13 +262,13 @@ public class PomHelper {
     public static boolean setPropertyVersion(
             final MutableXMLStreamReader pom, final String profileId, final String property, final String value)
             throws XMLStreamException {
-        Stack<String> stack = new Stack<>();
-        String path = "";
+        boolean inMatchScope = profileId == null;
+        boolean madeReplacement = false;
+
         final Pattern propertyRegex;
         final Pattern matchScopeRegex;
         final Pattern projectProfileId;
-        boolean inMatchScope = false;
-        boolean madeReplacement = false;
+
         if (profileId == null) {
             propertyRegex = Pattern.compile("/project/properties/" + RegexUtils.quote(property));
             matchScopeRegex = PATTERN_PROJECT_PROPERTIES;
@@ -237,28 +280,29 @@ public class PomHelper {
         }
 
         pom.rewind();
-        while (pom.hasNext()) {
+        for (Deque<String> stack = new ArrayDeque<>(); pom.hasNext(); ) {
             pom.next();
             if (pom.isStartElement()) {
-                stack.push(path);
-                path = path + "/" + pom.getLocalName();
+                stack.push(pom.getLocalName());
+                String path = "/" + String.join("/", stack);
 
                 if (propertyRegex.matcher(path).matches()) {
                     pom.mark(0);
                 } else if (matchScopeRegex.matcher(path).matches()) {
-                    // we're in a new match scope
-                    // reset any previous partial matches
+                    // New match scope, reset previous matches
                     inMatchScope = profileId == null;
                     pom.clearMark(0);
                     pom.clearMark(1);
                 } else if (profileId != null && projectProfileId.matcher(path).matches()) {
-                    String candidateId = pom.getElementText();
-
-                    inMatchScope = profileId.trim().equals(candidateId.trim());
+                    String candidateId = pom.getElementText().trim();
+                    inMatchScope = profileId.trim().equals(candidateId);
                 }
             }
-            // for empty elements, pom can be both start- and end element
+
+            // For empty elements, pom can be both start and end element
             if (pom.isEndElement()) {
+                String path = "/" + String.join("/", stack);
+
                 if (propertyRegex.matcher(path).matches()) {
                     pom.mark(1);
                 } else if (matchScopeRegex.matcher(path).matches()) {
@@ -270,7 +314,7 @@ public class PomHelper {
                     pom.clearMark(1);
                     inMatchScope = false;
                 }
-                path = stack.pop();
+                stack.pop();
             }
         }
         return madeReplacement;
@@ -491,7 +535,7 @@ public class PomHelper {
      * @return <code>true</code> if a replacement was made.
      * @throws XMLStreamException if something went wrong.
      */
-    @SuppressWarnings("checkstyle:MethodLength")
+    @SuppressWarnings({"checkstyle:MethodLength"})
     public static boolean setDependencyVersion(
             final MutableXMLStreamReader pom,
             final String groupId,
@@ -537,9 +581,7 @@ public class PomHelper {
         boolean madeReplacement = false;
 
         boolean inMatchScope = false;
-        boolean haveGroupId = false;
-        boolean haveArtifactId = false;
-        boolean haveOldVersion = false;
+        GAVMatcher gavMatcher = new GAVMatcher();
         path = "";
         pom.rewind();
 
@@ -556,7 +598,7 @@ public class PomHelper {
                     inMatchScope = true;
                     pom.clearMark(0);
                     pom.clearMark(1);
-                    haveGroupId = haveArtifactId = haveOldVersion = false;
+                    gavMatcher.clear();
                 } else if (inMatchScope
                         && PATTERN_PROJECT_DEPENDENCY_VERSION.matcher(path).matches()) {
                     String elementText = pom.getElementText().trim();
@@ -564,13 +606,15 @@ public class PomHelper {
 
                     switch (pom.getLocalName()) {
                         case "groupId":
-                            haveGroupId = groupId.equals(evaluatedText);
+                            gavMatcher.setGroupIdMatch(StringUtils.equals(groupId, evaluatedText));
                             break;
                         case "artifactId":
-                            haveArtifactId = artifactId.equals(evaluatedText);
+                            gavMatcher.setArtifactIdMatch(StringUtils.equals(artifactId, evaluatedText));
                             break;
                         case "version":
                             pom.mark(0);
+                            break;
+                        default:
                             break;
                     }
                 }
@@ -585,25 +629,21 @@ public class PomHelper {
                     String compressedOldVersion = StringUtils.deleteWhitespace(oldVersion);
 
                     try {
-                        haveOldVersion = isVersionOverlap(compressedOldVersion, compressedPomVersion);
+                        gavMatcher.setVersionMatch(isVersionOverlap(compressedOldVersion, compressedPomVersion));
                     } catch (InvalidVersionSpecificationException e) {
                         // Fallback to string comparison
-                        haveOldVersion = compressedOldVersion.equals(compressedPomVersion);
+                        gavMatcher.setVersionMatch(compressedOldVersion.equals(compressedPomVersion));
                     }
                 } else if (PATTERN_PROJECT_DEPENDENCY.matcher(path).matches()) {
-                    if (inMatchScope
-                            && pom.hasMark(0)
-                            && pom.hasMark(1)
-                            && haveGroupId
-                            && haveArtifactId
-                            && haveOldVersion) {
+                    if (inMatchScope && pom.hasMark(0) && pom.hasMark(1) && gavMatcher.matches()) {
                         pom.replaceBetween(0, 1, newVersion);
                         madeReplacement = true;
                     }
                     // Reset flags after exiting dependency scope
                     pom.clearMark(0);
                     pom.clearMark(1);
-                    inMatchScope = haveGroupId = haveArtifactId = haveOldVersion = false;
+                    gavMatcher.clear();
+                    inMatchScope = false;
                 }
                 path = stack.pop();
             }
@@ -625,53 +665,49 @@ public class PomHelper {
             return null;
         }
 
-        return extractExpression(expr)
-                .map(expression -> {
-                    String value = properties.get(expression);
+        Optional<String> optionalExpression = extractExpression(expr);
+        if (optionalExpression.isPresent()) {
+            String expression = optionalExpression.get();
+            String value = properties.get(expression);
 
-                    if (value != null) {
-                        int exprStartDelimiter = value.indexOf("${");
+            if (value != null) {
+                if (value.contains("${")) {
+                    value = evaluate(value, properties, logger);
+                }
+                return value;
+            } else {
+                // Because we work with the raw model without interpolation, unevaluatable expressions are not
+                // unexpected
+                logger.debug("Expression: " + expression + " has no value.");
+                return expr;
+            }
+        } else {
+            int index = expr.indexOf("${");
+            if (index >= 0) {
+                int lastIndex = expr.indexOf("}", index);
+                if (lastIndex >= 0) {
+                    String beforeExpr = expr.substring(0, index);
+                    String exprContent = expr.substring(index, lastIndex + 1);
+                    String afterExpr = expr.substring(lastIndex + 1);
 
-                        if (exprStartDelimiter >= 0) {
-                            if (exprStartDelimiter > 0) {
-                                value = value.substring(0, exprStartDelimiter)
-                                        + evaluate(value.substring(exprStartDelimiter), properties, logger);
-                            } else {
-                                value = evaluate(value.substring(exprStartDelimiter), properties, logger);
-                            }
-                        }
+                    String evaluatedExprContent;
+                    if (index > 0 && expr.charAt(index - 1) == '$') {
+                        evaluatedExprContent = expr.substring(index + 1, lastIndex + 1);
                     } else {
-                        // Because we work with the raw model, without interpolation, unevaluatable expressions are not
-                        // unexpected
-                        logger.debug("expression: " + expression + " no value ");
-                    }
-                    return value == null ? expr : value;
-                })
-                .orElseGet(() -> {
-                    int index = expr.indexOf("${");
-                    if (index >= 0) {
-                        int lastIndex = expr.indexOf("}", index);
-                        if (lastIndex >= 0) {
-                            String retVal = expr.substring(0, index);
-
-                            if (index > 0 && expr.charAt(index - 1) == '$') {
-                                retVal += expr.substring(index + 1, lastIndex + 1);
-                            } else {
-                                retVal += evaluate(expr.substring(index, lastIndex + 1), properties, logger);
-                            }
-
-                            retVal += evaluate(expr.substring(lastIndex + 1), properties, logger);
-                            return retVal;
-                        }
+                        evaluatedExprContent = evaluate(exprContent, properties, logger);
                     }
 
-                    // Was not an expression
-                    if (expr.contains("$$")) {
-                        return expr.replaceAll("\\$\\$", "\\$");
-                    } else {
-                        return expr;
-                    }
-                });
+                    return beforeExpr + evaluatedExprContent + evaluate(afterExpr, properties, logger);
+                }
+            }
+
+            // Was not an expression
+            if (expr.contains("$$")) {
+                return expr.replace("$$", "$");
+            } else {
+                return expr;
+            }
+        }
     }
 
     /**
@@ -740,12 +776,10 @@ public class PomHelper {
             throws XMLStreamException {
         boolean inMatchScope = false;
         boolean madeReplacement = false;
-        boolean haveGroupId = false;
-        boolean haveArtifactId = false;
-        boolean haveOldVersion = false;
         boolean needGroupId = groupId != null && !APACHE_MAVEN_PLUGINS_GROUPID.equals(groupId);
         String path;
 
+        GAVMatcher gavMatcher = new GAVMatcher();
         for (Deque<String> stack = new ArrayDeque<>(); pom.hasNext(); ) {
             pom.next();
 
@@ -759,20 +793,22 @@ public class PomHelper {
                     inMatchScope = true;
                     pom.clearMark(0);
                     pom.clearMark(1);
-                    haveGroupId = haveArtifactId = haveOldVersion = false;
+                    gavMatcher.clear();
                 } else if (inMatchScope
                         && PATTERN_PROJECT_PLUGIN_VERSION.matcher(path).matches()) {
                     String elementText = pom.getElementText().trim();
 
                     switch (elementName) {
                         case "groupId":
-                            haveGroupId = StringUtils.equals(groupId, elementText);
+                            gavMatcher.setGroupIdMatch(StringUtils.equals(groupId, elementText));
                             break;
                         case "artifactId":
-                            haveArtifactId = StringUtils.equals(artifactId, elementText);
+                            gavMatcher.setArtifactIdMatch(StringUtils.equals(artifactId, elementText));
                             break;
                         case "version":
                             pom.mark(0);
+                            break;
+                        default:
                             break;
                     }
                 }
@@ -787,18 +823,13 @@ public class PomHelper {
                     String pomVersion = pom.getBetween(0, 1).trim();
 
                     try {
-                        haveOldVersion = isVersionOverlap(oldVersion, pomVersion);
+                        gavMatcher.setVersionMatch(isVersionOverlap(oldVersion, pomVersion));
                     } catch (InvalidVersionSpecificationException e) {
                         // Fallback to string comparison
-                        haveOldVersion = oldVersion.equals(pomVersion);
+                        gavMatcher.setVersionMatch(oldVersion.equals(pomVersion));
                     }
                 } else if (PATTERN_PROJECT_PLUGIN.matcher(path).matches()) {
-                    if (inMatchScope
-                            && pom.hasMark(0)
-                            && pom.hasMark(1)
-                            && (haveGroupId || !needGroupId)
-                            && haveArtifactId
-                            && haveOldVersion) {
+                    if (inMatchScope && pom.hasMark(0) && pom.hasMark(1) && gavMatcher.matches(needGroupId)) {
                         pom.replaceBetween(0, 1, newVersion);
                         madeReplacement = true;
                     }
@@ -806,7 +837,7 @@ public class PomHelper {
                     inMatchScope = false;
                     pom.clearMark(0);
                     pom.clearMark(1);
-                    haveGroupId = haveArtifactId = haveOldVersion = false;
+                    gavMatcher.clear();
                 }
                 stack.pop();
             }
