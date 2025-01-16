@@ -19,9 +19,10 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
-import javax.xml.transform.TransformerException;
+import static java.util.Optional.ofNullable;
+import static org.codehaus.mojo.versions.api.PomHelper.Marks.CHILD_START;
+import static org.codehaus.mojo.versions.api.PomHelper.Marks.END_ELEMENT;
+import static org.codehaus.mojo.versions.api.PomHelper.Marks.PARENT_START;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -54,7 +55,9 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.transform.TransformerException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
@@ -89,37 +92,37 @@ import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.codehaus.stax2.XMLInputFactory2;
 
-import static java.util.Optional.ofNullable;
-import static org.codehaus.mojo.versions.api.PomHelper.Marks.CHILD_START;
-import static org.codehaus.mojo.versions.api.PomHelper.Marks.END_ELEMENT;
-import static org.codehaus.mojo.versions.api.PomHelper.Marks.PARENT_START;
-
 public class PomHelper {
     public static final String APACHE_MAVEN_PLUGINS_GROUPID = "org.apache.maven.plugins";
 
-    public static final Pattern PATTERN_PROJECT_PROPERTIES = Pattern.compile("/project/properties");
+    private static final Set<String> IMPLICIT_PATHS = new HashSet<>(Arrays.asList(
+            "/project/parent/groupId", "/project/parent/artifactId",
+            "/project/parent/version", "/project/groupId",
+            "/project/artifactId", "/project/version"));
 
-    public static final Pattern PATTERN_PROJECT_PROFILE = Pattern.compile("/project/profiles/profile");
+    private static final Pattern PATTERN_PROJECT_PROPERTIES = Pattern.compile("/project/properties");
 
-    public static final Pattern PATTERN_PROJECT_PROFILE_ID = Pattern.compile("/project/profiles/profile/id");
+    private static final Pattern PATTERN_PROJECT_PROFILE = Pattern.compile("/project/profiles/profile");
 
-    public static final Pattern PATTERN_PROJECT_VERSION = Pattern.compile("/project/version");
+    private static final Pattern PATTERN_PROJECT_PROFILE_ID = Pattern.compile("/project/profiles/profile/id");
 
-    public static final Pattern PATTERN_PROJECT_PARENT_VERSION = Pattern.compile("/project/parent/version");
+    private static final Pattern PATTERN_PROJECT_VERSION = Pattern.compile("/project/version");
 
-    public static final Pattern PATTERN_PROJECT_DEPENDENCY = Pattern.compile("/project" + "(/profiles/profile)?"
+    private static final Pattern PATTERN_PROJECT_PARENT_VERSION = Pattern.compile("/project/parent/version");
+
+    private static final Pattern PATTERN_PROJECT_DEPENDENCY = Pattern.compile("/project" + "(/profiles/profile)?"
             + "((/dependencyManagement)|(/build(/pluginManagement)?/plugins/plugin))?"
             + "/dependencies/dependency");
 
-    public static final Pattern PATTERN_PROJECT_DEPENDENCY_VERSION = Pattern.compile("/project" + "(/profiles/profile)?"
+    private static final Pattern PATTERN_PROJECT_DEPENDENCY_VERSION = Pattern.compile("/project" + "(/profiles/profile)?"
             + "((/dependencyManagement)|(/build(/pluginManagement)?/plugins/plugin))?"
             + "/dependencies/dependency"
             + "((/groupId)|(/artifactId)|(/version))");
 
-    public static final Pattern PATTERN_PROJECT_PLUGIN = Pattern.compile(
+    private static final Pattern PATTERN_PROJECT_PLUGIN = Pattern.compile(
             "/project" + "(/profiles/profile)?" + "((/build(/pluginManagement)?)|(/reporting))/plugins/plugin");
 
-    public static final Pattern PATTERN_PROJECT_PLUGIN_VERSION = Pattern.compile("/project" + "(/profiles/profile)?"
+    private static final Pattern PATTERN_PROJECT_PLUGIN_VERSION = Pattern.compile("/project" + "(/profiles/profile)?"
             + "((/build(/pluginManagement)?)|(/reporting))/plugins/plugin"
             + "((/groupId)|(/artifactId)|(/version))");
 
@@ -500,10 +503,6 @@ public class PomHelper {
         Stack<String> stack = new Stack<>();
         String path = "";
 
-        Set<String> implicitPaths = new HashSet<>(Arrays.asList(
-                "/project/parent/groupId", "/project/parent/artifactId",
-                "/project/parent/version", "/project/groupId",
-                "/project/artifactId", "/project/version"));
         Map<String, String> implicitProperties = new HashMap<>();
 
         for (Map.Entry<Object, Object> entry : model.getProperties().entrySet()) {
@@ -517,7 +516,7 @@ public class PomHelper {
                 stack.push(path);
                 path = path + "/" + pom.getLocalName();
 
-                if (implicitPaths.contains(path)) {
+                if (IMPLICIT_PATHS.contains(path)) {
                     final String elementText = pom.getElementText().trim();
                     implicitProperties.put(path.substring(1).replace('/', '.'), elementText);
                 }
