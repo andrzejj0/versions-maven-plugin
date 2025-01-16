@@ -35,11 +35,12 @@ import java.io.UncheckedIOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -47,7 +48,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
-import java.util.Stack;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Consumer;
@@ -218,7 +218,7 @@ public class PomHelper {
     public static boolean setPropertyVersion(
             final MutableXMLStreamReader pom, final String profileId, final String property, final String value)
             throws XMLStreamException {
-        Stack<String> stack = new Stack<>();
+        Deque<String> stack = new ArrayDeque<>();
         String path = "";
         final Pattern propertyRegex;
         final Pattern matchScopeRegex;
@@ -408,7 +408,7 @@ public class PomHelper {
      * @throws XMLStreamException if something went wrong.
      */
     public static String getProjectVersion(final MutableXMLStreamReader pom) throws XMLStreamException {
-        Stack<String> stack = new Stack<>();
+        Deque<String> stack = new ArrayDeque<>();
         String path = "";
 
         pom.rewind();
@@ -448,7 +448,7 @@ public class PomHelper {
      */
     public static boolean setProjectParentVersion(final MutableXMLStreamReader pom, final String value)
             throws XMLStreamException {
-        Stack<String> stack = new Stack<>();
+        Deque<String> stack = new ArrayDeque<>();
         String path = "";
         boolean madeReplacement = false;
 
@@ -503,14 +503,11 @@ public class PomHelper {
             final Model model,
             final Log logger)
             throws XMLStreamException {
-        Stack<String> stack = new Stack<>();
+        Deque<String> stack = new ArrayDeque<>();
         String path = "";
 
-        Map<String, String> implicitProperties = new HashMap<>();
-
-        for (Map.Entry<Object, Object> entry : model.getProperties().entrySet()) {
-            implicitProperties.put((String) entry.getKey(), (String) entry.getValue());
-        }
+        Map<String, String> implicitProperties = model.getProperties().entrySet().stream()
+                .collect(Collectors.toMap(e -> (String) e.getKey(), e -> (String) e.getValue()));
 
         pom.rewind();
         while (pom.hasNext()) {
@@ -543,7 +540,7 @@ public class PomHelper {
             }
         }
 
-        stack = new Stack<>();
+        stack = new ArrayDeque<>();
         path = "";
         boolean inMatchScope = false;
         boolean madeReplacement = false;
@@ -745,7 +742,7 @@ public class PomHelper {
             final String oldVersion,
             final String newVersion)
             throws XMLStreamException {
-        Stack<String> stack = new Stack<>();
+        Deque<String> stack = new ArrayDeque<>();
         String path = "";
         boolean inMatchScope = false;
         boolean madeReplacement = false;
