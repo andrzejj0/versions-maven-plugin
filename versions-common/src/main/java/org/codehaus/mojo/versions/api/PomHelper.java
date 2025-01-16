@@ -19,6 +19,8 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.TransformerException;
@@ -503,24 +505,27 @@ public class PomHelper {
             final Model model,
             final Log logger)
             throws XMLStreamException {
-        Stack<String> stack = new Stack<>();
+
+        // Collect implicit properties from the model
+        Map<String, String> implicitProperties = model.getProperties().entrySet().stream()
+                .collect(Collectors.toMap(
+                        e -> (String) e.getKey(),
+                        e -> (String) e.getValue()));
+
+        // Rewind the reader and initialize path tracking
+        pom.rewind();
+        Deque<String> stack = new ArrayDeque<>();
         String path = "";
 
-        Map<String, String> implicitProperties = new HashMap<>();
-
-        for (Map.Entry<Object, Object> entry : model.getProperties().entrySet()) {
-            implicitProperties.put((String) entry.getKey(), (String) entry.getValue());
-        }
-
-        pom.rewind();
+        // Collect additional implicit properties from the POM
         while (pom.hasNext()) {
             pom.next();
             if (pom.isStartElement()) {
                 stack.push(path);
-                path = path + "/" + pom.getLocalName();
+                path += "/" + pom.getLocalName();
 
                 if (IMPLICIT_PATHS.contains(path)) {
-                    final String elementText = pom.getElementText().trim();
+                    String elementText = pom.getElementText().trim();
                     implicitProperties.put(path.substring(1).replace('/', '.'), elementText);
                 }
             }
@@ -529,95 +534,87 @@ public class PomHelper {
             }
         }
 
-        for (boolean modified = true; modified; ) {
-            modified = false;
-            for (Map.Entry<String, String> entry : implicitProperties.entrySet()) {
-                if (entry.getKey().contains(".parent")) {
-                    String child = entry.getKey().replace(".parent", "");
-                    if (!implicitProperties.containsKey(child)) {
-                        implicitProperties.put(child, entry.getValue());
-                        modified = true;
-                        break;
-                    }
-                }
-            }
-        }
+        // Propagate parent properties to child if not already present
+        implicitProperties.keySet().stream()
+                .filter(key -> key.contains(".parent"))
+                .forEach(key -> {
+                    String childKey = key.replace(".parent", "");
+                    implicitProperties.putIfAbsent(childKey, implicitProperties.get(key));
+                });
 
-        stack = new Stack<>();
-        path = "";
-        boolean inMatchScope = false;
         boolean madeReplacement = false;
+        path = "";
+        stack.clear();
+        pom.rewind();
+
+        boolean inMatchScope = false;
         boolean haveGroupId = false;
         boolean haveArtifactId = false;
         boolean haveOldVersion = false;
 
-        pom.rewind();
+        // Iterate through the POM to find and replace the dependency version
         while (pom.hasNext()) {
             pom.next();
+
             if (pom.isStartElement()) {
                 stack.push(path);
-                path = path + "/" + pom.getLocalName();
+                path += "/" + pom.getLocalName();
 
                 if (PATTERN_PROJECT_DEPENDENCY.matcher(path).matches()) {
-                    // we're in a new match scope
-                    // reset any previous partial matches
+                    // Entering a new dependency scope
                     inMatchScope = true;
                     pom.clearMark(0);
                     pom.clearMark(1);
+                    haveGroupId = haveArtifactId = haveOldVersion = false;
+                } else if (inMatchScope && PATTERN_PROJECT_DEPENDENCY_VERSION.matcher(path).matches()) {
+                    String elementText = pom.getElementText().trim();
+                    String evaluatedText = evaluate(elementText, implicitProperties, logger);
 
-                    haveGroupId = false;
-                    haveArtifactId = false;
-                    haveOldVersion = false;
-                } else if (inMatchScope
-                        && PATTERN_PROJECT_DEPENDENCY_VERSION.matcher(path).matches()) {
-                    if ("groupId".equals(pom.getLocalName())) {
-                        haveGroupId =
-                                groupId.equals(evaluate(pom.getElementText().trim(), implicitProperties, logger));
-                    } else if ("artifactId".equals(pom.getLocalName())) {
-                        haveArtifactId =
-                                artifactId.equals(evaluate(pom.getElementText().trim(), implicitProperties, logger));
-                    } else if ("version".equals(pom.getLocalName())) {
-                        pom.mark(0);
+                    switch (pom.getLocalName()) {
+                        case "groupId":
+                            haveGroupId = groupId.equals(evaluatedText);
+                            break;
+                        case "artifactId":
+                            haveArtifactId = artifactId.equals(evaluatedText);
+                            break;
+                        case "version":
+                            pom.mark(0);
+                            break;
                     }
                 }
             }
-            // for empty elements, pom can be both start- and end element
+
             if (pom.isEndElement()) {
                 if (PATTERN_PROJECT_DEPENDENCY_VERSION.matcher(path).matches()
                         && "version".equals(pom.getLocalName())) {
                     pom.mark(1);
-                    String compressedPomVersion =
-                            StringUtils.deleteWhitespace(pom.getBetween(0, 1).trim());
+                    String compressedPomVersion = StringUtils.deleteWhitespace(pom.getBetween(0, 1).trim());
                     String compressedOldVersion = StringUtils.deleteWhitespace(oldVersion);
 
                     try {
                         haveOldVersion = isVersionOverlap(compressedOldVersion, compressedPomVersion);
                     } catch (InvalidVersionSpecificationException e) {
-                        // fall back to string comparison
+                        // Fallback to string comparison
                         haveOldVersion = compressedOldVersion.equals(compressedPomVersion);
                     }
                 } else if (PATTERN_PROJECT_DEPENDENCY.matcher(path).matches()) {
-                    if (inMatchScope
-                            && pom.hasMark(0)
-                            && pom.hasMark(1)
-                            && haveGroupId
-                            && haveArtifactId
-                            && haveOldVersion) {
+                    if (inMatchScope && pom.hasMark(0) && pom.hasMark(1)
+                            && haveGroupId && haveArtifactId && haveOldVersion) {
                         pom.replaceBetween(0, 1, newVersion);
                         madeReplacement = true;
                     }
+                    // Reset flags after exiting dependency scope
                     pom.clearMark(0);
                     pom.clearMark(1);
-                    haveArtifactId = false;
-                    haveGroupId = false;
-                    haveOldVersion = false;
-                    inMatchScope = false;
+                    inMatchScope = haveGroupId = haveArtifactId = haveOldVersion = false;
                 }
                 path = stack.pop();
             }
         }
+
         return madeReplacement;
     }
+
 
     /**
      * A lightweight expression evaluation function.
