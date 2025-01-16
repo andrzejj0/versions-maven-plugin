@@ -19,8 +19,6 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
-import java.util.ArrayDeque;
-import java.util.Deque;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.TransformerException;
@@ -37,11 +35,12 @@ import java.io.UncheckedIOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -410,31 +409,30 @@ public class PomHelper {
      * @throws XMLStreamException if something went wrong.
      */
     public static String getProjectVersion(final MutableXMLStreamReader pom) throws XMLStreamException {
-        Stack<String> stack = new Stack<>();
-        String path = "";
-
         pom.rewind();
-        while (pom.hasNext()) {
+        for (Deque<String> stack = new ArrayDeque<>(); pom.hasNext(); ) {
             pom.next();
+
             if (pom.isStartElement()) {
-                stack.push(path);
-                path = path + "/" + pom.getLocalName();
+                stack.push(pom.getLocalName());
+                String path = "/" + String.join("/", stack);
 
                 if (PATTERN_PROJECT_VERSION.matcher(path).matches()) {
                     pom.mark(0);
                 }
             }
-            // for empty elements, pom can be both start- and end element
+
             if (pom.isEndElement()) {
-                if (PATTERN_PROJECT_VERSION.matcher(path).matches()) {
+                String path = "/" + String.join("/", stack);
+
+                if (PATTERN_PROJECT_VERSION.matcher(path).matches() && pom.hasMark(0)) {
                     pom.mark(1);
-                    if (pom.hasMark(0) && pom.hasMark(1)) {
-                        return pom.getBetween(0, 1).trim();
-                    }
+                    String version = pom.getBetween(0, 1).trim();
                     pom.clearMark(0);
                     pom.clearMark(1);
+                    return version;
                 }
-                path = stack.pop();
+                stack.pop();
             }
         }
         return null;
@@ -450,23 +448,21 @@ public class PomHelper {
      */
     public static boolean setProjectParentVersion(final MutableXMLStreamReader pom, final String value)
             throws XMLStreamException {
-        Stack<String> stack = new Stack<>();
-        String path = "";
-        boolean madeReplacement = false;
-
         pom.rewind();
-        while (pom.hasNext()) {
+        boolean madeReplacement = false;
+        for (Deque<String> stack = new ArrayDeque<>(); pom.hasNext(); ) {
             pom.next();
             if (pom.isStartElement()) {
-                stack.push(path);
-                path = path + "/" + pom.getLocalName();
+                stack.push(pom.getLocalName());
+                String path = "/" + String.join("/", stack);
 
                 if (PATTERN_PROJECT_PARENT_VERSION.matcher(path).matches()) {
                     pom.mark(0);
                 }
             }
-            // for empty elements, pom can be both start- and end element
             if (pom.isEndElement()) {
+                String path = "/" + String.join("/", stack);
+
                 if (PATTERN_PROJECT_PARENT_VERSION.matcher(path).matches()) {
                     pom.mark(1);
                     if (pom.hasMark(0) && pom.hasMark(1)) {
@@ -476,7 +472,7 @@ public class PomHelper {
                     pom.clearMark(0);
                     pom.clearMark(1);
                 }
-                path = stack.pop();
+                stack.pop();
             }
         }
         return madeReplacement;
@@ -508,17 +504,13 @@ public class PomHelper {
 
         // Collect implicit properties from the model
         Map<String, String> implicitProperties = model.getProperties().entrySet().stream()
-                .collect(Collectors.toMap(
-                        e -> (String) e.getKey(),
-                        e -> (String) e.getValue()));
+                .collect(Collectors.toMap(e -> (String) e.getKey(), e -> (String) e.getValue()));
 
         // Rewind the reader and initialize path tracking
         pom.rewind();
-        Deque<String> stack = new ArrayDeque<>();
         String path = "";
-
         // Collect additional implicit properties from the POM
-        while (pom.hasNext()) {
+        for (Deque<String> stack = new ArrayDeque<>(); pom.hasNext(); ) {
             pom.next();
             if (pom.isStartElement()) {
                 stack.push(path);
@@ -543,17 +535,16 @@ public class PomHelper {
                 });
 
         boolean madeReplacement = false;
-        path = "";
-        stack.clear();
-        pom.rewind();
 
         boolean inMatchScope = false;
         boolean haveGroupId = false;
         boolean haveArtifactId = false;
         boolean haveOldVersion = false;
+        path = "";
+        pom.rewind();
 
         // Iterate through the POM to find and replace the dependency version
-        while (pom.hasNext()) {
+        for (Deque<String> stack = new ArrayDeque<>(); pom.hasNext(); ) {
             pom.next();
 
             if (pom.isStartElement()) {
@@ -566,7 +557,8 @@ public class PomHelper {
                     pom.clearMark(0);
                     pom.clearMark(1);
                     haveGroupId = haveArtifactId = haveOldVersion = false;
-                } else if (inMatchScope && PATTERN_PROJECT_DEPENDENCY_VERSION.matcher(path).matches()) {
+                } else if (inMatchScope
+                        && PATTERN_PROJECT_DEPENDENCY_VERSION.matcher(path).matches()) {
                     String elementText = pom.getElementText().trim();
                     String evaluatedText = evaluate(elementText, implicitProperties, logger);
 
@@ -588,7 +580,8 @@ public class PomHelper {
                 if (PATTERN_PROJECT_DEPENDENCY_VERSION.matcher(path).matches()
                         && "version".equals(pom.getLocalName())) {
                     pom.mark(1);
-                    String compressedPomVersion = StringUtils.deleteWhitespace(pom.getBetween(0, 1).trim());
+                    String compressedPomVersion =
+                            StringUtils.deleteWhitespace(pom.getBetween(0, 1).trim());
                     String compressedOldVersion = StringUtils.deleteWhitespace(oldVersion);
 
                     try {
@@ -598,8 +591,12 @@ public class PomHelper {
                         haveOldVersion = compressedOldVersion.equals(compressedPomVersion);
                     }
                 } else if (PATTERN_PROJECT_DEPENDENCY.matcher(path).matches()) {
-                    if (inMatchScope && pom.hasMark(0) && pom.hasMark(1)
-                            && haveGroupId && haveArtifactId && haveOldVersion) {
+                    if (inMatchScope
+                            && pom.hasMark(0)
+                            && pom.hasMark(1)
+                            && haveGroupId
+                            && haveArtifactId
+                            && haveOldVersion) {
                         pom.replaceBetween(0, 1, newVersion);
                         madeReplacement = true;
                     }
@@ -614,7 +611,6 @@ public class PomHelper {
 
         return madeReplacement;
     }
-
 
     /**
      * A lightweight expression evaluation function.
@@ -742,55 +738,59 @@ public class PomHelper {
             final String oldVersion,
             final String newVersion)
             throws XMLStreamException {
-        Stack<String> stack = new Stack<>();
-        String path = "";
         boolean inMatchScope = false;
         boolean madeReplacement = false;
         boolean haveGroupId = false;
-        boolean needGroupId = groupId != null && !APACHE_MAVEN_PLUGINS_GROUPID.equals(groupId);
         boolean haveArtifactId = false;
         boolean haveOldVersion = false;
+        boolean needGroupId = groupId != null && !APACHE_MAVEN_PLUGINS_GROUPID.equals(groupId);
+        String path;
 
-        pom.rewind();
-        while (pom.hasNext()) {
+        for (Deque<String> stack = new ArrayDeque<>(); pom.hasNext(); ) {
             pom.next();
+
             if (pom.isStartElement()) {
-                stack.push(path);
-                final String elementName = pom.getLocalName();
-                path = path + "/" + elementName;
+                String elementName = pom.getLocalName();
+                stack.push(elementName);
+                path = "/" + String.join("/", stack);
 
                 if (PATTERN_PROJECT_PLUGIN.matcher(path).matches()) {
-                    // we're in a new match scope
-                    // reset any previous partial matches
+                    // Entering a new plugin scope
                     inMatchScope = true;
                     pom.clearMark(0);
                     pom.clearMark(1);
-
-                    haveGroupId = false;
-                    haveArtifactId = false;
-                    haveOldVersion = false;
+                    haveGroupId = haveArtifactId = haveOldVersion = false;
                 } else if (inMatchScope
                         && PATTERN_PROJECT_PLUGIN_VERSION.matcher(path).matches()) {
-                    if ("groupId".equals(elementName)) {
-                        haveGroupId = pom.getElementText().trim().equals(groupId);
-                    } else if ("artifactId".equals(elementName)) {
-                        haveArtifactId = artifactId.equals(pom.getElementText().trim());
-                    } else if ("version".equals(elementName)) {
-                        pom.mark(0);
+                    String elementText = pom.getElementText().trim();
+
+                    switch (elementName) {
+                        case "groupId":
+                            haveGroupId = StringUtils.equals(groupId, elementText);
+                            break;
+                        case "artifactId":
+                            haveArtifactId = StringUtils.equals(artifactId, elementText);
+                            break;
+                        case "version":
+                            pom.mark(0);
+                            break;
                     }
                 }
             }
-            // for empty elements, pom can be both start- and end element
+
             if (pom.isEndElement()) {
-                if (PATTERN_PROJECT_PLUGIN_VERSION.matcher(path).matches() && "version".equals(pom.getLocalName())) {
+                String elementName = pom.getLocalName();
+                path = "/" + String.join("/", stack);
+
+                if (PATTERN_PROJECT_PLUGIN_VERSION.matcher(path).matches() && "version".equals(elementName)) {
                     pom.mark(1);
+                    String pomVersion = pom.getBetween(0, 1).trim();
 
                     try {
-                        haveOldVersion = isVersionOverlap(
-                                oldVersion, pom.getBetween(0, 1).trim());
+                        haveOldVersion = isVersionOverlap(oldVersion, pomVersion);
                     } catch (InvalidVersionSpecificationException e) {
-                        // fall back to string comparison
-                        haveOldVersion = oldVersion.equals(pom.getBetween(0, 1).trim());
+                        // Fallback to string comparison
+                        haveOldVersion = oldVersion.equals(pomVersion);
                     }
                 } else if (PATTERN_PROJECT_PLUGIN.matcher(path).matches()) {
                     if (inMatchScope
@@ -801,15 +801,14 @@ public class PomHelper {
                             && haveOldVersion) {
                         pom.replaceBetween(0, 1, newVersion);
                         madeReplacement = true;
-                        pom.clearMark(0);
-                        pom.clearMark(1);
-                        haveArtifactId = false;
-                        haveGroupId = false;
-                        haveOldVersion = false;
                     }
+                    // Exiting plugin scope
                     inMatchScope = false;
+                    pom.clearMark(0);
+                    pom.clearMark(1);
+                    haveGroupId = haveArtifactId = haveOldVersion = false;
                 }
-                path = stack.pop();
+                stack.pop();
             }
         }
         return madeReplacement;
