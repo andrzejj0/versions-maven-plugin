@@ -19,8 +19,12 @@ package org.codehaus.mojo.versions.ordering;
  * under the License.
  */
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
+import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 
 /**
  * Base class for version comparators.
@@ -28,8 +32,12 @@ import org.apache.maven.artifact.versioning.ArtifactVersion;
  * @since 1.0-beta-1
  */
 public abstract class AbstractVersionComparator implements VersionComparator {
+    private static final Pattern SNAPSHOT_PATTERN = Pattern.compile("(-((\\d{8}\\.\\d{6})-(\\d+))|(SNAPSHOT))$");
+
     @Override
-    public abstract int compare(ArtifactVersion o1, ArtifactVersion o2);
+    public int compare(ArtifactVersion o1, ArtifactVersion o2) {
+        return o1.compareTo(o2);
+    }
 
     @Override
     public final int getSegmentCount(ArtifactVersion v) {
@@ -37,9 +45,18 @@ public abstract class AbstractVersionComparator implements VersionComparator {
             return 0;
         }
         if (ArtifactUtils.isSnapshot(v.toString())) {
-            return innerGetSegmentCount(VersionComparators.stripSnapshot(v));
+            return innerGetSegmentCount(stripSnapshot(v));
         }
         return innerGetSegmentCount(v);
+    }
+
+    private static ArtifactVersion stripSnapshot(ArtifactVersion v) {
+        final String version = v.toString();
+        final Matcher matcher = SNAPSHOT_PATTERN.matcher(version);
+        if (matcher.find()) {
+            return ArtifactVersionService.getArtifactVersion(version.substring(0, matcher.start(1) - 1));
+        }
+        return v;
     }
 
     protected abstract int innerGetSegmentCount(ArtifactVersion v);

@@ -23,7 +23,7 @@ import org.apache.maven.wagon.proxy.ProxyInfo;
 import org.codehaus.mojo.versions.model.IgnoreVersion;
 import org.codehaus.mojo.versions.model.Rule;
 import org.codehaus.mojo.versions.model.RuleSet;
-import org.codehaus.mojo.versions.ordering.VersionComparators;
+import org.codehaus.mojo.versions.ordering.VersionComparatorFactory;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -157,26 +157,26 @@ public class RuleServiceTest {
                 .build();
 
         assertEquals(
-                VersionComparators.getVersionComparator("maven"),
+                VersionComparatorFactory.getVersionComparator("maven"),
                 service.getVersionComparator("net.foo", "bar"),
                 "no match gives default");
         assertEquals(
-                VersionComparators.getVersionComparator("mercury"),
+                VersionComparatorFactory.getVersionComparator("mercury"),
                 service.getVersionComparator("org.apache.maven", "plugins"),
                 "matches wildcard");
         assertEquals(
-                VersionComparators.getVersionComparator("mercury"),
+                VersionComparatorFactory.getVersionComparator("mercury"),
                 service.getVersionComparator("com.mycompany.custom.maven", "plugins"),
                 "exact match wins over initial match");
         assertEquals(
-                VersionComparators.getVersionComparator("maven"),
+                VersionComparatorFactory.getVersionComparator("maven"),
                 service.getVersionComparator("com.mycompany.maven.plugins", "plugins"),
                 "non-wildcard prefix wins over wildcard prefix match");
         assertEquals(
-                VersionComparators.getVersionComparator("maven"),
+                VersionComparatorFactory.getVersionComparator("maven"),
                 service.getVersionComparator("com.mycompany.maven", "new-maven-plugin"));
         assertEquals(
-                VersionComparators.getVersionComparator("mercury"),
+                VersionComparatorFactory.getVersionComparator("mercury"),
                 service.getVersionComparator("com.mycompany.maven", "old-maven-plugin"));
     }
 }

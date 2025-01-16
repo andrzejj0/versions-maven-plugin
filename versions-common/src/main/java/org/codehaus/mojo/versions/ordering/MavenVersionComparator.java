@@ -21,40 +21,16 @@ package org.codehaus.mojo.versions.ordering;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
-import org.eclipse.aether.util.version.GenericVersionScheme;
-import org.eclipse.aether.version.InvalidVersionSpecificationException;
-import org.eclipse.aether.version.Version;
-import org.eclipse.aether.version.VersionScheme;
 
 /**
  * A comparator which uses Maven's version rules, i.e. 1.3.34 &gt; 1.3.9 but 1.3.4.3.2.34 &lt; 1.3.4.3.2.9.
+ * Relies on the default comparison method, as implemented by {@link org.apache.maven.artifact.versioning.DefaultArtifactVersion}
+ * which is based on Maven Resolver {@link org.eclipse.aether.util.version.GenericVersionScheme}
  *
  * @author Stephen Connolly
  * @since 1.0-alpha-3
  */
 public class MavenVersionComparator extends AbstractVersionComparator {
-    private static final VersionScheme VERSION_SCHEME = new GenericVersionScheme();
-
-    /**
-     * {@inheritDoc}
-     */
-    public int compare(ArtifactVersion o1, ArtifactVersion o2) {
-        if (o1 instanceof BoundArtifactVersion) {
-            return o1.compareTo(o2);
-        }
-
-        try {
-            Version v1 = VERSION_SCHEME.parseVersion(o1.toString());
-            Version v2 = VERSION_SCHEME.parseVersion(o2.toString());
-            return v1.compareTo(v2);
-        } catch (InvalidVersionSpecificationException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     protected int innerGetSegmentCount(ArtifactVersion v) {
         // if the version does not match the maven rules, then we have only one segment
         // i.e. the qualifier
