@@ -858,25 +858,24 @@ public class PomHelper {
                 ? getRawModelWithParents(project)
                 : Collections.singletonMap(project, getRawModel(project));
 
-        Map<String, PropertyVersionsBuilder> propertiesMap = new TreeMap<>();
-
         Set<String> activeProfileIds =
                 project.getActiveProfiles().stream().map(Profile::getId).collect(Collectors.toSet());
 
-        // First, add properties from active profiles (they override project properties)
-        reactorModels.values().forEach(model -> processProfiles(helper, log, propertiesMap, model, activeProfileIds));
-
-        // Second, add all properties in the POMs
-        reactorModels.values().forEach(model -> addProperties(helper, log, propertiesMap, null, model.getProperties()));
+        Map<String, PropertyVersionsBuilder> propertiesMap = new TreeMap<>();
+        reactorModels.values().forEach(model -> {
+            processProfiles(helper, log, propertiesMap, model, activeProfileIds);
+            addPropertiesIfAbsent(helper, log, propertiesMap, null, model.getProperties());
+        });
 
         // Process the project and its parent hierarchy
-        for (MavenProject currentProject = project;
-                currentProject != null;
-                currentProject = includeParent ? currentProject.getParent() : null) {
-
-            Model model = reactorModels.get(currentProject);
-            if (model != null) {
-                processModel(propertiesMap, model, activeProfileIds);
+        if (includeParent) {
+            for (MavenProject currentProject = project;
+                    currentProject != null;
+                    currentProject = currentProject.getParent()) {
+                Model model = reactorModels.get(currentProject);
+                if (model != null) {
+                    processModel(propertiesMap, model, activeProfileIds);
+                }
             }
         }
 
@@ -897,7 +896,7 @@ public class PomHelper {
                 .filter(profile -> activeProfileIds.contains(profile.getId()))
                 .forEach(profile -> {
                     try {
-                        addProperties(helper, log, propertiesMap, profile.getId(), profile.getProperties());
+                        addPropertiesIfAbsent(helper, log, propertiesMap, profile.getId(), profile.getProperties());
                         processDependencies(
                                 propertiesMap, profile.getDependencyManagement(), profile.getDependencies());
                         processBuild(propertiesMap, profile.getBuild());
@@ -1119,15 +1118,15 @@ public class PomHelper {
         }
     }
 
-    private void addProperties(
+    private void addPropertiesIfAbsent(
             VersionsHelper helper,
             Log log,
             Map<String, PropertyVersionsBuilder> result,
             String profileId,
             Properties properties) {
-        ofNullable(properties).map(Properties::stringPropertyNames).ifPresent(propertyNames -> propertyNames.stream()
-                .filter(propertyName -> !result.containsKey(propertyName))
-                .forEach(propertyName -> result.put(
+        ofNullable(properties)
+                .map(Properties::stringPropertyNames)
+                .ifPresent(propertyNames -> propertyNames.forEach(propertyName -> result.putIfAbsent(
                         propertyName, new PropertyVersionsBuilder(helper, ruleService, profileId, propertyName, log))));
     }
 
