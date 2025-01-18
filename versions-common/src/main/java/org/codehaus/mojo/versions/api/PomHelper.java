@@ -864,18 +864,17 @@ public class PomHelper {
         Map<String, PropertyVersionsBuilder> propertiesMap = new TreeMap<>();
         reactorModels.values().forEach(model -> {
             processProfiles(helper, log, propertiesMap, model, activeProfileIds);
-            addPropertiesIfAbsent(helper, log, propertiesMap, null, model.getProperties());
+            putPropertiesIfAbsent(helper, log, propertiesMap, null, model.getProperties());
         });
 
         // Process the project and its parent hierarchy
-        if (includeParent) {
-            for (MavenProject currentProject = project;
-                    currentProject != null;
-                    currentProject = currentProject.getParent()) {
-                Model model = reactorModels.get(currentProject);
-                if (model != null) {
-                    processModel(propertiesMap, model, activeProfileIds);
-                }
+        for (MavenProject currentProject = project;
+                currentProject != null;
+                currentProject = includeParent ? currentProject.getParent() : null) {
+
+            Model model = reactorModels.get(currentProject);
+            if (model != null) {
+                processModel(propertiesMap, model, activeProfileIds);
             }
         }
 
@@ -896,7 +895,7 @@ public class PomHelper {
                 .filter(profile -> activeProfileIds.contains(profile.getId()))
                 .forEach(profile -> {
                     try {
-                        addPropertiesIfAbsent(helper, log, propertiesMap, profile.getId(), profile.getProperties());
+                        putPropertiesIfAbsent(helper, log, propertiesMap, profile.getId(), profile.getProperties());
                         processDependencies(
                                 propertiesMap, profile.getDependencyManagement(), profile.getDependencies());
                         processBuild(propertiesMap, profile.getBuild());
@@ -1118,7 +1117,7 @@ public class PomHelper {
         }
     }
 
-    private void addPropertiesIfAbsent(
+    private void putPropertiesIfAbsent(
             VersionsHelper helper,
             Log log,
             Map<String, PropertyVersionsBuilder> result,
