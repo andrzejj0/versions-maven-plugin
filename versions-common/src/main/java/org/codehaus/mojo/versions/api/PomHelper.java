@@ -49,10 +49,12 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -1151,9 +1153,10 @@ public class PomHelper {
      */
     public static Set<String> getAllChildModules(Model model, Log logger) {
         logger.debug("Finding child modules of " + model);
-        Set<String> childModules = model.getProfiles().stream()
-                .flatMap(profile -> profile.getModules().stream())
-                .collect(Collectors.toSet());
+        Set<String> childModules = Stream.concat(
+                        model.getModules().stream(),
+                        model.getProfiles().stream().flatMap(profile -> profile.getModules().stream()))
+                .collect(TreeSet::new, Set::add, Set::addAll);
         debugModules(logger, "Child modules:", childModules);
         return childModules;
     }
@@ -1229,37 +1232,36 @@ public class PomHelper {
      */
     public static MavenProject getLocalRoot(ProjectBuilder projectBuilder, MavenSession mavenSession, Log logger) {
         logger.info("Searching for local aggregator root...");
-        return findLocalRoot(projectBuilder, mavenSession, logger, mavenSession.getCurrentProject());
-    }
-
-    private static MavenProject findLocalRoot(
-            ProjectBuilder projectBuilder, MavenSession mavenSession, Log logger, MavenProject project) {
-        File parentDir = project.getBasedir().getParentFile();
-        if (parentDir == null || !parentDir.isDirectory()) {
-            logger.debug("Local aggregation root is " + project.getBasedir());
-            return project;
-        }
-
-        File parentFile = new File(parentDir, "pom.xml");
-        if (!parentFile.isFile()) {
-            logger.debug("Local aggregation root is " + project.getBasedir());
-            return project;
-        }
-
-        try {
-            ProjectBuildingResult result = projectBuilder.build(parentFile, createProjectBuilderRequest(mavenSession));
-            result.getProblems().forEach(p -> logger.warn("\t" + p.getMessage()));
-
-            if (getAllChildModules(result.getProject(), logger)
-                    .contains(project.getBasedir().getName())) {
-                return findLocalRoot(projectBuilder, mavenSession, logger, result.getProject());
+        MavenProject project = mavenSession.getCurrentProject();
+        while (true) {
+            final File parentDir = project.getBasedir().getParentFile();
+            if (parentDir != null && parentDir.isDirectory()) {
+                logger.debug("Checking to see if " + parentDir + " is an aggregator parent");
+                File parentFile = new File(parentDir, "pom.xml");
+                if (parentFile.isFile()) {
+                    try {
+                        ProjectBuildingResult result =
+                                projectBuilder.build(parentFile, createProjectBuilderRequest(mavenSession));
+                        if (!result.getProblems().isEmpty()) {
+                            logger.warn("Problems encountered during the computation of the local aggregation root.");
+                            result.getProblems().forEach(p -> logger.warn("\t" + p.getMessage()));
+                        }
+                        if (getAllChildModules(result.getProject(), logger)
+                                .contains(project.getBasedir().getName())) {
+                            logger.debug(parentDir + " is an aggregator parent");
+                            project = result.getProject();
+                            continue;
+                        } else {
+                            logger.debug(parentDir + " is not an aggregator parent");
+                        }
+                    } catch (ProjectBuildingException e) {
+                        logger.warn(e);
+                    }
+                }
             }
-        } catch (ProjectBuildingException e) {
-            logger.warn(e);
+            logger.debug("Local aggregation root is " + project.getBasedir());
+            return project;
         }
-
-        logger.debug("Local aggregation root is " + project.getBasedir());
-        return project;
     }
 
     /**
