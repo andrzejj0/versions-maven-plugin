@@ -49,7 +49,6 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -1124,15 +1123,10 @@ public class PomHelper {
             Map<String, PropertyVersionsBuilder> result,
             String profileId,
             Properties properties) {
-        if (properties == null) {
-            return;
-        }
-        for (String propertyName : properties.stringPropertyNames()) {
-            if (!result.containsKey(propertyName)) {
-                result.put(
-                        propertyName, new PropertyVersionsBuilder(helper, ruleService, profileId, propertyName, log));
-            }
-        }
+        ofNullable(properties).map(Properties::stringPropertyNames).ifPresent(propertyNames -> propertyNames.stream()
+                .filter(propertyName -> !result.containsKey(propertyName))
+                .forEach(propertyName -> result.put(
+                        propertyName, new PropertyVersionsBuilder(helper, ruleService, profileId, propertyName, log))));
     }
 
     /**
@@ -1157,8 +1151,9 @@ public class PomHelper {
      */
     public static Set<String> getAllChildModules(Model model, Log logger) {
         logger.debug("Finding child modules of " + model);
-        Set<String> childModules = new TreeSet<>(model.getModules());
-        model.getProfiles().forEach(profile -> childModules.addAll(profile.getModules()));
+        Set<String> childModules = model.getProfiles().stream()
+                .flatMap(profile -> profile.getModules().stream())
+                .collect(Collectors.toSet());
         debugModules(logger, "Child modules:", childModules);
         return childModules;
     }
@@ -1188,11 +1183,8 @@ public class PomHelper {
      * @return The version.
      */
     public static String getVersion(Model model) {
-        String targetVersion = model.getVersion();
-        if (targetVersion == null && model.getParent() != null) {
-            targetVersion = model.getParent().getVersion();
-        }
-        return targetVersion;
+        return ofNullable(model.getVersion())
+                .orElse(ofNullable(model.getParent()).map(Parent::getVersion).orElse(null));
     }
 
     /**
@@ -1212,11 +1204,8 @@ public class PomHelper {
      * @return The artifactId.
      */
     public static String getArtifactId(Model model) {
-        String sourceArtifactId = model.getArtifactId();
-        if (sourceArtifactId == null && model.getParent() != null) {
-            sourceArtifactId = model.getParent().getArtifactId();
-        }
-        return sourceArtifactId;
+        return ofNullable(model.getArtifactId())
+                .orElse(ofNullable(model.getParent()).map(Parent::getArtifactId).orElse(null));
     }
 
     /**
@@ -1226,11 +1215,8 @@ public class PomHelper {
      * @return The groupId.
      */
     public static String getGroupId(Model model) {
-        String targetGroupId = model.getGroupId();
-        if (targetGroupId == null && model.getParent() != null) {
-            targetGroupId = model.getParent().getGroupId();
-        }
-        return targetGroupId;
+        return ofNullable(model.getGroupId())
+                .orElse(ofNullable(model.getParent()).map(Parent::getGroupId).orElse(null));
     }
 
     /**
@@ -1243,36 +1229,37 @@ public class PomHelper {
      */
     public static MavenProject getLocalRoot(ProjectBuilder projectBuilder, MavenSession mavenSession, Log logger) {
         logger.info("Searching for local aggregator root...");
-        MavenProject project = mavenSession.getCurrentProject();
-        while (true) {
-            final File parentDir = project.getBasedir().getParentFile();
-            if (parentDir != null && parentDir.isDirectory()) {
-                logger.debug("Checking to see if " + parentDir + " is an aggregator parent");
-                File parentFile = new File(parentDir, "pom.xml");
-                if (parentFile.isFile()) {
-                    try {
-                        ProjectBuildingResult result =
-                                projectBuilder.build(parentFile, createProjectBuilderRequest(mavenSession));
-                        if (!result.getProblems().isEmpty()) {
-                            logger.warn("Problems encountered during the computation of the local aggregation root.");
-                            result.getProblems().forEach(p -> logger.warn("\t" + p.getMessage()));
-                        }
-                        if (getAllChildModules(result.getProject(), logger)
-                                .contains(project.getBasedir().getName())) {
-                            logger.debug(parentDir + " is an aggregator parent");
-                            project = result.getProject();
-                            continue;
-                        } else {
-                            logger.debug(parentDir + " is not an aggregator parent");
-                        }
-                    } catch (ProjectBuildingException e) {
-                        logger.warn(e);
-                    }
-                }
-            }
+        return findLocalRoot(projectBuilder, mavenSession, logger, mavenSession.getCurrentProject());
+    }
+
+    private static MavenProject findLocalRoot(
+            ProjectBuilder projectBuilder, MavenSession mavenSession, Log logger, MavenProject project) {
+        File parentDir = project.getBasedir().getParentFile();
+        if (parentDir == null || !parentDir.isDirectory()) {
             logger.debug("Local aggregation root is " + project.getBasedir());
             return project;
         }
+
+        File parentFile = new File(parentDir, "pom.xml");
+        if (!parentFile.isFile()) {
+            logger.debug("Local aggregation root is " + project.getBasedir());
+            return project;
+        }
+
+        try {
+            ProjectBuildingResult result = projectBuilder.build(parentFile, createProjectBuilderRequest(mavenSession));
+            result.getProblems().forEach(p -> logger.warn("\t" + p.getMessage()));
+
+            if (getAllChildModules(result.getProject(), logger)
+                    .contains(project.getBasedir().getName())) {
+                return findLocalRoot(projectBuilder, mavenSession, logger, result.getProject());
+            }
+        } catch (ProjectBuildingException e) {
+            logger.warn(e);
+        }
+
+        logger.debug("Local aggregation root is " + project.getBasedir());
+        return project;
     }
 
     /**
