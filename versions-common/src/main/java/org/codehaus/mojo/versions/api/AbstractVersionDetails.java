@@ -35,8 +35,8 @@ import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.Restriction;
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
+import org.codehaus.mojo.versions.ordering.DefaultSegmentCounter;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
-import org.codehaus.mojo.versions.ordering.MavenVersionComparator;
 import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 
 import static java.util.Collections.reverseOrder;
@@ -65,8 +65,14 @@ public abstract class AbstractVersionDetails implements VersionDetails {
      */
     private ArtifactVersion currentVersion = null;
 
+    /**
+     * holds the current version range
+     */
     private VersionRange currentVersionRange = null;
 
+    /**
+     * displays more verbose information about discovered updates
+     */
     protected boolean verboseDetail = true;
 
     protected AbstractVersionDetails() {}
@@ -341,7 +347,7 @@ public abstract class AbstractVersionDetails implements VersionDetails {
             return empty();
         }
 
-        int segmentCount = MavenVersionComparator.INSTANCE.getSegmentCount(version);
+        int segmentCount = DefaultSegmentCounter.INSTANCE.getSegmentCount(version);
         if (unchangedSegment.get().value() > segmentCount) {
             throw new InvalidSegmentException(unchangedSegment.get(), segmentCount, version);
         }

@@ -40,9 +40,9 @@ import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
+import org.codehaus.mojo.versions.ordering.DefaultSegmentCounter;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
-import org.codehaus.mojo.versions.ordering.MavenVersionComparator;
-import org.codehaus.mojo.versions.ordering.VersionComparator;
+import org.codehaus.mojo.versions.ordering.SegmentCounter;
 import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 
 import static java.util.Optional.empty;
@@ -68,7 +68,7 @@ public class PropertyVersions extends AbstractVersionDetails {
      */
     private final SortedSet<ArtifactVersion> versions;
 
-    private final PropertyVersions.PropertyVersionComparator comparator;
+    private final PropertySegmentCounter comparator;
 
     private final Log log;
 
@@ -79,18 +79,8 @@ public class PropertyVersions extends AbstractVersionDetails {
         this.name = name;
         this.log = log;
         this.associations = new TreeSet<>(associations);
-        this.comparator = new PropertyVersionComparator();
+        this.comparator = new PropertySegmentCounter();
         this.versions = helper.resolveAssociatedVersions(associations, comparator);
-    }
-
-    /**
-     * Gets the rule for version comparison of this artifact.
-     *
-     * @return the rule for version comparison of this artifact.
-     * @since 1.0-beta-1
-     */
-    public VersionComparator getVersionComparator() {
-        return comparator;
     }
 
     public ArtifactAssociation[] getAssociations() {
@@ -167,7 +157,7 @@ public class PropertyVersions extends AbstractVersionDetails {
         if (includeSnapshots) {
             result = versions;
         } else {
-            result = new TreeSet<>(getVersionComparator());
+            result = new TreeSet<>();
             for (ArtifactVersion candidate : versions) {
                 if (ArtifactUtils.isSnapshot(candidate.toString())) {
                     continue;
@@ -188,23 +178,50 @@ public class PropertyVersions extends AbstractVersionDetails {
         }
     }
 
+    /**
+     * Returns the name of the property
+     * @return name of the property
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Returns the id of the profile
+     * @return id of the profile
+     */
     public String getProfileId() {
         return profileId;
     }
 
+    /**
+     * Says whether the property is associated with a dependency
+     * @return {@code true} if the property is associated with a dependency
+     */
     public boolean isAssociated() {
         return !associations.isEmpty();
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public String toString() {
         return "PropertyVersions{" + (profileId == null ? "" : "profileId='" + profileId + "', ") + "name='" + name
                 + '\'' + ", associations=" + associations + '}';
     }
 
+    /**
+     * Returns the newest version
+     * @param currentVersion
+     * @param property
+     * @param allowSnapshots
+     * @param reactorProjects
+     * @param helper
+     * @return
+     * @throws InvalidVersionSpecificationException
+     * @throws InvalidSegmentException
+     */
     public ArtifactVersion getNewestVersion(
             String currentVersion,
             Property property,
@@ -299,7 +316,7 @@ public class PropertyVersions extends AbstractVersionDetails {
                     if (result == null) {
                         log.debug("Property ${" + property.getName() + "}: Reactor has the only version");
                         result = fromReactor;
-                    } else if (getVersionComparator().compare(result, fromReactor) < 0) {
+                    } else if (result.compareTo(fromReactor) < 0) {
                         log.debug("Property ${" + property.getName() + "}: Reactor has a newer version");
                         result = fromReactor;
                     } else {
@@ -311,23 +328,17 @@ public class PropertyVersions extends AbstractVersionDetails {
         return result;
     }
 
-    private final class PropertyVersionComparator implements VersionComparator {
-        public int compare(ArtifactVersion v1, ArtifactVersion v2) {
-            return innerCompare(v1, v2);
-        }
+    private final class PropertySegmentCounter implements SegmentCounter {
 
-        private int innerCompare(ArtifactVersion v1, ArtifactVersion v2) {
-            if (!isAssociated()) {
-                throw new IllegalStateException("Cannot compare versions for a property with no associations");
-            }
-            return v1.compareTo(v2);
-        }
-
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public int getSegmentCount(ArtifactVersion v) {
             if (!isAssociated()) {
                 throw new IllegalStateException("Cannot compare versions for a property with no associations");
             }
-            return MavenVersionComparator.INSTANCE.getSegmentCount(v);
+            return DefaultSegmentCounter.INSTANCE.getSegmentCount(v);
         }
     }
 }

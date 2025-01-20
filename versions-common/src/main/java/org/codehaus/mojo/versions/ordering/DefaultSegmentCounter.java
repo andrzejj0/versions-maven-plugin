@@ -19,19 +19,31 @@ package org.codehaus.mojo.versions.ordering;
  * under the License.
  */
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.commons.lang3.StringUtils;
+import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
+import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 
 /**
- * A comparator which uses Maven's version rules, i.e. 1.3.34 &gt; 1.3.9 but 1.3.4.3.2.34 &lt; 1.3.4.3.2.9.
- * Relies on the default comparison method, as implemented by {@link org.apache.maven.artifact.versioning.DefaultArtifactVersion}
- * which is based on Maven Resolver {@link org.eclipse.aether.util.version.GenericVersionScheme}
- *
- * @author Stephen Connolly
- * @since 1.0-alpha-3
+ * Default implementation of the {@link SegmentCounter} interface, using Maven's version rules, i.e. 1.3.34 &gt; 1.3.9
+ * but 1.3.4.3.2.34 &lt; 1.3.4.3.2.9.
  */
-public class MavenVersionComparator extends AbstractVersionComparator {
-    public static final VersionComparator INSTANCE = new MavenVersionComparator();
+public class DefaultSegmentCounter implements SegmentCounter {
+    public static final SegmentCounter INSTANCE = new DefaultSegmentCounter();
+
+    private static final Pattern SNAPSHOT_PATTERN = Pattern.compile("(-((\\d{8}\\.\\d{6})-(\\d+))|(SNAPSHOT))$");
+
+    private static ArtifactVersion stripSnapshot(ArtifactVersion v) {
+        final String version = v.toString();
+        final Matcher matcher = SNAPSHOT_PATTERN.matcher(version);
+        if (matcher.find()) {
+            return ArtifactVersionService.getArtifactVersion(version.substring(0, matcher.start(1) - 1));
+        }
+        return v;
+    }
 
     protected int innerGetSegmentCount(ArtifactVersion v) {
         // if the version does not match the maven rules, then we have only one segment
@@ -67,5 +79,16 @@ public class MavenVersionComparator extends AbstractVersionComparator {
         } catch (NumberFormatException e) {
             return 1;
         }
+    }
+
+    @Override
+    public final int getSegmentCount(ArtifactVersion v) {
+        if (v == null) {
+            return 0;
+        }
+        if (ArtifactUtils.isSnapshot(v.toString())) {
+            return innerGetSegmentCount(stripSnapshot(v));
+        }
+        return innerGetSegmentCount(v);
     }
 }

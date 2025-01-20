@@ -60,7 +60,7 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.wagon.authentication.AuthenticationInfo;
 import org.apache.maven.wagon.proxy.ProxyInfo;
 import org.codehaus.mojo.versions.model.IgnoreVersion;
-import org.codehaus.mojo.versions.ordering.VersionComparator;
+import org.codehaus.mojo.versions.ordering.SegmentCounter;
 import org.codehaus.mojo.versions.rule.RuleService;
 import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.ArtifactVersionService;
@@ -235,8 +235,7 @@ public class DefaultVersionsHelper implements VersionsHelper {
     }
 
     public SortedSet<ArtifactVersion> resolveAssociatedVersions(
-            Set<ArtifactAssociation> associations, VersionComparator versionComparator)
-            throws VersionRetrievalException {
+            Set<ArtifactAssociation> associations, SegmentCounter versionComparator) throws VersionRetrievalException {
         SortedSet<ArtifactVersion> versions = null;
         for (ArtifactAssociation association : associations) {
             final ArtifactVersions associatedVersions =
@@ -260,12 +259,11 @@ public class DefaultVersionsHelper implements VersionsHelper {
                     }
                 }
             } else {
-                versions = new TreeSet<>(versionComparator);
-                versions.addAll(Arrays.asList(associatedVersions.getVersions(true)));
+                versions = new TreeSet<>(Arrays.asList(associatedVersions.getVersions(true)));
             }
         }
         if (versions == null) {
-            versions = new TreeSet<>(versionComparator);
+            versions = new TreeSet<>();
         }
         return Collections.unmodifiableSortedSet(versions);
     }

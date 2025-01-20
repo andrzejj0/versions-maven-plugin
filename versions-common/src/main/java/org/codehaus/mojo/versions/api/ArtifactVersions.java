@@ -59,7 +59,6 @@ public class ArtifactVersions extends AbstractVersionDetails implements Comparab
      *
      * @param artifact          The artifact.
      * @param versions          The versions.
-     * @param versionComparator The version comparison rule.
      * @since 1.0-alpha-3
      */
     public ArtifactVersions(Artifact artifact, List<ArtifactVersion> versions) {
