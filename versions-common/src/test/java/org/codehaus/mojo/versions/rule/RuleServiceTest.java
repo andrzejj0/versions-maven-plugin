@@ -6,7 +6,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.apache.maven.execution.MavenSession;
@@ -23,8 +22,6 @@ import org.apache.maven.wagon.proxy.ProxyInfo;
 import org.codehaus.mojo.versions.model.IgnoreVersion;
 import org.codehaus.mojo.versions.model.Rule;
 import org.codehaus.mojo.versions.model.RuleSet;
-import org.codehaus.mojo.versions.ordering.VersionComparatorFactory;
-import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -32,18 +29,14 @@ import org.mockito.MockitoAnnotations;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Collections.singletonList;
-import static java.util.Collections.singletonMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class RuleServiceTest {
     @Mock
@@ -55,17 +48,6 @@ public class RuleServiceTest {
     @BeforeEach
     public void beforeEach() {
         MockitoAnnotations.openMocks(this);
-    }
-
-    @Test
-    void testDefaultsShouldBePresentInAnEmptyRuleSet() throws MojoExecutionException {
-        RuleService service = new RulesServiceBuilder()
-                .withMavenSession(mavenSession)
-                .withLog(log)
-                .withIgnoredVersions(singletonList(".*-M."))
-                .build();
-        RuleSet ruleSet = service.getRuleSet();
-        assertThat(ruleSet.getComparisonMethod(), is("maven"));
     }
 
     @Test
@@ -139,44 +121,5 @@ public class RuleServiceTest {
                 .when(wagon)
                 .get(anyString(), any(File.class));
         return wagon;
-    }
-
-    @Test
-    public void testRuleSets() throws Exception {
-        final String resourcePath = "/" + getClass().getPackage().getName().replace('.', '/') + "/rules.xml";
-        final String rulesUri =
-                Objects.requireNonNull(getClass().getResource(resourcePath)).toExternalForm();
-        when(mavenSession.getRepositorySession()).thenReturn(new DefaultRepositorySystemSession());
-        RuleService service = new RulesServiceBuilder()
-                .withWagonMap(singletonMap("file", mockFileWagon(new URI(rulesUri))))
-                .withServerId("")
-                .withRulesUri(rulesUri)
-                .withMavenSession(mavenSession)
-                .withLog(log)
-                .withMavenSession(mavenSession)
-                .build();
-
-        assertEquals(
-                VersionComparatorFactory.getVersionComparator("maven"),
-                service.getVersionComparator("net.foo", "bar"),
-                "no match gives default");
-        assertEquals(
-                VersionComparatorFactory.getVersionComparator("mercury"),
-                service.getVersionComparator("org.apache.maven", "plugins"),
-                "matches wildcard");
-        assertEquals(
-                VersionComparatorFactory.getVersionComparator("mercury"),
-                service.getVersionComparator("com.mycompany.custom.maven", "plugins"),
-                "exact match wins over initial match");
-        assertEquals(
-                VersionComparatorFactory.getVersionComparator("maven"),
-                service.getVersionComparator("com.mycompany.maven.plugins", "plugins"),
-                "non-wildcard prefix wins over wildcard prefix match");
-        assertEquals(
-                VersionComparatorFactory.getVersionComparator("maven"),
-                service.getVersionComparator("com.mycompany.maven", "new-maven-plugin"));
-        assertEquals(
-                VersionComparatorFactory.getVersionComparator("mercury"),
-                service.getVersionComparator("com.mycompany.maven", "old-maven-plugin"));
     }
 }

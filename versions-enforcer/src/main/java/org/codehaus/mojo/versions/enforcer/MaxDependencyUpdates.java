@@ -311,7 +311,7 @@ public class MaxDependencyUpdates extends AbstractEnforcerRule {
                     .withMavenSession(mavenSession)
                     .build();
             PomHelper pomHelper = new PomHelper(
-                    ruleService, artifactCreationService, new VersionsExpressionEvaluator(mavenSession, mojoExecution));
+                    artifactCreationService, new VersionsExpressionEvaluator(mavenSession, mojoExecution));
             return new DefaultVersionsHelper.Builder()
                     .withArtifactCreationService(artifactCreationService)
                     .withRepositorySystem(repositorySystem)

@@ -266,7 +266,6 @@ public class RulesServiceBuilder {
     private static RuleSet enrichRuleSet(Collection<String> ignoredVersions, RuleSet originalRuleSet) {
         RuleSet ruleSet = new RuleSet();
         if (originalRuleSet != null) {
-            ruleSet.setComparisonMethod(originalRuleSet.getComparisonMethod());
             if (originalRuleSet.getRules() != null) {
                 ruleSet.setRules(new ArrayList<>(originalRuleSet.getRules()));
             }

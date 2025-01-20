@@ -31,8 +31,6 @@ import org.apache.maven.plugin.testing.stubs.DefaultArtifactHandlerStub;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.rule.RuleService;
-import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
 import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
@@ -78,11 +76,7 @@ public class LockSnapshotsMojoTest {
         mavenSession = mockMavenSession();
         ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
         artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
-        RuleService ruleService = new RulesServiceBuilder()
-                .withLog(log)
-                .withMavenSession(mavenSession)
-                .build();
-        pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
+        pomHelper = new PomHelper(artifactCreationService, expressionEvaluator);
     }
 
     private LockSnapshotsMojo createMojo(RepositorySystem repositorySystem) throws MojoExecutionException {

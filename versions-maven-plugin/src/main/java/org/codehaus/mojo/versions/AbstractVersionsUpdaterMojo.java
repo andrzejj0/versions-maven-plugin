@@ -218,8 +218,8 @@ public abstract class AbstractVersionsUpdaterMojo extends AbstractMojo {
                     .withIgnoredVersions(ignoredVersions)
                     .withLog(getLog())
                     .build();
-            PomHelper pomHelper = new PomHelper(
-                    ruleService, artifactCreationService, new VersionsExpressionEvaluator(session, mojoExecution));
+            PomHelper pomHelper =
+                    new PomHelper(artifactCreationService, new VersionsExpressionEvaluator(session, mojoExecution));
             helper = new DefaultVersionsHelper.Builder()
                     .withArtifactCreationService(artifactCreationService)
                     .withRepositorySystem(repositorySystem)

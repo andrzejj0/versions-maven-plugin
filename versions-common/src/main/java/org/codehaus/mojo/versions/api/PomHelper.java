@@ -81,7 +81,6 @@ import org.apache.maven.project.ProjectBuildingRequest;
 import org.apache.maven.project.ProjectBuildingResult;
 import org.apache.maven.shared.utils.io.IOUtil;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.rule.RuleService;
 import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.mojo.versions.utils.ModelNode;
 import org.codehaus.mojo.versions.utils.RegexUtils;
@@ -134,16 +133,10 @@ public class PomHelper {
 
     private final ExpressionEvaluator expressionEvaluator;
 
-    private final RuleService ruleService;
-
     /**
      * Creates a new instance
      */
-    public PomHelper(
-            RuleService ruleService,
-            ArtifactCreationService artifactCreationService,
-            ExpressionEvaluator expressionEvaluator) {
-        this.ruleService = ruleService;
+    public PomHelper(ArtifactCreationService artifactCreationService, ExpressionEvaluator expressionEvaluator) {
         this.artifactCreationService = artifactCreationService;
         this.expressionEvaluator = expressionEvaluator;
     }
@@ -1126,7 +1119,7 @@ public class PomHelper {
         ofNullable(properties)
                 .map(Properties::stringPropertyNames)
                 .ifPresent(propertyNames -> propertyNames.forEach(propertyName -> result.putIfAbsent(
-                        propertyName, new PropertyVersionsBuilder(helper, ruleService, profileId, propertyName, log))));
+                        propertyName, new PropertyVersionsBuilder(helper, profileId, propertyName, log))));
     }
 
     /**

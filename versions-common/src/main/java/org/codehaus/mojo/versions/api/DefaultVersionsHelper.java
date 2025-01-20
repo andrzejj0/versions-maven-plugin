@@ -228,8 +228,7 @@ public class DefaultVersionsHelper implements VersionsHelper {
                                 return false;
                             }))
                             .map(v -> ArtifactVersionService.getArtifactVersion(v.toString()))
-                            .collect(Collectors.toList()),
-                    ruleService.getVersionComparator(artifact));
+                            .collect(Collectors.toList()));
         } catch (VersionRangeResolutionException e) {
             throw new VersionRetrievalException(e.getMessage(), e);
         }
@@ -346,8 +345,7 @@ public class DefaultVersionsHelper implements VersionsHelper {
                 useProjectRepositories);
         return new ArtifactVersions(
                 allVersions.getArtifact(),
-                Arrays.stream(allVersions.getAllUpdates(allowSnapshots)).collect(Collectors.toList()),
-                allVersions.getVersionComparator());
+                Arrays.stream(allVersions.getAllUpdates(allowSnapshots)).collect(Collectors.toList()));
     }
 
     @Override
@@ -390,8 +388,7 @@ public class DefaultVersionsHelper implements VersionsHelper {
                 true);
         ArtifactVersions updatedVersions = new ArtifactVersions(
                 allVersions.getArtifact(),
-                Arrays.stream(allVersions.getAllUpdates(allowSnapshots)).collect(Collectors.toList()),
-                allVersions.getVersionComparator());
+                Arrays.stream(allVersions.getAllUpdates(allowSnapshots)).collect(Collectors.toList()));
         return new PluginUpdatesDetails(updatedVersions, pluginDependencyDetails, allowSnapshots);
     }
 
@@ -463,7 +460,7 @@ public class DefaultVersionsHelper implements VersionsHelper {
             PropertyVersionsBuilder builder = builders.get(propertyName);
             if (builder == null || !builder.isAssociated()) {
                 log.debug(String.format("Property ${%s}: Not associated with any dependency.", propertyName));
-                builder = new PropertyVersionsBuilder(this, ruleService, null, propertyName, log);
+                builder = new PropertyVersionsBuilder(this, null, propertyName, log);
             }
 
             if (!property.isAutoLinkDependencies()) {

@@ -29,8 +29,6 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.plugin.logging.Log;
-import org.codehaus.mojo.versions.ordering.VersionComparator;
-import org.codehaus.mojo.versions.rule.RuleService;
 import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 
 /**
@@ -58,8 +56,6 @@ public class PropertyVersionsBuilder {
 
     private VersionRange currentVersionRange;
 
-    private RuleService ruleService;
-
     /**
      * Constructs a new {@link org.codehaus.mojo.versions.api.PropertyVersions}.
      *
@@ -67,9 +63,8 @@ public class PropertyVersionsBuilder {
      * @param name The property name.
      * @param helper The {@link org.codehaus.mojo.versions.api.DefaultVersionsHelper}.
      */
-    PropertyVersionsBuilder(VersionsHelper helper, RuleService ruleService, String profileId, String name, Log log) {
+    PropertyVersionsBuilder(VersionsHelper helper, String profileId, String name, Log log) {
         this.helper = helper;
-        this.ruleService = ruleService;
         this.profileId = profileId;
         this.name = name;
         this.associations = new TreeSet<>();
@@ -94,7 +89,7 @@ public class PropertyVersionsBuilder {
     }
 
     public PropertyVersions build() throws VersionRetrievalException {
-        PropertyVersions instance = new PropertyVersions(helper, ruleService, profileId, name, log, associations);
+        PropertyVersions instance = new PropertyVersions(helper, profileId, name, log, associations);
         instance.setCurrentVersion(currentVersion);
         instance.setCurrentVersionRange(currentVersionRange);
         return instance;
@@ -186,13 +181,6 @@ public class PropertyVersionsBuilder {
         return this;
     }
 
-    private VersionComparator[] lookupComparators() {
-        return associations.stream()
-                .map(association -> ruleService.getVersionComparator(association.getArtifact()))
-                .distinct()
-                .toArray(VersionComparator[]::new);
-    }
-
     private final class PropertyVersionComparator implements Comparator<ArtifactVersion> {
         public int compare(ArtifactVersion v1, ArtifactVersion v2) {
             return innerCompare(v1, v2);
@@ -202,20 +190,7 @@ public class PropertyVersionsBuilder {
             if (!isAssociated()) {
                 throw new IllegalStateException("Cannot compare versions for a property with no associations");
             }
-            VersionComparator[] comparators = lookupComparators();
-            assert comparators.length >= 1 : "we have at least one association => at least one comparator";
-            int result = comparators[0].compare(v1, v2);
-            for (int i = 1; i < comparators.length; i++) {
-                int alt = comparators[i].compare(v1, v2);
-                if (result != alt && (result >= 0 && alt < 0) || (result <= 0 && alt > 0)) {
-                    throw new IllegalStateException("Property " + name + " is associated with multiple artifacts"
-                            + " and these artifacts use different version sorting rules and these rules are effectively"
-                            + " incompatible for the two of versions being compared.\nFirst rule says compare(\"" + v1
-                            + "\", \"" + v2 + "\") = " + result + "\nSecond rule says compare(\"" + v1 + "\", \"" + v2
-                            + "\") = " + alt);
-                }
-            }
-            return result;
+            return v1.compareTo(v2);
         }
     }
 

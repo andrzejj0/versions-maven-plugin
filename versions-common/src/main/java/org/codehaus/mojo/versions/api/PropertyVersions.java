@@ -41,11 +41,10 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
+import org.codehaus.mojo.versions.ordering.MavenVersionComparator;
 import org.codehaus.mojo.versions.ordering.VersionComparator;
-import org.codehaus.mojo.versions.rule.RuleService;
 import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 
-import static java.lang.Integer.signum;
 import static java.util.Optional.empty;
 import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 
@@ -62,8 +61,6 @@ public class PropertyVersions extends AbstractVersionDetails {
 
     private final Set<ArtifactAssociation> associations;
 
-    private final RuleService ruleService;
-
     /**
      * The available versions.
      *
@@ -76,14 +73,8 @@ public class PropertyVersions extends AbstractVersionDetails {
     private final Log log;
 
     PropertyVersions(
-            VersionsHelper helper,
-            RuleService ruleService,
-            String profileId,
-            String name,
-            Log log,
-            Set<ArtifactAssociation> associations)
+            VersionsHelper helper, String profileId, String name, Log log, Set<ArtifactAssociation> associations)
             throws VersionRetrievalException {
-        this.ruleService = ruleService;
         this.profileId = profileId;
         this.name = name;
         this.log = log;
@@ -104,13 +95,6 @@ public class PropertyVersions extends AbstractVersionDetails {
 
     public ArtifactAssociation[] getAssociations() {
         return associations.toArray(new ArtifactAssociation[0]);
-    }
-
-    private VersionComparator[] lookupComparators() {
-        return associations.stream()
-                .map(association -> ruleService.getVersionComparator(association.getArtifact()))
-                .distinct()
-                .toArray(VersionComparator[]::new);
     }
 
     /**
@@ -199,24 +183,7 @@ public class PropertyVersions extends AbstractVersionDetails {
             return new ArtifactVersion[0];
         } else {
             final ArtifactVersion[] answer = result.toArray(new ArtifactVersion[0]);
-            VersionComparator[] rules = lookupComparators();
-            assert rules.length > 0;
-            Arrays.sort(answer, rules[0]);
-            if (rules.length == 1 || answer.length == 1) {
-                // only one rule...
-                return answer;
-            }
-            ArtifactVersion[] alt = answer.clone();
-            for (int j = 1; j < rules.length; j++) {
-                Arrays.sort(alt, rules[j]);
-                if (!Arrays.equals(alt, answer)) {
-                    throw new IllegalStateException("Property " + name + " is associated with multiple artifacts"
-                            + " and these artifacts use different version sorting rules and these rules are effectively"
-                            + " incompatible for the set of versions available to this property.\nFirst rule says: "
-                            + Arrays.asList(answer) + "\nSecond rule says: "
-                            + Arrays.asList(alt));
-                }
-            }
+            Arrays.sort(answer);
             return answer;
         }
     }
@@ -353,45 +320,14 @@ public class PropertyVersions extends AbstractVersionDetails {
             if (!isAssociated()) {
                 throw new IllegalStateException("Cannot compare versions for a property with no associations");
             }
-            VersionComparator[] comparators = lookupComparators();
-            assert comparators.length >= 1 : "we have at least one association => at least one comparator";
-            int firstResult = comparators[0].compare(v1, v2);
-            Arrays.stream(comparators, 1, comparators.length)
-                    .map(comparator -> comparator.compare(v1, v2))
-                    .filter(result -> signum(firstResult) != signum(result))
-                    .findAny()
-                    .ifPresent(result -> {
-                        throw new IllegalStateException("Property " + name + " is associated with multiple artifacts"
-                                + " and these artifacts use different version sorting rules and these rules are effectively"
-                                + " incompatible for the two of versions being compared.\nFirst rule says compare(\""
-                                + v1
-                                + "\", \"" + v2 + "\") = " + firstResult
-                                + "\nSecond rule says compare(\"" + v1 + "\", \"" + v2
-                                + "\") = " + result);
-                    });
-            return firstResult;
+            return v1.compareTo(v2);
         }
 
         public int getSegmentCount(ArtifactVersion v) {
             if (!isAssociated()) {
                 throw new IllegalStateException("Cannot compare versions for a property with no associations");
             }
-            VersionComparator[] comparators = lookupComparators();
-            assert comparators.length >= 1 : "we have at least one association => at least one comparator";
-            int firstSegmentCount = comparators[0].getSegmentCount(v);
-            Arrays.stream(comparators, 1, comparators.length)
-                    .map(comparator -> comparator.getSegmentCount(v))
-                    .filter(segmentCount -> segmentCount != firstSegmentCount)
-                    .findAny()
-                    .ifPresent(segmentCount -> {
-                        throw new IllegalStateException("Property " + name + " is associated with multiple artifacts"
-                                + " and these artifacts use different version sorting rules and these rules are effectively"
-                                + " incompatible for the two of versions being compared.\n"
-                                + "First rule says getSegmentCount(\""
-                                + v + "\") = " + firstSegmentCount
-                                + "\nSecond rule says getSegmentCount(\"" + v + "\") = " + segmentCount);
-                    });
-            return firstSegmentCount;
+            return MavenVersionComparator.INSTANCE.getSegmentCount(v);
         }
     }
 }

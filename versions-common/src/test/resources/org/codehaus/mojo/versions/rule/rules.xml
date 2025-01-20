@@ -1,13 +1,11 @@
-<ruleset comparisonMethod="maven">
+<ruleset>
   <ignoreVersions>
     <ignoreVersion type="regex">.*-alpha</ignoreVersion>
     <ignoreVersion type="regex">.*-beta</ignoreVersion>
     <ignoreVersion type="illegalType">illegalVersion</ignoreVersion>
   </ignoreVersions>
   <rules>
-    <rule groupId="*.maven" comparisonMethod="mercury"/>
-    <rule groupId="com.mycompany" comparisonMethod="numeric"/>
-    <rule groupId="com.mycompany.maven" comparisonMethod="maven">
+    <rule groupId="com.mycompany.maven">
       <ignoreVersions>
         <ignoreVersion>one</ignoreVersion>
         <ignoreVersion>two</ignoreVersion>
@@ -15,6 +13,5 @@
         <ignoreVersion type="illegalType">illegalVersion</ignoreVersion>
       </ignoreVersions>
     </rule>
-    <rule groupId="com.mycompany.maven" artifactId="old-maven-plugin" comparisonMethod="mercury"/>
   </rules>
 </ruleset>

@@ -89,16 +89,6 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
     private String rulesUri;
 
     /**
-     * The versioning rule to use when comparing versions. Valid values are <code>maven</code>, <code>numeric</code>
-     * which will handle long version numbers provided all components are numeric, or <code>mercury</code> which will
-     * use the mercury version number comparison rules.
-     *
-     * @since 1.0-alpha-1
-     */
-    @Parameter(property = "comparisonMethod")
-    protected String comparisonMethod;
-
-    /**
      * Whether to allow snapshots when searching for the latest version of an artifact.
      *
      * @since 1.0-alpha-3
@@ -189,8 +179,8 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
                         .withLog(getLog())
                         .withMavenSession(session)
                         .build();
-                PomHelper pomHelper = new PomHelper(
-                        ruleService, artifactCreationService, new VersionsExpressionEvaluator(session, mojoExecution));
+                PomHelper pomHelper =
+                        new PomHelper(artifactCreationService, new VersionsExpressionEvaluator(session, mojoExecution));
                 helper = new DefaultVersionsHelper.Builder()
                         .withArtifactCreationService(artifactCreationService)
                         .withRepositorySystem(repositorySystem)
@@ -254,10 +244,6 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
 
     public Boolean getAllowSnapshots() {
         return this.allowSnapshots;
-    }
-
-    public String getComparisonMethod() {
-        return comparisonMethod;
     }
 
     public I18N getI18n() {

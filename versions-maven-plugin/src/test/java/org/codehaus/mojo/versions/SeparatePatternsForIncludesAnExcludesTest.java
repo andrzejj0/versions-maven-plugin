@@ -6,8 +6,6 @@ import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.plugin.logging.Log;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.rule.RuleService;
-import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
 import org.codehaus.mojo.versions.utils.ArtifactCreationService;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.junit.Before;
@@ -15,7 +13,6 @@ import org.junit.Test;
 import org.mockito.Mock;
 
 import static org.codehaus.mojo.versions.utils.MockUtils.mockArtifactHandlerManager;
-import static org.codehaus.mojo.versions.utils.MockUtils.mockMavenSession;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.MockitoAnnotations.openMocks;
 
@@ -38,11 +35,7 @@ public class SeparatePatternsForIncludesAnExcludesTest {
         openMocks(this);
         ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
         artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
-        RuleService ruleService = new RulesServiceBuilder()
-                .withLog(log)
-                .withMavenSession(mockMavenSession())
-                .build();
-        pomHelper = new PomHelper(ruleService, artifactCreationService, expressionEvaluator);
+        pomHelper = new PomHelper(artifactCreationService, expressionEvaluator);
 
         mojo = new AbstractVersionsDependencyUpdaterMojo(artifactCreationService, null, null, null) {
             @Override

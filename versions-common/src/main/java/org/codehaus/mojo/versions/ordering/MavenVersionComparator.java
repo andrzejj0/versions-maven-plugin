@@ -31,6 +31,8 @@ import org.apache.maven.artifact.versioning.ArtifactVersion;
  * @since 1.0-alpha-3
  */
 public class MavenVersionComparator extends AbstractVersionComparator {
+    public static final VersionComparator INSTANCE = new MavenVersionComparator();
+
     protected int innerGetSegmentCount(ArtifactVersion v) {
         // if the version does not match the maven rules, then we have only one segment
         // i.e. the qualifier
