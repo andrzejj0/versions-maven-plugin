@@ -211,6 +211,12 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
     }
 
     /**
+     * Returns the bundle name for the underlying report renderers
+     * @return bundle name for the underlying report renderers
+     */
+    protected abstract String getBundleName();
+
+    /**
      * generates the report.
      *
      * @param locale the locale to generate the report for.
@@ -224,6 +230,15 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
     @Override
     public String getDescription(Locale locale) {
         return getText(locale, "report.description");
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Deprecated
+    public String getOutputName() {
+        return getBundleName();
     }
 
     @Override
