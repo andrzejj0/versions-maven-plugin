@@ -19,6 +19,8 @@ package org.codehaus.mojo.versions.ordering;
  * under the License.
  */
 
+import javax.annotation.Nullable;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -45,7 +47,7 @@ public class DefaultSegmentCounter implements SegmentCounter {
         return v;
     }
 
-    protected int innerGetSegmentCount(ArtifactVersion v) {
+    private int innerGetSegmentCount(ArtifactVersion v) {
         // if the version does not match the maven rules, then we have only one segment
         // i.e. the qualifier
         if (v.getBuildNumber() != 0) {
@@ -81,8 +83,11 @@ public class DefaultSegmentCounter implements SegmentCounter {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public final int getSegmentCount(ArtifactVersion v) {
+    public final int getSegmentCount(@Nullable ArtifactVersion v) {
         if (v == null) {
             return 0;
         }

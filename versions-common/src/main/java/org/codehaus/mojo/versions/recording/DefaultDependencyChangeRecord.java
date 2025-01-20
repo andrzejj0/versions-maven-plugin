@@ -16,6 +16,7 @@ package org.codehaus.mojo.versions.recording;
  */
 
 import java.util.Objects;
+
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.model.Dependency;
 import org.codehaus.mojo.versions.api.change.DependencyVersionChange;
