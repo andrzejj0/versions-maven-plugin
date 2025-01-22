@@ -20,13 +20,10 @@ package org.codehaus.mojo.versions.api;
  */
 
 import java.util.Map;
-import java.util.Set;
-import java.util.SortedSet;
 import java.util.stream.Stream;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
-import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Plugin;
@@ -345,12 +342,4 @@ public interface VersionsHelper {
      * @since 1.3
      */
     void resolveArtifact(Artifact artifact, boolean usePluginRepositories) throws ArtifactResolutionException;
-
-    /**
-     * Resolves {@link ArtifactVersions} for a set of artifact associations
-     * @param associations set of artifact versions
-     * @return set of resolved associations
-     */
-    SortedSet<ArtifactVersion> resolveAssociatedVersions(Set<ArtifactAssociation> associations)
-            throws VersionRetrievalException;
 }

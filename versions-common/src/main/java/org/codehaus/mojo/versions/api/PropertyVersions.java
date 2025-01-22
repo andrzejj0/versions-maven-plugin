@@ -21,6 +21,7 @@ package org.codehaus.mojo.versions.api;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -74,11 +75,45 @@ public class PropertyVersions extends AbstractVersionDetails {
         this.name = name;
         this.log = log;
         this.associations = new TreeSet<>(associations);
-        this.allVersions = helper.resolveAssociatedVersions(associations);
+        this.allVersions = resolveAssociatedVersions(helper, associations);
     }
 
     public ArtifactAssociation[] getAssociations() {
         return associations.toArray(new ArtifactAssociation[0]);
+    }
+
+    private SortedSet<ArtifactVersion> resolveAssociatedVersions(
+            VersionsHelper helper, Set<ArtifactAssociation> associations) throws VersionRetrievalException {
+        SortedSet<ArtifactVersion> versions = null;
+        for (ArtifactAssociation association : associations) {
+            final ArtifactVersions associatedVersions =
+                    helper.lookupArtifactVersions(association.getArtifact(), association.isUsePluginRepositories());
+            if (versions != null) {
+                final ArtifactVersion[] artifactVersions = associatedVersions.getVersions(true);
+                // since ArtifactVersion does not override equals, we have to do this the hard way
+                // result.retainAll( Arrays.asList( artifactVersions ) );
+                Iterator<ArtifactVersion> j = versions.iterator();
+                while (j.hasNext()) {
+                    boolean contains = false;
+                    ArtifactVersion version = j.next();
+                    for (ArtifactVersion artifactVersion : artifactVersions) {
+                        if (version.compareTo(artifactVersion) == 0) {
+                            contains = true;
+                            break;
+                        }
+                    }
+                    if (!contains) {
+                        j.remove();
+                    }
+                }
+            } else {
+                versions = new TreeSet<>(Arrays.asList(associatedVersions.getVersions(true)));
+            }
+        }
+        if (versions == null) {
+            versions = new TreeSet<>();
+        }
+        return Collections.unmodifiableSortedSet(versions);
     }
 
     /**

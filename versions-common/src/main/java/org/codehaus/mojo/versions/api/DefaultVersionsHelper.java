@@ -24,13 +24,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
@@ -46,7 +44,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
-import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.artifact.versioning.Restriction;
 import org.apache.maven.artifact.versioning.VersionRange;
@@ -222,40 +219,6 @@ public class DefaultVersionsHelper implements VersionsHelper {
         } catch (VersionRangeResolutionException e) {
             throw new VersionRetrievalException(e.getMessage(), e);
         }
-    }
-
-    public SortedSet<ArtifactVersion> resolveAssociatedVersions(Set<ArtifactAssociation> associations)
-            throws VersionRetrievalException {
-        SortedSet<ArtifactVersion> versions = null;
-        for (ArtifactAssociation association : associations) {
-            final ArtifactVersions associatedVersions =
-                    lookupArtifactVersions(association.getArtifact(), association.isUsePluginRepositories());
-            if (versions != null) {
-                final ArtifactVersion[] artifactVersions = associatedVersions.getVersions(true);
-                // since ArtifactVersion does not override equals, we have to do this the hard way
-                // result.retainAll( Arrays.asList( artifactVersions ) );
-                Iterator<ArtifactVersion> j = versions.iterator();
-                while (j.hasNext()) {
-                    boolean contains = false;
-                    ArtifactVersion version = j.next();
-                    for (ArtifactVersion artifactVersion : artifactVersions) {
-                        if (version.compareTo(artifactVersion) == 0) {
-                            contains = true;
-                            break;
-                        }
-                    }
-                    if (!contains) {
-                        j.remove();
-                    }
-                }
-            } else {
-                versions = new TreeSet<>(Arrays.asList(associatedVersions.getVersions(true)));
-            }
-        }
-        if (versions == null) {
-            versions = new TreeSet<>();
-        }
-        return Collections.unmodifiableSortedSet(versions);
     }
 
     @Override
