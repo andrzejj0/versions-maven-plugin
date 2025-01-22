@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.VersionRange;
@@ -106,27 +107,21 @@ public class PropertyVersionsBuilder {
             return null;
         }
 
-        Optional<ArtifactVersion> lowerBound = lowerBounds.entrySet().stream()
+        Optional<Pair<ArtifactVersion, Boolean>> lowerBound = lowerBounds.entrySet().stream()
                 .min(Map.Entry.comparingByKey())
-                .map(Map.Entry::getKey)
-                .map(ArtifactVersionService::getArtifactVersion);
-        boolean includeLower = lowerBound
-                .map(bound -> lowerBounds.getOrDefault(bound.toString(), true))
-                .orElse(false);
+                .map(e -> Pair.of(e.getKey(), e.getValue()))
+                .map(p -> Pair.of(ArtifactVersionService.getArtifactVersion(p.getKey()), p.getValue()));
 
-        Optional<ArtifactVersion> upperBound = upperBounds.entrySet().stream()
+        Optional<Pair<ArtifactVersion, Boolean>> upperBound = upperBounds.entrySet().stream()
                 .max(Map.Entry.comparingByKey())
-                .map(Map.Entry::getKey)
-                .map(ArtifactVersionService::getArtifactVersion);
-        boolean includeUpper = upperBound
-                .map(bound -> upperBounds.getOrDefault(bound.toString(), true))
-                .orElse(false);
+                .map(e -> Pair.of(e.getKey(), e.getValue()))
+                .map(p -> Pair.of(ArtifactVersionService.getArtifactVersion(p.getKey()), p.getValue()));
 
-        return (includeLower ? '[' : '(')
-                + lowerBound.map(Object::toString).orElse("")
+        return (lowerBound.map(Pair::getValue).orElse(false) ? '[' : '(')
+                + lowerBound.map(Pair::getKey).map(Object::toString).orElse("")
                 + ','
-                + upperBound.map(Object::toString).orElse("")
-                + (includeUpper ? ']' : ')');
+                + upperBound.map(Pair::getKey).map(Object::toString).orElse("")
+                + (upperBound.map(Pair::getValue).orElse(false) ? ']' : ')');
     }
 
     public PropertyVersionsBuilder withLowerBound(String lowerBound, boolean includeLower) {
