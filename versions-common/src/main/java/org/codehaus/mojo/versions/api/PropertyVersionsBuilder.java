@@ -19,10 +19,12 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
-import java.util.Comparator;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.apache.maven.artifact.Artifact;
@@ -84,12 +86,9 @@ public class PropertyVersionsBuilder {
         return !associations.isEmpty();
     }
 
-    public ArtifactAssociation[] getAssociations() {
-        return associations.toArray(new ArtifactAssociation[0]);
-    }
-
     public PropertyVersions build() throws VersionRetrievalException {
-        PropertyVersions instance = new PropertyVersions(helper, profileId, name, log, associations);
+        SortedSet<ArtifactVersion> resolvedVersions = resolveAssociatedVersions(helper, associations);
+        PropertyVersions instance = new PropertyVersions(profileId, name, log, associations, resolvedVersions);
         instance.setCurrentVersion(currentVersion);
         instance.setCurrentVersionRange(currentVersionRange);
         return instance;
@@ -100,7 +99,6 @@ public class PropertyVersionsBuilder {
     }
 
     public String getVersionRange() {
-        Comparator<ArtifactVersion> comparator = new PropertyVersionComparator();
         if (lowerBounds.isEmpty() && upperBounds.isEmpty()) {
             return null;
         }
@@ -112,11 +110,12 @@ public class PropertyVersionsBuilder {
                 lowerBound = candidate;
                 includeLower = entry.getValue();
             } else {
-                final int result = comparator.compare(lowerBound, candidate);
-                if (result > 0) {
+                assert isAssociated();
+                final int comparisonResult = lowerBound.compareTo(candidate);
+                if (comparisonResult > 0) {
                     lowerBound = candidate;
                     includeLower = entry.getValue();
-                } else if (result == 0) {
+                } else if (comparisonResult == 0) {
                     includeLower = includeLower && entry.getValue();
                 }
             }
@@ -129,11 +128,12 @@ public class PropertyVersionsBuilder {
                 upperBound = candidate;
                 includeUpper = entry.getValue();
             } else {
-                final int result = comparator.compare(upperBound, candidate);
-                if (result < 0) {
+                assert isAssociated();
+                final int comparisonResult = upperBound.compareTo(candidate);
+                if (comparisonResult < 0) {
                     upperBound = candidate;
                     includeUpper = entry.getValue();
-                } else if (result == 0) {
+                } else if (comparisonResult == 0) {
                     includeUpper = includeUpper && entry.getValue();
                 }
             }
@@ -181,19 +181,6 @@ public class PropertyVersionsBuilder {
         return this;
     }
 
-    private final class PropertyVersionComparator implements Comparator<ArtifactVersion> {
-        public int compare(ArtifactVersion v1, ArtifactVersion v2) {
-            return innerCompare(v1, v2);
-        }
-
-        private int innerCompare(ArtifactVersion v1, ArtifactVersion v2) {
-            if (!isAssociated()) {
-                throw new IllegalStateException("Cannot compare versions for a property with no associations");
-            }
-            return v1.compareTo(v2);
-        }
-    }
-
     public PropertyVersionsBuilder withCurrentVersion(ArtifactVersion currentVersion) {
         this.currentVersion = currentVersion;
         return this;
@@ -202,5 +189,21 @@ public class PropertyVersionsBuilder {
     public PropertyVersionsBuilder withCurrentVersionRange(VersionRange currentVersionRange) {
         this.currentVersionRange = currentVersionRange;
         return this;
+    }
+
+    private SortedSet<ArtifactVersion> resolveAssociatedVersions(
+            VersionsHelper helper, Set<ArtifactAssociation> associations) throws VersionRetrievalException {
+        SortedSet<ArtifactVersion> result = new TreeSet<>();
+        for (ArtifactAssociation association : associations) {
+            ArtifactVersions artifactVersions =
+                    helper.lookupArtifactVersions(association.getArtifact(), association.isUsePluginRepositories());
+            List<ArtifactVersion> associatedVersions = Arrays.asList(artifactVersions.getVersions(true));
+            if (result.isEmpty()) {
+                result.addAll(associatedVersions);
+            } else {
+                result.retainAll(associatedVersions);
+            }
+        }
+        return result;
     }
 }

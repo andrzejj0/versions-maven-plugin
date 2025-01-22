@@ -872,7 +872,7 @@ public class PomHelper {
         }
 
         // Finally, remove any properties without associations
-        propertiesMap.values().removeIf(versions -> versions.getAssociations().length == 0);
+        propertiesMap.values().removeIf(versions -> !versions.isAssociated());
 
         return propertiesMap.values().toArray(new PropertyVersionsBuilder[0]);
     }

@@ -21,7 +21,6 @@ package org.codehaus.mojo.versions.api;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
@@ -61,38 +60,25 @@ public class PropertyVersions extends AbstractVersionDetails {
      *
      * @since 1.0-beta-1
      */
-    private final SortedSet<ArtifactVersion> allVersions;
+    private final SortedSet<ArtifactVersion> resolvedVersions;
 
     private final Log log;
 
     PropertyVersions(
-            VersionsHelper helper, String profileId, String name, Log log, Set<ArtifactAssociation> associations)
-            throws VersionRetrievalException {
+            String profileId,
+            String name,
+            Log log,
+            Set<ArtifactAssociation> associations,
+            SortedSet<ArtifactVersion> resolvedVersions) {
         this.profileId = profileId;
         this.name = name;
         this.log = log;
         this.associations = new TreeSet<>(associations);
-        this.allVersions = resolveAssociatedVersions(helper, associations);
+        this.resolvedVersions = resolvedVersions;
     }
 
     public ArtifactAssociation[] getAssociations() {
         return associations.toArray(new ArtifactAssociation[0]);
-    }
-
-    private SortedSet<ArtifactVersion> resolveAssociatedVersions(
-            VersionsHelper helper, Set<ArtifactAssociation> associations) throws VersionRetrievalException {
-        SortedSet<ArtifactVersion> result = new TreeSet<>();
-        for (ArtifactAssociation association : associations) {
-            ArtifactVersions artifactVersions =
-                    helper.lookupArtifactVersions(association.getArtifact(), association.isUsePluginRepositories());
-            List<ArtifactVersion> associatedVersions = Arrays.asList(artifactVersions.getVersions(true));
-            if (result.isEmpty()) {
-                result.addAll(associatedVersions);
-            } else {
-                result.retainAll(associatedVersions);
-            }
-        }
-        return result;
     }
 
     /**
@@ -150,7 +136,7 @@ public class PropertyVersions extends AbstractVersionDetails {
      * @return The (possibly empty) array of versions.
      */
     public ArtifactVersion[] getVersions(boolean includeSnapshots) {
-        return allVersions.stream()
+        return resolvedVersions.stream()
                 .filter(v -> includeSnapshots || !ArtifactUtils.isSnapshot(v.toString()))
                 .toArray(ArtifactVersion[]::new);
     }
