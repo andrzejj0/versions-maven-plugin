@@ -40,7 +40,7 @@ import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.eclipse.aether.RepositorySystem;
 
 /**
@@ -108,12 +108,12 @@ public class UseReactorMojo extends AbstractVersionsDependencyUpdaterMojo {
 
     @Inject
     public UseReactorMojo(
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders)
             throws MojoExecutionException {
-        super(artifactCreationService, repositorySystem, wagonMap, changeRecorders);
+        super(artifactFactory, repositorySystem, wagonMap, changeRecorders);
     }
 
     /**

@@ -50,7 +50,7 @@ import org.codehaus.mojo.versions.api.VersionsHelper;
 import org.codehaus.mojo.versions.model.RuleSet;
 import org.codehaus.mojo.versions.rule.RuleService;
 import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.DependencyComparator;
 import org.codehaus.mojo.versions.utils.VersionsExpressionEvaluator;
 import org.eclipse.aether.RepositorySystem;
@@ -70,7 +70,7 @@ import static org.codehaus.mojo.versions.utils.MavenProjectUtils.extractPluginDe
 
 @Named("maxDependencyUpdates")
 public class MaxDependencyUpdates extends AbstractEnforcerRule {
-    private final ArtifactCreationService artifactCreationService;
+    private final ArtifactFactory artifactFactory;
 
     private final ArtifactHandlerManager artifactHandlerManager;
 
@@ -278,14 +278,14 @@ public class MaxDependencyUpdates extends AbstractEnforcerRule {
     @Inject
     public MaxDependencyUpdates(
             MavenProject project,
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             ArtifactHandlerManager artifactHandlerManager,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             MavenSession mavenSession,
             MojoExecution mojoExecution) {
         this.project = project;
-        this.artifactCreationService = artifactCreationService;
+        this.artifactFactory = artifactFactory;
         this.artifactHandlerManager = artifactHandlerManager;
         this.repositorySystem = repositorySystem;
         this.wagonMap = wagonMap;
@@ -310,14 +310,13 @@ public class MaxDependencyUpdates extends AbstractEnforcerRule {
                     .withLog(log)
                     .withMavenSession(mavenSession)
                     .build();
-            PomHelper pomHelper = new PomHelper(
-                    artifactCreationService, new VersionsExpressionEvaluator(mavenSession, mojoExecution));
+            PomHelper pomHelper =
+                    new PomHelper(artifactFactory, new VersionsExpressionEvaluator(mavenSession, mojoExecution));
             return new DefaultVersionsHelper.Builder()
-                    .withArtifactCreationService(artifactCreationService)
+                    .withArtifactCreationService(artifactFactory)
                     .withRepositorySystem(repositorySystem)
                     .withLog(log)
                     .withMavenSession(mavenSession)
-                    .withMojoExecution(mojoExecution)
                     .withPomHelper(pomHelper)
                     .withRuleService(ruleService)
                     .build();

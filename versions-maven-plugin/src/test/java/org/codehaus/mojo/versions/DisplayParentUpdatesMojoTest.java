@@ -38,7 +38,7 @@ import org.apache.maven.plugin.testing.stubs.DefaultArtifactHandlerStub;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.TestUtils;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.eclipse.aether.RepositorySystem;
@@ -69,7 +69,7 @@ public class DisplayParentUpdatesMojoTest {
 
     private static RepositorySystem repositorySystem;
 
-    private static ArtifactCreationService artifactCreationService;
+    private static ArtifactFactory artifactFactory;
 
     @Mock
     private static ExpressionEvaluator expressionEvaluator;
@@ -84,7 +84,7 @@ public class DisplayParentUpdatesMojoTest {
     @BeforeClass
     public static void setUpStatic() throws MojoExecutionException {
         artifactHandlerManager = mockArtifactHandlerManager();
-        artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
+        artifactFactory = new ArtifactFactory(artifactHandlerManager);
         repositorySystem = mockAetherRepositorySystem(new HashMap<String, String[]>() {
             {
                 put("parent-artifact", new String[] {"0.9.0", "1.0.0", "1.0.1-SNAPSHOT"});
@@ -100,7 +100,7 @@ public class DisplayParentUpdatesMojoTest {
     public void setUp() throws IllegalAccessException, IOException, MojoExecutionException {
         tempDir = TestUtils.createTempDir("display-property-updates");
         tempFile = Files.createTempFile(tempDir, "output", "");
-        mojo = new DisplayParentUpdatesMojo(artifactCreationService, repositorySystem, null, null) {
+        mojo = new DisplayParentUpdatesMojo(artifactFactory, repositorySystem, null, null) {
             {
                 setProject(createProject());
                 reactorProjects = Collections.emptyList();

@@ -39,7 +39,7 @@ import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.eclipse.aether.RepositorySystem;
 
 /**
@@ -76,12 +76,12 @@ public class UpdateChildModulesMojo extends AbstractVersionsUpdaterMojo {
 
     @Inject
     public UpdateChildModulesMojo(
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders)
             throws MojoExecutionException {
-        super(artifactCreationService, repositorySystem, wagonMap, changeRecorders);
+        super(artifactFactory, repositorySystem, wagonMap, changeRecorders);
     }
 
     @Override

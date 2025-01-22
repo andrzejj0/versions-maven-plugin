@@ -45,8 +45,7 @@ public class UseLatestReleasesMojoTest extends UseLatestVersionsMojoTestBase {
 
     @Override
     protected UseLatestReleasesMojo createMojo() throws IllegalAccessException, MojoExecutionException {
-        return new UseLatestReleasesMojo(
-                artifactCreationService, createRepositorySystem(), null, changeRecorder.asTestMap()) {
+        return new UseLatestReleasesMojo(artifactFactory, createRepositorySystem(), null, changeRecorder.asTestMap()) {
             {
                 reactorProjects = emptyList();
                 mojoExecution = mock(MojoExecution.class);

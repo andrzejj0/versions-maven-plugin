@@ -6,7 +6,7 @@ import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.plugin.logging.Log;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,7 +25,7 @@ public class SeparatePatternsForIncludesAnExcludesTest {
 
     private PomHelper pomHelper;
 
-    private ArtifactCreationService artifactCreationService;
+    private ArtifactFactory artifactFactory;
 
     @Mock
     private ExpressionEvaluator expressionEvaluator;
@@ -34,10 +34,10 @@ public class SeparatePatternsForIncludesAnExcludesTest {
     public void setUp() throws Exception {
         openMocks(this);
         ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
-        artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
-        pomHelper = new PomHelper(artifactCreationService, expressionEvaluator);
+        artifactFactory = new ArtifactFactory(artifactHandlerManager);
+        pomHelper = new PomHelper(artifactFactory, expressionEvaluator);
 
-        mojo = new AbstractVersionsDependencyUpdaterMojo(artifactCreationService, null, null, null) {
+        mojo = new AbstractVersionsDependencyUpdaterMojo(artifactFactory, null, null, null) {
             @Override
             protected boolean getProcessDependencies() {
                 return true;

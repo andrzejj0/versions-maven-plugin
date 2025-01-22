@@ -54,7 +54,7 @@ import org.codehaus.mojo.versions.change.VersionChanger;
 import org.codehaus.mojo.versions.change.VersionChangerFactory;
 import org.codehaus.mojo.versions.ordering.ReactorDepthComparator;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.ContextualLog;
 import org.codehaus.mojo.versions.utils.DelegatingContextualLog;
 import org.codehaus.mojo.versions.utils.RegexUtils;
@@ -261,14 +261,14 @@ public class SetMojo extends AbstractVersionsUpdaterMojo {
 
     @Inject
     public SetMojo(
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             ProjectBuilder projectBuilder,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders,
             Prompter prompter)
             throws MojoExecutionException {
-        super(artifactCreationService, repositorySystem, wagonMap, changeRecorders);
+        super(artifactFactory, repositorySystem, wagonMap, changeRecorders);
         this.projectBuilder = projectBuilder;
         this.prompter = prompter;
     }

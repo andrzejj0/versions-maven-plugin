@@ -37,7 +37,7 @@ import org.codehaus.mojo.versions.api.PluginUpdatesDetails;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactory;
 import org.codehaus.mojo.versions.reporting.model.PluginUpdatesModel;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.PluginComparator;
 import org.codehaus.mojo.versions.xml.PluginUpdatesXmlReportRenderer;
 import org.codehaus.plexus.i18n.I18N;
@@ -77,11 +77,11 @@ public abstract class AbstractPluginUpdatesReport extends AbstractVersionsReport
 
     protected AbstractPluginUpdatesReport(
             I18N i18n,
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             ReportRendererFactory rendererFactory) {
-        super(i18n, artifactCreationService, repositorySystem, wagonMap, rendererFactory);
+        super(i18n, artifactFactory, repositorySystem, wagonMap, rendererFactory);
     }
 
     /**

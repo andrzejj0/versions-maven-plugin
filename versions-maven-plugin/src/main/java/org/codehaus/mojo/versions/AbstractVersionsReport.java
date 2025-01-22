@@ -37,7 +37,7 @@ import org.codehaus.mojo.versions.model.RuleSet;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactory;
 import org.codehaus.mojo.versions.rule.RuleService;
 import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.VersionsExpressionEvaluator;
 import org.codehaus.plexus.i18n.I18N;
 import org.eclipse.aether.RepositorySystem;
@@ -150,18 +150,18 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
      */
     protected Map<String, Wagon> wagonMap;
 
-    private final ArtifactCreationService artifactCreationService;
+    private final ArtifactFactory artifactFactory;
 
     // --------------------- GETTER / SETTER METHODS ---------------------
 
     protected AbstractVersionsReport(
             I18N i18n,
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             ReportRendererFactory rendererFactory) {
         this.i18n = i18n;
-        this.artifactCreationService = artifactCreationService;
+        this.artifactFactory = artifactFactory;
         this.repositorySystem = repositorySystem;
         this.wagonMap = wagonMap;
         this.rendererFactory = rendererFactory;
@@ -180,13 +180,12 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
                         .withMavenSession(session)
                         .build();
                 PomHelper pomHelper =
-                        new PomHelper(artifactCreationService, new VersionsExpressionEvaluator(session, mojoExecution));
+                        new PomHelper(artifactFactory, new VersionsExpressionEvaluator(session, mojoExecution));
                 helper = new DefaultVersionsHelper.Builder()
-                        .withArtifactCreationService(artifactCreationService)
+                        .withArtifactCreationService(artifactFactory)
                         .withRepositorySystem(repositorySystem)
                         .withLog(getLog())
                         .withMavenSession(session)
-                        .withMojoExecution(mojoExecution)
                         .withPomHelper(pomHelper)
                         .withRuleService(ruleService)
                         .build();

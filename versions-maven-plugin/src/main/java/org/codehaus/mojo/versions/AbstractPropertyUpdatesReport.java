@@ -36,7 +36,7 @@ import org.codehaus.mojo.versions.api.PropertyVersions;
 import org.codehaus.mojo.versions.api.VersionsHelper.VersionPropertiesMapRequest;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactory;
 import org.codehaus.mojo.versions.reporting.model.PropertyUpdatesModel;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.PropertyComparator;
 import org.codehaus.mojo.versions.xml.PropertyUpdatesXmlReportRenderer;
 import org.codehaus.plexus.i18n.I18N;
@@ -100,11 +100,11 @@ public abstract class AbstractPropertyUpdatesReport extends AbstractVersionsRepo
 
     protected AbstractPropertyUpdatesReport(
             I18N i18n,
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             ReportRendererFactory rendererFactory) {
-        super(i18n, artifactCreationService, repositorySystem, wagonMap, rendererFactory);
+        super(i18n, artifactFactory, repositorySystem, wagonMap, rendererFactory);
     }
 
     /**

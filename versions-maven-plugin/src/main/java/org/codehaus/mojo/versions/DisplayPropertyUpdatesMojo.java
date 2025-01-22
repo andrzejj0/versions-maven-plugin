@@ -42,7 +42,7 @@ import org.codehaus.mojo.versions.api.VersionsHelper;
 import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.eclipse.aether.RepositorySystem;
 
 import static java.util.Optional.empty;
@@ -153,12 +153,12 @@ public class DisplayPropertyUpdatesMojo extends AbstractVersionsDisplayMojo {
 
     @Inject
     public DisplayPropertyUpdatesMojo(
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders)
             throws MojoExecutionException {
-        super(artifactCreationService, repositorySystem, wagonMap, changeRecorders);
+        super(artifactFactory, repositorySystem, wagonMap, changeRecorders);
     }
 
     @Override

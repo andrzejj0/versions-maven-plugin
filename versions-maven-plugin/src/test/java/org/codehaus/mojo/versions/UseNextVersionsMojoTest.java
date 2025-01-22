@@ -55,7 +55,7 @@ public class UseNextVersionsMojoTest extends UseLatestVersionsMojoTestBase {
     @Override
     protected UseLatestVersionsMojoBase createMojo() throws IllegalAccessException, MojoExecutionException {
         return new UseNextVersionsMojo(
-                artifactCreationService,
+                artifactFactory,
                 mockAetherRepositorySystem(new HashMap<String, String[]>() {
                     {
                         put("dependency-artifact", new String[] {"1.0.0", "1.1.0-SNAPSHOT"});

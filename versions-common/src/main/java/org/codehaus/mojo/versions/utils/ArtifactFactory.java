@@ -14,7 +14,7 @@ import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.model.Dependency;
 
 @Named
-public class ArtifactCreationService {
+public class ArtifactFactory {
     private final ArtifactHandlerManager artifactHandlerManager;
 
     /**
@@ -22,7 +22,7 @@ public class ArtifactCreationService {
      * @param artifactHandlerManager {@link ArtifactHandlerManager} instance
      */
     @Inject
-    public ArtifactCreationService(ArtifactHandlerManager artifactHandlerManager) {
+    public ArtifactFactory(ArtifactHandlerManager artifactHandlerManager) {
         this.artifactHandlerManager = artifactHandlerManager;
     }
 

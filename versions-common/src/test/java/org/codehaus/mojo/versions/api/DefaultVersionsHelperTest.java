@@ -34,7 +34,6 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.handler.DefaultArtifactHandler;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.execution.MavenSession;
-import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.wagon.ConnectionException;
@@ -46,7 +45,7 @@ import org.apache.maven.wagon.authentication.AuthenticationInfo;
 import org.apache.maven.wagon.authorization.AuthorizationException;
 import org.apache.maven.wagon.proxy.ProxyInfo;
 import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.repository.RemoteRepository;
@@ -85,7 +84,7 @@ import static org.mockito.Mockito.when;
 class DefaultVersionsHelperTest {
 
     @Mock
-    ArtifactCreationService artifactCreationService;
+    ArtifactFactory artifactFactory;
 
     @Mock
     PomHelper pomHelper;
@@ -225,12 +224,11 @@ class DefaultVersionsHelperTest {
                 Objects.requireNonNull(getClass().getResource(resourcePath)).toExternalForm();
 
         return new DefaultVersionsHelper.Builder()
-                .withArtifactCreationService(artifactCreationService)
+                .withArtifactCreationService(artifactFactory)
                 .withPomHelper(pomHelper)
                 .withRepositorySystem(repositorySystem)
                 .withLog(log)
                 .withMavenSession(mavenSession)
-                .withMojoExecution(mock(MojoExecution.class))
                 .withRuleService(new RulesServiceBuilder()
                         .withMavenSession(mavenSession)
                         .withWagonMap(singletonMap("file", mockFileWagon(new URI(rulesUri))))

@@ -43,7 +43,7 @@ import org.codehaus.mojo.versions.filtering.WildcardMatcher;
 import org.codehaus.mojo.versions.internal.DependencyUpdatesLoggingHelper;
 import org.codehaus.mojo.versions.internal.DependencyUpdatesLoggingHelper.DependencyUpdatesResult;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.DependencyComparator;
 import org.codehaus.mojo.versions.utils.MavenProjectUtils;
 import org.codehaus.mojo.versions.utils.SegmentUtils;
@@ -322,12 +322,12 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
 
     @Inject
     public DisplayDependencyUpdatesMojo(
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders)
             throws MojoExecutionException {
-        super(artifactCreationService, repositorySystem, wagonMap, changeRecorders);
+        super(artifactFactory, repositorySystem, wagonMap, changeRecorders);
     }
 
     @Override

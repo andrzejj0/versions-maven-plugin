@@ -31,7 +31,7 @@ import org.apache.maven.plugin.testing.stubs.DefaultArtifactHandlerStub;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.eclipse.aether.RepositorySystem;
@@ -63,7 +63,7 @@ public class LockSnapshotsMojoTest {
 
     private PomHelper pomHelper;
 
-    private ArtifactCreationService artifactCreationService;
+    private ArtifactFactory artifactFactory;
 
     @Mock
     private ExpressionEvaluator expressionEvaluator;
@@ -75,12 +75,12 @@ public class LockSnapshotsMojoTest {
         openMocks(this);
         mavenSession = mockMavenSession();
         ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
-        artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
-        pomHelper = new PomHelper(artifactCreationService, expressionEvaluator);
+        artifactFactory = new ArtifactFactory(artifactHandlerManager);
+        pomHelper = new PomHelper(artifactFactory, expressionEvaluator);
     }
 
     private LockSnapshotsMojo createMojo(RepositorySystem repositorySystem) throws MojoExecutionException {
-        return new LockSnapshotsMojo(artifactCreationService, repositorySystem, null, null) {
+        return new LockSnapshotsMojo(artifactFactory, repositorySystem, null, null) {
             {
                 reactorProjects = emptyList();
                 project = new MavenProject(new Model() {

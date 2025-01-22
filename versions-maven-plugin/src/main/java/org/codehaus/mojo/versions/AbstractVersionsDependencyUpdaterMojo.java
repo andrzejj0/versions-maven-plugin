@@ -43,7 +43,7 @@ import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.api.recording.DependencyChangeRecord;
 import org.codehaus.mojo.versions.recording.DefaultDependencyChangeRecord;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.mojo.versions.utils.DependencyComparator;
 import org.eclipse.aether.RepositorySystem;
@@ -137,12 +137,12 @@ public abstract class AbstractVersionsDependencyUpdaterMojo extends AbstractVers
 
     @Inject
     protected AbstractVersionsDependencyUpdaterMojo(
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders)
             throws MojoExecutionException {
-        super(artifactCreationService, repositorySystem, wagonMap, changeRecorders);
+        super(artifactFactory, repositorySystem, wagonMap, changeRecorders);
     }
 
     /**
@@ -216,7 +216,7 @@ public abstract class AbstractVersionsDependencyUpdaterMojo extends AbstractVers
      * @since 1.0-alpha-3
      */
     protected Artifact toArtifact(Dependency dependency) throws MojoExecutionException {
-        return findArtifact(dependency).orElse(artifactCreationService.createArtifact(dependency));
+        return findArtifact(dependency).orElse(artifactFactory.createArtifact(dependency));
     }
 
     protected Artifact toArtifact(Parent model) throws MojoExecutionException {

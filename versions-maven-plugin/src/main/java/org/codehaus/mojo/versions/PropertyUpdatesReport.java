@@ -31,7 +31,7 @@ import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.Property;
 import org.codehaus.mojo.versions.api.PropertyVersions;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactory;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.plexus.i18n.I18N;
 import org.eclipse.aether.RepositorySystem;
 
@@ -47,11 +47,11 @@ public class PropertyUpdatesReport extends AbstractPropertyUpdatesReport {
     @Inject
     protected PropertyUpdatesReport(
             I18N i18n,
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             ReportRendererFactory rendererFactory) {
-        super(i18n, artifactCreationService, repositorySystem, wagonMap, rendererFactory);
+        super(i18n, artifactFactory, repositorySystem, wagonMap, rendererFactory);
     }
 
     /**

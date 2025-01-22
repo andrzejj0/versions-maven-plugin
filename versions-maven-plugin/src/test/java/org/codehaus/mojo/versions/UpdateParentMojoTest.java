@@ -71,7 +71,7 @@ public class UpdateParentMojoTest extends UseLatestVersionsMojoTestBase {
 
     @Override
     protected UseLatestVersionsMojoBase createMojo() throws IllegalAccessException, MojoExecutionException {
-        return new UpdateParentMojo(artifactCreationService, repositorySystem, null, changeRecorder.asTestMap()) {
+        return new UpdateParentMojo(artifactFactory, repositorySystem, null, changeRecorder.asTestMap()) {
             {
                 setProject(createProject());
                 reactorProjects = Collections.emptyList();

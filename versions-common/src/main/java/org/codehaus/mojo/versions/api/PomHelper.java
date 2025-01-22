@@ -81,7 +81,7 @@ import org.apache.maven.project.ProjectBuildingRequest;
 import org.apache.maven.project.ProjectBuildingResult;
 import org.apache.maven.shared.utils.io.IOUtil;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.ModelNode;
 import org.codehaus.mojo.versions.utils.RegexUtils;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluationException;
@@ -129,15 +129,15 @@ public class PomHelper {
             + "((/build(/pluginManagement)?)|(/reporting))/plugins/plugin"
             + "((/groupId)|(/artifactId)|(/version))");
 
-    private final ArtifactCreationService artifactCreationService;
+    private final ArtifactFactory artifactFactory;
 
     private final ExpressionEvaluator expressionEvaluator;
 
     /**
      * Creates a new instance
      */
-    public PomHelper(ArtifactCreationService artifactCreationService, ExpressionEvaluator expressionEvaluator) {
-        this.artifactCreationService = artifactCreationService;
+    public PomHelper(ArtifactFactory artifactFactory, ExpressionEvaluator expressionEvaluator) {
+        this.artifactFactory = artifactFactory;
         this.expressionEvaluator = expressionEvaluator;
     }
 
@@ -984,9 +984,7 @@ public class PomHelper {
                         // might as well capture the current value
                         String evaluatedVersion = (String) expressionEvaluator.evaluate(plugin.getVersion());
                         property.withAssociation(
-                                artifactCreationService.createMavenPluginArtifact(
-                                        groupId, artifactId, evaluatedVersion),
-                                true);
+                                artifactFactory.createMavenPluginArtifact(groupId, artifactId, evaluatedVersion), true);
                         if (!propertyRef.equals(version)) {
                             addBounds(property, version, propertyRef);
                         }
@@ -1028,9 +1026,7 @@ public class PomHelper {
                         // might as well capture the current value
                         String versionEvaluated = (String) expressionEvaluator.evaluate(plugin.getVersion());
                         property.withAssociation(
-                                artifactCreationService.createMavenPluginArtifact(
-                                        groupId, artifactId, versionEvaluated),
-                                true);
+                                artifactFactory.createMavenPluginArtifact(groupId, artifactId, versionEvaluated), true);
                         if (!propertyRef.equals(version)) {
                             addBounds(property, version, propertyRef);
                         }
@@ -1071,7 +1067,7 @@ public class PomHelper {
                         // might as well capture the current value
                         String versionEvaluated = (String) expressionEvaluator.evaluate(dependency.getVersion());
                         property.withAssociation(
-                                artifactCreationService.createArtifact(
+                                artifactFactory.createArtifact(
                                         groupId,
                                         artifactId,
                                         versionEvaluated,

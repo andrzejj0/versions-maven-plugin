@@ -45,7 +45,7 @@ import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.api.recording.DependencyChangeRecord;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 import org.codehaus.mojo.versions.utils.SegmentUtils;
 import org.eclipse.aether.RepositorySystem;
@@ -82,12 +82,12 @@ public abstract class UseLatestVersionsMojoBase extends AbstractVersionsDependen
     private final ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
     public UseLatestVersionsMojoBase(
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders)
             throws MojoExecutionException {
-        super(artifactCreationService, repositorySystem, wagonMap, changeRecorders);
+        super(artifactFactory, repositorySystem, wagonMap, changeRecorders);
     }
 
     /**

@@ -42,7 +42,7 @@ import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.api.recording.DependencyChangeRecord;
 import org.codehaus.mojo.versions.recording.DefaultDependencyChangeRecord;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.eclipse.aether.RepositorySystem;
 
@@ -143,12 +143,12 @@ public class UpdateParentMojo extends UseLatestVersionsMojoBase {
 
     @Inject
     public UpdateParentMojo(
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders)
             throws MojoExecutionException {
-        super(artifactCreationService, repositorySystem, wagonMap, changeRecorders);
+        super(artifactFactory, repositorySystem, wagonMap, changeRecorders);
     }
 
     @Override
@@ -188,7 +188,7 @@ public class UpdateParentMojo extends UseLatestVersionsMojoBase {
 
     @Override
     protected Optional<ArtifactVersion> versionProducer(Stream<ArtifactVersion> stream) {
-        Artifact artifact = artifactCreationService.createArtifact(DependencyBuilder.newBuilder()
+        Artifact artifact = artifactFactory.createArtifact(DependencyBuilder.newBuilder()
                 .withGroupId(getProject().getParent().getGroupId())
                 .withArtifactId(getProject().getParent().getArtifactId())
                 .withVersion(getProject().getParent().getVersion())

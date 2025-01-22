@@ -32,7 +32,7 @@ import org.codehaus.mojo.versions.api.PropertyVersions;
 import org.codehaus.mojo.versions.api.VersionsHelper;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactory;
 import org.codehaus.mojo.versions.reporting.util.AggregateReportUtils;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.plexus.i18n.I18N;
 import org.eclipse.aether.RepositorySystem;
 
@@ -52,11 +52,11 @@ public class PropertyUpdatesAggregateReport extends AbstractPropertyUpdatesRepor
     @Inject
     protected PropertyUpdatesAggregateReport(
             I18N i18n,
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             ReportRendererFactory rendererFactory) {
-        super(i18n, artifactCreationService, repositorySystem, wagonMap, rendererFactory);
+        super(i18n, artifactFactory, repositorySystem, wagonMap, rendererFactory);
     }
 
     /**

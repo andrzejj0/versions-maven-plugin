@@ -15,7 +15,7 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.change.DefaultDependencyVersionChange;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.mojo.versions.utils.TestChangeRecorder;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
@@ -67,7 +67,7 @@ public class ForceReleasesMojoTest extends AbstractMojoTestCase {
 
     private PomHelper pomHelper;
 
-    private ArtifactCreationService artifactCreationService;
+    private ArtifactFactory artifactFactory;
 
     @Mock
     private ExpressionEvaluator expressionEvaluator;
@@ -77,12 +77,11 @@ public class ForceReleasesMojoTest extends AbstractMojoTestCase {
         super.setUp();
         openMocks(this);
         ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
-        artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
+        artifactFactory = new ArtifactFactory(artifactHandlerManager);
         MavenSession session = mockMavenSession();
 
         changeRecorder = new TestChangeRecorder();
-        mojo = new ForceReleasesMojo(
-                artifactCreationService, mockAetherRepositorySystem(), null, changeRecorder.asTestMap());
+        mojo = new ForceReleasesMojo(artifactFactory, mockAetherRepositorySystem(), null, changeRecorder.asTestMap());
         setVariableValueToObject(mojo, "reactorProjects", emptyList());
         mojo.project = new MavenProject() {
             {

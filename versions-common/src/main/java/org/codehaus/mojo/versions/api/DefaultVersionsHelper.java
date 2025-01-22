@@ -53,7 +53,6 @@ import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Plugin;
-import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
@@ -62,7 +61,7 @@ import org.apache.maven.wagon.proxy.ProxyInfo;
 import org.codehaus.mojo.versions.model.IgnoreVersion;
 import org.codehaus.mojo.versions.ordering.SegmentCounter;
 import org.codehaus.mojo.versions.rule.RuleService;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 import org.codehaus.mojo.versions.utils.DependencyComparator;
 import org.codehaus.mojo.versions.utils.PluginComparator;
@@ -96,7 +95,7 @@ public class DefaultVersionsHelper implements VersionsHelper {
 
     private final RuleService ruleService;
 
-    private final ArtifactCreationService artifactCreationService;
+    private final ArtifactFactory artifactFactory;
 
     private final RepositorySystem repositorySystem;
 
@@ -114,30 +113,26 @@ public class DefaultVersionsHelper implements VersionsHelper {
      */
     private final MavenSession mavenSession;
 
-    private final MojoExecution mojoExecution;
-
     private final List<RemoteRepository> remotePluginRepositories;
 
     private final List<RemoteRepository> remoteProjectRepositories;
 
-    private PomHelper pomHelper;
+    private final PomHelper pomHelper;
 
     /**
      * Private constructor used by the builder
      */
     private DefaultVersionsHelper(
             PomHelper pomHelper,
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             MavenSession mavenSession,
-            MojoExecution mojoExecution,
             RuleService ruleService,
             Log log) {
         this.pomHelper = requireNonNull(pomHelper);
-        this.artifactCreationService = requireNonNull(artifactCreationService);
+        this.artifactFactory = requireNonNull(artifactFactory);
         this.repositorySystem = requireNonNull(repositorySystem);
         this.mavenSession = requireNonNull(mavenSession);
-        this.mojoExecution = requireNonNull(mojoExecution);
         this.ruleService = requireNonNull(ruleService);
         this.log = requireNonNull(log);
 
@@ -337,10 +332,7 @@ public class DefaultVersionsHelper implements VersionsHelper {
             boolean allowSnapshots)
             throws VersionRetrievalException {
         ArtifactVersions allVersions = lookupArtifactVersions(
-                artifactCreationService.createArtifact(dependency),
-                null,
-                usePluginRepositories,
-                useProjectRepositories);
+                artifactFactory.createArtifact(dependency), null, usePluginRepositories, useProjectRepositories);
         return new ArtifactVersions(
                 allVersions.getArtifact(),
                 Arrays.stream(allVersions.getAllUpdates(allowSnapshots)).collect(Collectors.toList()));
@@ -382,8 +374,7 @@ public class DefaultVersionsHelper implements VersionsHelper {
                 lookupDependenciesUpdates(pluginDependencies.stream(), false, allowSnapshots);
 
         ArtifactVersions allVersions = lookupArtifactVersions(
-                artifactCreationService.createMavenPluginArtifact(plugin.getGroupId(), plugin.getArtifactId(), version),
-                true);
+                artifactFactory.createMavenPluginArtifact(plugin.getGroupId(), plugin.getArtifactId(), version), true);
         ArtifactVersions updatedVersions = new ArtifactVersions(
                 allVersions.getArtifact(),
                 Arrays.stream(allVersions.getAllUpdates(allowSnapshots)).collect(Collectors.toList()));
@@ -471,7 +462,7 @@ public class DefaultVersionsHelper implements VersionsHelper {
             if (dependencies != null) {
                 for (Dependency dependency : dependencies) {
                     log.debug(String.format("Property ${%s}: Adding association to %s", propertyName, dependency));
-                    builder.withAssociation(artifactCreationService.createArtifact(dependency), false);
+                    builder.withAssociation(artifactFactory.createArtifact(dependency), false);
                 }
             }
 
@@ -515,13 +506,11 @@ public class DefaultVersionsHelper implements VersionsHelper {
 
         private MavenSession mavenSession;
 
-        private MojoExecution mojoExecution;
-
         private RepositorySystem repositorySystem;
 
         private RuleService ruleService;
 
-        private ArtifactCreationService artifactCreationService;
+        private ArtifactFactory artifactFactory;
 
         private PomHelper pomHelper;
 
@@ -585,11 +574,6 @@ public class DefaultVersionsHelper implements VersionsHelper {
             return this;
         }
 
-        public Builder withMojoExecution(MojoExecution mojoExecution) {
-            this.mojoExecution = mojoExecution;
-            return this;
-        }
-
         public Builder withRepositorySystem(RepositorySystem repositorySystem) {
             this.repositorySystem = repositorySystem;
             return this;
@@ -600,8 +584,8 @@ public class DefaultVersionsHelper implements VersionsHelper {
             return this;
         }
 
-        public Builder withArtifactCreationService(ArtifactCreationService artifactCreationService) {
-            this.artifactCreationService = artifactCreationService;
+        public Builder withArtifactCreationService(ArtifactFactory artifactFactory) {
+            this.artifactFactory = artifactFactory;
             return this;
         }
 
@@ -618,13 +602,7 @@ public class DefaultVersionsHelper implements VersionsHelper {
          */
         public DefaultVersionsHelper build() throws MojoExecutionException {
             return new DefaultVersionsHelper(
-                    pomHelper,
-                    artifactCreationService,
-                    repositorySystem,
-                    mavenSession,
-                    mojoExecution,
-                    ruleService,
-                    log);
+                    pomHelper, artifactFactory, repositorySystem, mavenSession, ruleService, log);
         }
     }
 }

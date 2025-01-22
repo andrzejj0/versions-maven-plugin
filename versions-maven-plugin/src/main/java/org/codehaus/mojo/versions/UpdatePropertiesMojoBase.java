@@ -36,7 +36,7 @@ import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.recording.DefaultDependencyChangeRecord;
 import org.codehaus.mojo.versions.recording.DefaultPropertyChangeRecord;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.eclipse.aether.RepositorySystem;
 
 import static java.util.Optional.empty;
@@ -140,12 +140,12 @@ public abstract class UpdatePropertiesMojoBase extends AbstractVersionsDependenc
     private boolean processParent = false;
 
     public UpdatePropertiesMojoBase(
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders)
             throws MojoExecutionException {
-        super(artifactCreationService, repositorySystem, wagonMap, changeRecorders);
+        super(artifactFactory, repositorySystem, wagonMap, changeRecorders);
     }
 
     @Override

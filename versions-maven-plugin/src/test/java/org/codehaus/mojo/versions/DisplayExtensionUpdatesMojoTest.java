@@ -31,7 +31,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.api.PomHelper;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.ExtensionBuilder;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.junit.After;
@@ -70,7 +70,7 @@ public class DisplayExtensionUpdatesMojoTest {
 
     private PomHelper pomHelper;
 
-    private ArtifactCreationService artifactCreationService;
+    private ArtifactFactory artifactFactory;
 
     @Mock
     private ExpressionEvaluator expressionEvaluator;
@@ -79,9 +79,9 @@ public class DisplayExtensionUpdatesMojoTest {
     public void setUp() throws IllegalAccessException, IOException, MojoExecutionException {
         openMocks(this);
         ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
-        artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
+        artifactFactory = new ArtifactFactory(artifactHandlerManager);
 
-        mojo = new DisplayExtensionUpdatesMojo(artifactCreationService, mockAetherRepositorySystem(), null, null);
+        mojo = new DisplayExtensionUpdatesMojo(artifactFactory, mockAetherRepositorySystem(), null, null);
         mojo.project = new MavenProject() {
             {
                 setModel(new Model() {

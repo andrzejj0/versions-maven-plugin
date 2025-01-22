@@ -60,7 +60,7 @@ import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
 import org.codehaus.mojo.versions.rule.RuleService;
 import org.codehaus.mojo.versions.rule.RulesServiceBuilder;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.VersionsExpressionEvaluator;
 import org.eclipse.aether.RepositorySystem;
 
@@ -188,18 +188,18 @@ public abstract class AbstractVersionsUpdaterMojo extends AbstractMojo {
      */
     protected final Map<String, Wagon> wagonMap;
 
-    protected final ArtifactCreationService artifactCreationService;
+    protected final ArtifactFactory artifactFactory;
 
     // --------------------- GETTER / SETTER METHODS ---------------------
 
     @Inject
     protected AbstractVersionsUpdaterMojo(
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders)
             throws MojoExecutionException {
-        this.artifactCreationService = artifactCreationService;
+        this.artifactFactory = artifactFactory;
         this.repositorySystem = repositorySystem;
         this.wagonMap = wagonMap;
         this.changeRecorders = changeRecorders;
@@ -219,13 +219,12 @@ public abstract class AbstractVersionsUpdaterMojo extends AbstractMojo {
                     .withLog(getLog())
                     .build();
             PomHelper pomHelper =
-                    new PomHelper(artifactCreationService, new VersionsExpressionEvaluator(session, mojoExecution));
+                    new PomHelper(artifactFactory, new VersionsExpressionEvaluator(session, mojoExecution));
             helper = new DefaultVersionsHelper.Builder()
-                    .withArtifactCreationService(artifactCreationService)
+                    .withArtifactCreationService(artifactFactory)
                     .withRepositorySystem(repositorySystem)
                     .withLog(getLog())
                     .withMavenSession(session)
-                    .withMojoExecution(mojoExecution)
                     .withPomHelper(pomHelper)
                     .withRuleService(ruleService)
                     .build();

@@ -40,7 +40,7 @@ import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.reporting.ReportRendererFactory;
 import org.codehaus.mojo.versions.reporting.model.DependencyUpdatesModel;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.DependencyComparator;
 import org.codehaus.mojo.versions.utils.MavenProjectUtils;
 import org.codehaus.mojo.versions.xml.DependencyUpdatesXmlReportRenderer;
@@ -113,7 +113,7 @@ public abstract class AbstractDependencyUpdatesReport extends AbstractVersionsRe
 
     protected AbstractDependencyUpdatesReport(
             I18N i18n,
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactCreationService,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             ReportRendererFactory rendererFactory) {

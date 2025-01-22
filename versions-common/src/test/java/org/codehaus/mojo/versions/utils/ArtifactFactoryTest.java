@@ -16,7 +16,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class ArtifactCreationServiceTest {
+public class ArtifactFactoryTest {
     @Mock
     ArtifactHandlerManager artifactHandlerManager;
 
@@ -35,8 +35,8 @@ public class ArtifactCreationServiceTest {
 
     @Test
     void createPluginArtifact() throws Exception {
-        ArtifactCreationService artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
-        Artifact artifact = artifactCreationService.createMavenPluginArtifact("groupId", "artifactId", "version");
+        ArtifactFactory artifactFactory = new ArtifactFactory(artifactHandlerManager);
+        Artifact artifact = artifactFactory.createMavenPluginArtifact("groupId", "artifactId", "version");
         assertThat("groupId", equalTo(artifact.getGroupId()));
         assertThat("artifactId", equalTo(artifact.getArtifactId()));
         assertThat("version", equalTo(artifact.getVersion()));

@@ -15,7 +15,7 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.api.PomHelper;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
 import org.codehaus.mojo.versions.change.DefaultDependencyVersionChange;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.mojo.versions.utils.TestChangeRecorder;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
@@ -51,7 +51,7 @@ public abstract class UseLatestVersionsMojoTestBase {
 
     protected PomHelper pomHelper;
 
-    protected ArtifactCreationService artifactCreationService;
+    protected ArtifactFactory artifactFactory;
 
     @Mock
     protected ExpressionEvaluator expressionEvaluator;
@@ -63,8 +63,8 @@ public abstract class UseLatestVersionsMojoTestBase {
         openMocks(this);
         changeRecorder = new TestChangeRecorder();
         ArtifactHandlerManager artifactHandlerManager = mockArtifactHandlerManager();
-        artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
-        pomHelper = new PomHelper(artifactCreationService, expressionEvaluator);
+        artifactFactory = new ArtifactFactory(artifactHandlerManager);
+        pomHelper = new PomHelper(artifactFactory, expressionEvaluator);
         mojo = createMojo();
         mojo.mojoExecution = Mockito.mock(MojoExecution.class);
     }

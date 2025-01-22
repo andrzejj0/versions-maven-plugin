@@ -37,7 +37,7 @@ import org.codehaus.mojo.versions.api.PropertyVersions;
 import org.codehaus.mojo.versions.api.VersionsHelper;
 import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.PropertiesVersionsFileReader;
 import org.eclipse.aether.RepositorySystem;
 
@@ -104,12 +104,12 @@ public class SetPropertyMojo extends AbstractVersionsUpdaterMojo {
 
     @Inject
     public SetPropertyMojo(
-            ArtifactCreationService artifactCreationService,
+            ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
             Map<String, ChangeRecorder> changeRecorders)
             throws MojoExecutionException {
-        super(artifactCreationService, repositorySystem, wagonMap, changeRecorders);
+        super(artifactFactory, repositorySystem, wagonMap, changeRecorders);
     }
 
     @Override

@@ -28,7 +28,7 @@ import org.apache.maven.enforcer.rule.api.EnforcerRuleException;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
-import org.codehaus.mojo.versions.utils.ArtifactCreationService;
+import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.DependencyBuilder;
 import org.codehaus.mojo.versions.utils.MockUtils;
 import org.eclipse.aether.RepositorySystem;
@@ -66,7 +66,7 @@ class MaxDependencyUpdatesTest {
     @Mock
     private MojoExecution mojoExecution;
 
-    private ArtifactCreationService artifactCreationService;
+    private ArtifactFactory artifactFactory;
 
     private ArtifactHandlerManager artifactHandlerManager;
 
@@ -78,10 +78,10 @@ class MaxDependencyUpdatesTest {
         when(mavenSession.getUserProperties()).thenReturn(emptyProperties);
         when(mavenSession.getSystemProperties()).thenReturn(emptyProperties);
         artifactHandlerManager = mockArtifactHandlerManager();
-        artifactCreationService = new ArtifactCreationService(artifactHandlerManager);
+        artifactFactory = new ArtifactFactory(artifactHandlerManager);
         maxDependencyUpdates = new MaxDependencyUpdates(
                 project,
-                artifactCreationService,
+                artifactFactory,
                 artifactHandlerManager,
                 repositorySystem,
                 Collections.emptyMap(),
