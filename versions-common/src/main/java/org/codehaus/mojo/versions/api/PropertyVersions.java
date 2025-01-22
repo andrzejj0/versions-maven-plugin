@@ -19,9 +19,6 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
-import static java.util.Optional.empty;
-import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -31,6 +28,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
@@ -43,6 +41,9 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.utils.ArtifactVersionService;
+
+import static java.util.Optional.empty;
+import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 
 /**
  * Manages a property that is associated with one or more artifacts.
