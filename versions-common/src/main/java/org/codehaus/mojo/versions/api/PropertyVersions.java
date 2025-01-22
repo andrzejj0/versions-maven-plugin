@@ -21,7 +21,6 @@ package org.codehaus.mojo.versions.api;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -42,7 +41,6 @@ import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 
-import static java.util.Optional.empty;
 import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 
 /**
@@ -125,33 +123,22 @@ public class PropertyVersions extends AbstractVersionDetails {
                 }
             }
         }
-        // we now have a list of all the versions that partially satisfy the association requirements
-        Iterator<ArtifactVersion> k = result.iterator();
-        versions:
-        while (k.hasNext()) {
-            ArtifactVersion candidate = k.next();
-            associations:
-            for (ArtifactAssociation association : associations) {
-                for (Artifact artifact : artifacts) {
-                    if (association.getArtifact().getGroupId().equals(artifact.getGroupId())
-                            && association.getArtifact().getArtifactId().equals(artifact.getArtifactId())) {
-                        try {
-                            if (candidate
-                                    .toString()
-                                    .equals(artifact.getSelectedVersion().toString())) {
-                                // this association can be met, try the next
-                                continue associations;
-                            }
-                        } catch (OverConstrainedVersionException e) {
-                            // ignore this one again
-                        }
+
+        // Filter versions that satisfy all associations
+        result.removeIf(candidate -> associations.stream()
+                .anyMatch(association -> artifacts.stream().noneMatch(artifact -> {
+                    try {
+                        return association.getArtifact().getGroupId().equals(artifact.getGroupId())
+                                && association.getArtifact().getArtifactId().equals(artifact.getArtifactId())
+                                && candidate
+                                        .toString()
+                                        .equals(artifact.getSelectedVersion().toString());
+                    } catch (OverConstrainedVersionException e) {
+                        // ignore this one as we cannot resolve a valid version
+                        return false;
                     }
-                }
-                // candidate is not valid as at least one association cannot be met
-                k.remove();
-                continue versions;
-            }
-        }
+                })));
+
         return result.toArray(new ArtifactVersion[0]);
     }
 
@@ -199,27 +186,6 @@ public class PropertyVersions extends AbstractVersionDetails {
     public String toString() {
         return "PropertyVersions{" + (profileId == null ? "" : "profileId='" + profileId + "', ") + "name='" + name
                 + '\'' + ", associations=" + associations + '}';
-    }
-
-    /**
-     * Returns the newest version
-     * @param currentVersion
-     * @param property
-     * @param allowSnapshots
-     * @param reactorProjects
-     * @param helper
-     * @return
-     * @throws InvalidVersionSpecificationException
-     * @throws InvalidSegmentException
-     */
-    public ArtifactVersion getNewestVersion(
-            String currentVersion,
-            Property property,
-            boolean allowSnapshots,
-            List<MavenProject> reactorProjects,
-            VersionsHelper helper)
-            throws InvalidVersionSpecificationException, InvalidSegmentException {
-        return getNewestVersion(currentVersion, property, allowSnapshots, reactorProjects, false, empty());
     }
 
     /**
