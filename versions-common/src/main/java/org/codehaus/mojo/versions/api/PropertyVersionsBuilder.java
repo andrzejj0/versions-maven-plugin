@@ -33,6 +33,8 @@ import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.plugin.logging.Log;
 import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 
+import static java.util.Optional.ofNullable;
+
 /**
  * Builds {@link org.codehaus.mojo.versions.api.PropertyVersions} instances.
  *
@@ -102,6 +104,7 @@ public class PropertyVersionsBuilder {
         if (lowerBounds.isEmpty() && upperBounds.isEmpty()) {
             return null;
         }
+
         ArtifactVersion lowerBound = null;
         boolean includeLower = true;
         for (Map.Entry<String, Boolean> entry : lowerBounds.entrySet()) {
@@ -120,6 +123,7 @@ public class PropertyVersionsBuilder {
                 }
             }
         }
+
         ArtifactVersion upperBound = null;
         boolean includeUpper = true;
         for (Map.Entry<String, Boolean> entry : upperBounds.entrySet()) {
@@ -138,46 +142,21 @@ public class PropertyVersionsBuilder {
                 }
             }
         }
-        StringBuilder buf = new StringBuilder();
-        if (includeLower) {
-            buf.append('[');
-        } else {
-            buf.append('(');
-        }
-        if (lowerBound != null) {
-            buf.append(lowerBound);
-        }
-        buf.append(',');
-        if (upperBound != null) {
-            buf.append(upperBound);
-        }
-        if (includeUpper) {
-            buf.append(']');
-        } else {
-            buf.append(')');
-        }
-        return buf.toString();
+
+        return String.valueOf(includeLower ? '[' : '(')
+                + (lowerBound != null ? lowerBound : "")
+                + ','
+                + (upperBound != null ? upperBound : "")
+                + (includeUpper ? ']' : ')');
     }
 
     public PropertyVersionsBuilder withLowerBound(String lowerBound, boolean includeLower) {
-        Boolean value = lowerBounds.get(lowerBound);
-        if (value == null) {
-            value = includeLower;
-        } else {
-            value = includeLower && value;
-        }
-        lowerBounds.put(lowerBound, value);
+        lowerBounds.compute(lowerBound, (__, oldValue) -> ofNullable(oldValue).orElse(true) && includeLower);
         return this;
     }
 
     public PropertyVersionsBuilder withUpperBound(String upperBound, boolean includeUpper) {
-        Boolean value = upperBounds.get(upperBound);
-        if (value == null) {
-            value = includeUpper;
-        } else {
-            value = includeUpper && value;
-        }
-        upperBounds.put(upperBound, value);
+        upperBounds.compute(upperBound, (__, oldValue) -> ofNullable(oldValue).orElse(true) && includeUpper);
         return this;
     }
 
