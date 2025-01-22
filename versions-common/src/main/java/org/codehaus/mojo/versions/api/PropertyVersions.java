@@ -28,6 +28,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
@@ -184,8 +185,9 @@ public class PropertyVersions extends AbstractVersionDetails {
      */
     @Override
     public String toString() {
-        return "PropertyVersions{" + (profileId == null ? "" : "profileId='" + profileId + "', ") + "name='" + name
-                + '\'' + ", associations=" + associations + '}';
+        return "PropertyVersions{" + (profileId == null ? "" : "profileId='" + profileId + "', ")
+                + "name='" + name + '\''
+                + ", associations=" + associations + '}';
     }
 
     /**
