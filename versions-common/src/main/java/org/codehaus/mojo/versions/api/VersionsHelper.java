@@ -32,7 +32,6 @@ import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
-import org.codehaus.mojo.versions.ordering.SegmentCounter;
 
 /**
  * Helper class that provides common functionality required by both the mojos and the reports.
@@ -350,9 +349,8 @@ public interface VersionsHelper {
     /**
      * Resolves {@link ArtifactVersions} for a set of artifact associations
      * @param associations set of artifact versions
-     * @param versionComparator comparator
      * @return set of resolved associations
      */
-    SortedSet<ArtifactVersion> resolveAssociatedVersions(
-            Set<ArtifactAssociation> associations, SegmentCounter versionComparator) throws VersionRetrievalException;
+    SortedSet<ArtifactVersion> resolveAssociatedVersions(Set<ArtifactAssociation> associations)
+            throws VersionRetrievalException;
 }

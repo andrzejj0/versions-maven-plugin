@@ -56,10 +56,7 @@ import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.wagon.authentication.AuthenticationInfo;
-import org.apache.maven.wagon.proxy.ProxyInfo;
 import org.codehaus.mojo.versions.model.IgnoreVersion;
-import org.codehaus.mojo.versions.ordering.SegmentCounter;
 import org.codehaus.mojo.versions.rule.RuleService;
 import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.ArtifactVersionService;
@@ -67,7 +64,6 @@ import org.codehaus.mojo.versions.utils.DependencyComparator;
 import org.codehaus.mojo.versions.utils.PluginComparator;
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluationException;
 import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.repository.AuthenticationContext;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.repository.RepositoryPolicy;
 import org.eclipse.aether.resolution.ArtifactRequest;
@@ -76,7 +72,6 @@ import org.eclipse.aether.resolution.VersionRangeRequest;
 import org.eclipse.aether.resolution.VersionRangeResolutionException;
 
 import static java.util.Objects.requireNonNull;
-import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 import static org.apache.maven.RepositoryUtils.toArtifact;
@@ -229,8 +224,8 @@ public class DefaultVersionsHelper implements VersionsHelper {
         }
     }
 
-    public SortedSet<ArtifactVersion> resolveAssociatedVersions(
-            Set<ArtifactAssociation> associations, SegmentCounter versionComparator) throws VersionRetrievalException {
+    public SortedSet<ArtifactVersion> resolveAssociatedVersions(Set<ArtifactAssociation> associations)
+            throws VersionRetrievalException {
         SortedSet<ArtifactVersion> versions = null;
         for (ArtifactAssociation association : associations) {
             final ArtifactVersions associatedVersions =
@@ -515,54 +510,6 @@ public class DefaultVersionsHelper implements VersionsHelper {
         private PomHelper pomHelper;
 
         public Builder() {}
-
-        private Optional<ProxyInfo> getProxyInfo(RemoteRepository repository) {
-            return ofNullable(repository.getProxy()).map(proxy -> new ProxyInfo() {
-                {
-                    setHost(proxy.getHost());
-                    setPort(proxy.getPort());
-                    setType(proxy.getType());
-                    ofNullable(proxy.getAuthentication()).ifPresent(auth -> {
-                        try (AuthenticationContext authCtx =
-                                AuthenticationContext.forProxy(mavenSession.getRepositorySession(), repository)) {
-                            ofNullable(authCtx.get(AuthenticationContext.USERNAME))
-                                    .ifPresent(this::setUserName);
-                            ofNullable(authCtx.get(AuthenticationContext.PASSWORD))
-                                    .ifPresent(this::setPassword);
-                            ofNullable(authCtx.get(AuthenticationContext.NTLM_DOMAIN))
-                                    .ifPresent(this::setNtlmDomain);
-                            ofNullable(authCtx.get(AuthenticationContext.NTLM_WORKSTATION))
-                                    .ifPresent(this::setNtlmHost);
-                        }
-                    });
-                }
-            });
-        }
-
-        private Optional<AuthenticationInfo> getAuthenticationInfo(RemoteRepository repository) {
-            return ofNullable(repository.getAuthentication()).map(authentication -> new AuthenticationInfo() {
-                {
-                    try (AuthenticationContext authCtx =
-                            AuthenticationContext.forRepository(mavenSession.getRepositorySession(), repository)) {
-                        ofNullable(authCtx.get(AuthenticationContext.USERNAME)).ifPresent(this::setUserName);
-                        ofNullable(authCtx.get(AuthenticationContext.PASSWORD)).ifPresent(this::setPassword);
-                        ofNullable(authCtx.get(AuthenticationContext.PRIVATE_KEY_PASSPHRASE))
-                                .ifPresent(this::setPassphrase);
-                        ofNullable(authCtx.get(AuthenticationContext.PRIVATE_KEY_PATH))
-                                .ifPresent(this::setPrivateKey);
-                    }
-                }
-            });
-        }
-
-        private org.apache.maven.wagon.repository.Repository wagonRepository(RemoteRepository repository) {
-            return new org.apache.maven.wagon.repository.Repository(repository.getId(), repository.getUrl());
-        }
-
-        public static Optional<String> protocol(final String url) {
-            int pos = url.indexOf(":");
-            return pos == -1 ? empty() : of(url.substring(0, pos).trim());
-        }
 
         public Builder withLog(Log log) {
             this.log = log;

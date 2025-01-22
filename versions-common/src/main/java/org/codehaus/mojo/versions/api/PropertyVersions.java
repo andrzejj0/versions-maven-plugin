@@ -19,7 +19,6 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -40,9 +39,7 @@ import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
-import org.codehaus.mojo.versions.ordering.DefaultSegmentCounter;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
-import org.codehaus.mojo.versions.ordering.SegmentCounter;
 import org.codehaus.mojo.versions.utils.ArtifactVersionService;
 
 import static java.util.Optional.empty;
@@ -66,9 +63,7 @@ public class PropertyVersions extends AbstractVersionDetails {
      *
      * @since 1.0-beta-1
      */
-    private final SortedSet<ArtifactVersion> versions;
-
-    private final PropertySegmentCounter comparator;
+    private final SortedSet<ArtifactVersion> allVersions;
 
     private final Log log;
 
@@ -79,8 +74,7 @@ public class PropertyVersions extends AbstractVersionDetails {
         this.name = name;
         this.log = log;
         this.associations = new TreeSet<>(associations);
-        this.comparator = new PropertySegmentCounter();
-        this.versions = helper.resolveAssociatedVersions(associations, comparator);
+        this.allVersions = helper.resolveAssociatedVersions(associations);
     }
 
     public ArtifactAssociation[] getAssociations() {
@@ -97,7 +91,7 @@ public class PropertyVersions extends AbstractVersionDetails {
      * @since 1.0-alpha-3
      */
     public ArtifactVersion[] getVersions(Collection<Artifact> artifacts) {
-        List<ArtifactVersion> result = new ArrayList<>();
+        SortedSet<ArtifactVersion> result = new TreeSet<>();
         // go through all the associations
         // see if they are met from the collection
         // add the version if they are
@@ -142,7 +136,7 @@ public class PropertyVersions extends AbstractVersionDetails {
                 continue versions;
             }
         }
-        return asArtifactVersionArray(result);
+        return result.toArray(new ArtifactVersion[0]);
     }
 
     /**
@@ -152,30 +146,10 @@ public class PropertyVersions extends AbstractVersionDetails {
      * @param includeSnapshots Whether to include snapshot versions in our search.
      * @return The (possibly empty) array of versions.
      */
-    public synchronized ArtifactVersion[] getVersions(boolean includeSnapshots) {
-        Set<ArtifactVersion> result;
-        if (includeSnapshots) {
-            result = versions;
-        } else {
-            result = new TreeSet<>();
-            for (ArtifactVersion candidate : versions) {
-                if (ArtifactUtils.isSnapshot(candidate.toString())) {
-                    continue;
-                }
-                result.add(candidate);
-            }
-        }
-        return asArtifactVersionArray(result);
-    }
-
-    private ArtifactVersion[] asArtifactVersionArray(Collection<ArtifactVersion> result) {
-        if (result == null || result.isEmpty()) {
-            return new ArtifactVersion[0];
-        } else {
-            final ArtifactVersion[] answer = result.toArray(new ArtifactVersion[0]);
-            Arrays.sort(answer);
-            return answer;
-        }
+    public ArtifactVersion[] getVersions(boolean includeSnapshots) {
+        return allVersions.stream()
+                .filter(v -> includeSnapshots || !ArtifactUtils.isSnapshot(v.toString()))
+                .toArray(ArtifactVersion[]::new);
     }
 
     /**
@@ -326,19 +300,5 @@ public class PropertyVersions extends AbstractVersionDetails {
             }
         }
         return result;
-    }
-
-    private final class PropertySegmentCounter implements SegmentCounter {
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public int getSegmentCount(ArtifactVersion v) {
-            if (!isAssociated()) {
-                throw new IllegalStateException("Cannot compare versions for a property with no associations");
-            }
-            return DefaultSegmentCounter.INSTANCE.getSegmentCount(v);
-        }
     }
 }
