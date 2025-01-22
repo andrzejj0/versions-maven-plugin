@@ -626,17 +626,11 @@ public class PomHelper {
         return extractExpression(expr)
                 .map(expression -> {
                     String value = properties.get(expression);
-
                     if (value != null) {
                         int exprStartDelimiter = value.indexOf("${");
-
                         if (exprStartDelimiter >= 0) {
-                            if (exprStartDelimiter > 0) {
-                                value = value.substring(0, exprStartDelimiter)
-                                        + evaluate(value.substring(exprStartDelimiter), properties, logger);
-                            } else {
-                                value = evaluate(value.substring(exprStartDelimiter), properties, logger);
-                            }
+                            value = value.substring(0, exprStartDelimiter)
+                                    + evaluate(value.substring(exprStartDelimiter), properties, logger);
                         }
                     } else {
                         // Because we work with the raw model, without interpolation, unevaluatable expressions are not
@@ -650,25 +644,16 @@ public class PomHelper {
                     if (index >= 0) {
                         int lastIndex = expr.indexOf("}", index);
                         if (lastIndex >= 0) {
-                            String retVal = expr.substring(0, index);
-
+                            String retVal = expr.substring(0, index)
+                                    + evaluate(expr.substring(index, lastIndex + 1), properties, logger)
+                                    + evaluate(expr.substring(lastIndex + 1), properties, logger);
                             if (index > 0 && expr.charAt(index - 1) == '$') {
-                                retVal += expr.substring(index + 1, lastIndex + 1);
-                            } else {
-                                retVal += evaluate(expr.substring(index, lastIndex + 1), properties, logger);
+                                retVal = expr.substring(0, index - 1) + retVal;
                             }
-
-                            retVal += evaluate(expr.substring(lastIndex + 1), properties, logger);
                             return retVal;
                         }
                     }
-
-                    // Was not an expression
-                    if (expr.contains("$$")) {
-                        return expr.replaceAll("\\$\\$", "\\$");
-                    } else {
-                        return expr;
-                    }
+                    return expr.contains("$$") ? expr.replaceAll("\\$\\$", "\\$") : expr;
                 });
     }
 
