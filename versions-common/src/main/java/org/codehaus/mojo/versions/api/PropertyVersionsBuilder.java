@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -105,48 +106,26 @@ public class PropertyVersionsBuilder {
             return null;
         }
 
-        ArtifactVersion lowerBound = null;
-        boolean includeLower = true;
-        for (Map.Entry<String, Boolean> entry : lowerBounds.entrySet()) {
-            ArtifactVersion candidate = ArtifactVersionService.getArtifactVersion(entry.getKey());
-            if (lowerBound == null) {
-                lowerBound = candidate;
-                includeLower = entry.getValue();
-            } else {
-                assert isAssociated();
-                final int comparisonResult = lowerBound.compareTo(candidate);
-                if (comparisonResult > 0) {
-                    lowerBound = candidate;
-                    includeLower = entry.getValue();
-                } else if (comparisonResult == 0) {
-                    includeLower = includeLower && entry.getValue();
-                }
-            }
-        }
+        Optional<ArtifactVersion> lowerBound = lowerBounds.entrySet().stream()
+                .min(Map.Entry.comparingByKey())
+                .map(Map.Entry::getKey)
+                .map(ArtifactVersionService::getArtifactVersion);
+        boolean includeLower = lowerBound
+                .map(bound -> lowerBounds.getOrDefault(bound.toString(), true))
+                .orElse(false);
 
-        ArtifactVersion upperBound = null;
-        boolean includeUpper = true;
-        for (Map.Entry<String, Boolean> entry : upperBounds.entrySet()) {
-            ArtifactVersion candidate = ArtifactVersionService.getArtifactVersion(entry.getKey());
-            if (upperBound == null) {
-                upperBound = candidate;
-                includeUpper = entry.getValue();
-            } else {
-                assert isAssociated();
-                final int comparisonResult = upperBound.compareTo(candidate);
-                if (comparisonResult < 0) {
-                    upperBound = candidate;
-                    includeUpper = entry.getValue();
-                } else if (comparisonResult == 0) {
-                    includeUpper = includeUpper && entry.getValue();
-                }
-            }
-        }
+        Optional<ArtifactVersion> upperBound = upperBounds.entrySet().stream()
+                .max(Map.Entry.comparingByKey())
+                .map(Map.Entry::getKey)
+                .map(ArtifactVersionService::getArtifactVersion);
+        boolean includeUpper = upperBound
+                .map(bound -> upperBounds.getOrDefault(bound.toString(), true))
+                .orElse(false);
 
-        return String.valueOf(includeLower ? '[' : '(')
-                + (lowerBound != null ? lowerBound : "")
+        return (includeLower ? '[' : '(')
+                + lowerBound.map(Object::toString).orElse("")
                 + ','
-                + (upperBound != null ? upperBound : "")
+                + upperBound.map(Object::toString).orElse("")
                 + (includeUpper ? ']' : ')');
     }
 
