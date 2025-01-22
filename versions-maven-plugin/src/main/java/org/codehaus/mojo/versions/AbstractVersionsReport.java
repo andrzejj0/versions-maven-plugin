@@ -233,7 +233,8 @@ public abstract class AbstractVersionsReport<T> extends AbstractMavenReport {
     }
 
     /**
-     * {@inheritDoc}
+     * Deprecated because the method is being deprecated in Maven 4 and because the plugin was using it to get
+     * {@link #getBundleName()}
      */
     @Override
     @Deprecated
