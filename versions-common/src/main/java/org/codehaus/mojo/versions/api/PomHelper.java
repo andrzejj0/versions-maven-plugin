@@ -58,6 +58,7 @@ import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.execution.MavenSession;
@@ -497,45 +498,9 @@ public class PomHelper {
             final Model model,
             final Log logger)
             throws XMLStreamException {
-        Deque<String> stack = new ArrayDeque<>();
+        Map<String, String> implicitProperties = getImplicitProperties(pom, model);
+
         String path = "";
-
-        Map<String, String> implicitProperties = model.getProperties().entrySet().stream()
-                .collect(Collectors.toMap(e -> (String) e.getKey(), e -> (String) e.getValue()));
-
-        pom.rewind();
-        while (pom.hasNext()) {
-            pom.next();
-            if (pom.isStartElement()) {
-                stack.push(path);
-                path = path + "/" + pom.getLocalName();
-
-                if (IMPLICIT_PATHS.contains(path)) {
-                    final String elementText = pom.getElementText().trim();
-                    implicitProperties.put(path.substring(1).replace('/', '.'), elementText);
-                }
-            }
-            if (pom.isEndElement()) {
-                path = stack.pop();
-            }
-        }
-
-        for (boolean modified = true; modified; ) {
-            modified = false;
-            for (Map.Entry<String, String> entry : implicitProperties.entrySet()) {
-                if (entry.getKey().contains(".parent")) {
-                    String child = entry.getKey().replace(".parent", "");
-                    if (!implicitProperties.containsKey(child)) {
-                        implicitProperties.put(child, entry.getValue());
-                        modified = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        stack = new ArrayDeque<>();
-        path = "";
         boolean inMatchScope = false;
         boolean madeReplacement = false;
         boolean haveGroupId = false;
@@ -543,7 +508,7 @@ public class PomHelper {
         boolean haveOldVersion = false;
 
         pom.rewind();
-        while (pom.hasNext()) {
+        for (Deque<String> stack = new ArrayDeque<>(); pom.hasNext(); ) {
             pom.next();
             if (pom.isStartElement()) {
                 stack.push(path);
@@ -608,6 +573,38 @@ public class PomHelper {
             }
         }
         return madeReplacement;
+    }
+
+    private static Map<String, String> getImplicitProperties(MutableXMLStreamReader pom, Model model)
+            throws XMLStreamException {
+
+        Map<String, String> implicitProperties = model.getProperties().entrySet().stream()
+                .collect(Collectors.toMap(e -> (String) e.getKey(), e -> (String) e.getValue()));
+
+        String path = "";
+        pom.rewind();
+        for (Deque<String> stack = new ArrayDeque<>(); pom.hasNext(); ) {
+            pom.next();
+            if (pom.isStartElement()) {
+                stack.push(path);
+                path = path + "/" + pom.getLocalName();
+
+                if (IMPLICIT_PATHS.contains(path)) {
+                    final String elementText = pom.getElementText().trim();
+                    implicitProperties.put(path.substring(1).replace('/', '.'), elementText);
+                }
+            }
+            if (pom.isEndElement()) {
+                path = stack.pop();
+            }
+        }
+
+        implicitProperties.entrySet().stream()
+                .filter(e -> e.getKey().contains(".parent"))
+                .map(e -> Pair.of(e.getKey().substring(0, e.getKey().indexOf(".parent")), e.getValue()))
+                .forEach(p -> implicitProperties.putIfAbsent(p.getLeft(), p.getRight()));
+
+        return implicitProperties;
     }
 
     /**
