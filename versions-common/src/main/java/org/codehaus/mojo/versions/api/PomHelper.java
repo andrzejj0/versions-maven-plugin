@@ -228,12 +228,12 @@ public class PomHelper {
                     if (pom.isStartElement()) {
                         String elementPath = path + "/" + pom.getLocalName();
                         if (propertyRegex.matcher(elementPath).matches()) {
-                            pom.mark(0);
+                            pom.mark(START);
                         } else if (matchScopeRegex.matcher(elementPath).matches()) {
                             // we're in a new match scope -> reset any previous partial matches
                             inMatchScope = profileId == null;
-                            pom.clearMark(0);
-                            pom.clearMark(1);
+                            pom.clearMark(START);
+                            pom.clearMark(END);
                         } else if (profileId != null
                                 && profileIdRegex.matcher(elementPath).matches()) {
                             inMatchScope =
@@ -247,14 +247,14 @@ public class PomHelper {
                         }
                     } else if (pom.isEndElement()) {
                         if (propertyRegex.matcher(path).matches()) {
-                            pom.mark(1);
+                            pom.mark(END);
                         } else if (matchScopeRegex.matcher(path).matches()) {
-                            if (inMatchScope && pom.hasMark(0) && pom.hasMark(1)) {
-                                pom.replaceBetween(0, 1, value);
+                            if (inMatchScope && pom.hasMark(START) && pom.hasMark(END)) {
+                                pom.replaceBetween(START, END, value);
                                 replaced = true;
                             }
-                            pom.clearMark(0);
-                            pom.clearMark(1);
+                            pom.clearMark(START);
+                            pom.clearMark(END);
                         }
                         return replaced;
                     }
@@ -495,8 +495,8 @@ public class PomHelper {
                     // we're in a new match scope
                     // reset any previous partial matches
                     inMatchScope = true;
-                    pom.clearMark(0);
-                    pom.clearMark(1);
+                    pom.clearMark(START);
+                    pom.clearMark(END);
 
                     haveGroupId = false;
                     haveArtifactId = false;
@@ -510,7 +510,7 @@ public class PomHelper {
                         haveArtifactId =
                                 artifactId.equals(evaluate(pom.getElementText().trim(), implicitProperties, logger));
                     } else if ("version".equals(pom.getLocalName())) {
-                        pom.mark(0);
+                        pom.mark(START);
                     }
                 }
             }
@@ -518,9 +518,9 @@ public class PomHelper {
             if (pom.isEndElement()) {
                 if (PATTERN_PROJECT_DEPENDENCY_VERSION.matcher(path).matches()
                         && "version".equals(pom.getLocalName())) {
-                    pom.mark(1);
-                    String compressedPomVersion =
-                            StringUtils.deleteWhitespace(pom.getBetween(0, 1).trim());
+                    pom.mark(END);
+                    String compressedPomVersion = StringUtils.deleteWhitespace(
+                            pom.getBetween(START, END).trim());
                     String compressedOldVersion = StringUtils.deleteWhitespace(oldVersion);
 
                     try {
@@ -531,16 +531,16 @@ public class PomHelper {
                     }
                 } else if (PATTERN_PROJECT_DEPENDENCY.matcher(path).matches()) {
                     if (inMatchScope
-                            && pom.hasMark(0)
-                            && pom.hasMark(1)
+                            && pom.hasMark(START)
+                            && pom.hasMark(END)
                             && haveGroupId
                             && haveArtifactId
                             && haveOldVersion) {
-                        pom.replaceBetween(0, 1, newVersion);
+                        pom.replaceBetween(START, END, newVersion);
                         madeReplacement = true;
                     }
-                    pom.clearMark(0);
-                    pom.clearMark(1);
+                    pom.clearMark(START);
+                    pom.clearMark(END);
                     haveArtifactId = false;
                     haveGroupId = false;
                     haveOldVersion = false;
@@ -721,8 +721,8 @@ public class PomHelper {
                     // we're in a new match scope
                     // reset any previous partial matches
                     inMatchScope = true;
-                    pom.clearMark(0);
-                    pom.clearMark(1);
+                    pom.clearMark(START);
+                    pom.clearMark(END);
 
                     haveGroupId = false;
                     haveArtifactId = false;
@@ -734,33 +734,34 @@ public class PomHelper {
                     } else if ("artifactId".equals(elementName)) {
                         haveArtifactId = artifactId.equals(pom.getElementText().trim());
                     } else if ("version".equals(elementName)) {
-                        pom.mark(0);
+                        pom.mark(START);
                     }
                 }
             }
             // for empty elements, pom can be both start- and end element
             if (pom.isEndElement()) {
                 if (PATTERN_PROJECT_PLUGIN_VERSION.matcher(path).matches() && "version".equals(pom.getLocalName())) {
-                    pom.mark(1);
+                    pom.mark(END);
 
                     try {
                         haveOldVersion = isVersionOverlap(
-                                oldVersion, pom.getBetween(0, 1).trim());
+                                oldVersion, pom.getBetween(START, END).trim());
                     } catch (InvalidVersionSpecificationException e) {
                         // fall back to string comparison
-                        haveOldVersion = oldVersion.equals(pom.getBetween(0, 1).trim());
+                        haveOldVersion =
+                                oldVersion.equals(pom.getBetween(START, END).trim());
                     }
                 } else if (PATTERN_PROJECT_PLUGIN.matcher(path).matches()) {
                     if (inMatchScope
-                            && pom.hasMark(0)
-                            && pom.hasMark(1)
+                            && pom.hasMark(START)
+                            && pom.hasMark(END)
                             && (haveGroupId || !needGroupId)
                             && haveArtifactId
                             && haveOldVersion) {
-                        pom.replaceBetween(0, 1, newVersion);
+                        pom.replaceBetween(START, END, newVersion);
                         madeReplacement = true;
-                        pom.clearMark(0);
-                        pom.clearMark(1);
+                        pom.clearMark(START);
+                        pom.clearMark(END);
                         haveArtifactId = false;
                         haveGroupId = false;
                         haveOldVersion = false;
