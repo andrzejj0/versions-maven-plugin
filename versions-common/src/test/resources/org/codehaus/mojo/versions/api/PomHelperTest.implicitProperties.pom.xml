@@ -13,4 +13,41 @@
         <propertyA>propertyAValue</propertyA>
         <projectVersion>doNotOverride</projectVersion>
     </properties>
+    <dependencies>
+        <dependency>
+            <groupId>${propertyA}</groupId>
+            <version>version</version>
+            <artifactId>artifactA</artifactId>
+        </dependency>
+    </dependencies>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>groupB</groupId>
+                <version>versionB</version>
+                <artifactId>artifactB</artifactId>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+    <profiles>
+        <profile>
+            <id>profileA</id>
+            <dependencies>
+                <dependency>
+                    <groupId>groupC</groupId>
+                    <artifactId>artifactC</artifactId>
+                    <version>versionC</version>
+                </dependency>
+            </dependencies>
+            <dependencyManagement>
+                <dependencies>
+                    <dependency>
+                        <groupId>groupD</groupId>
+                        <artifactId>artifactD</artifactId>
+                        <version>versionD</version>
+                    </dependency>
+                </dependencies>
+            </dependencyManagement>
+        </profile>
+    </profiles>
 </project>

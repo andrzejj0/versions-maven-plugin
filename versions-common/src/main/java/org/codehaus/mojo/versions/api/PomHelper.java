@@ -490,7 +490,6 @@ public class PomHelper {
             if (pom.isStartElement()) {
                 stack.push(path);
                 path = path + "/" + pom.getLocalName();
-
                 if (PATTERN_PROJECT_DEPENDENCY.matcher(path).matches()) {
                     // we're in a new match scope
                     // reset any previous partial matches

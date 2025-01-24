@@ -34,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.maven.model.Model;
@@ -45,8 +46,15 @@ import org.apache.maven.plugin.logging.SystemStreamLog;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
 import org.codehaus.mojo.versions.utils.ModelNode;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static java.nio.charset.Charset.defaultCharset;
 import static org.apache.commons.io.IOUtils.toInputStream;
@@ -56,6 +64,8 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.hamcrest.Matchers.hasEntry;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -67,10 +77,14 @@ import static org.mockito.Mockito.mock;
 /**
  * Tests the methods of {@link PomHelper}.
  */
+@ExtendWith(MockitoExtension.class)
 class PomHelperTest {
     private static final int NUMBER_OF_CHILD_PROJECTS = 30;
 
     private static final Path PATH = Paths.get("dummy-file");
+
+    @Mock
+    private Log log;
 
     /**
      * Tests what happens when changing a long property substitution pattern, e.g.
@@ -94,7 +108,7 @@ class PomHelperTest {
 
         assertEquals(newVersion, PomHelper.getProjectVersion(pom));
 
-        assertNotSame(oldVersion, newVersion);
+        assertNotSame(newVersion, oldVersion);
     }
 
     @Test
@@ -155,6 +169,16 @@ class PomHelperTest {
         }
     }
 
+    static Stream<Arguments> testGetProjectVersionArguments() {
+        return Stream.of(
+                Arguments.of(
+                        "<project><modelVersion>4.0.0</modelVersion><parent/><version>projectVersion</version></project>",
+                        "projectVersion"),
+                Arguments.of("<project><modelVersion>4.0.0</modelVersion><parent/><version/></project>", ""));
+    }
+
+    @ParameterizedTest
+    @MethodSource("testGetProjectVersionArguments")
     void testGetProjectVersion(String pom, String expectedValue)
             throws XMLStreamException, IOException, TransformerException {
         try (MutableXMLStreamReader reader = new MutableXMLStreamReader(toInputStream(pom, defaultCharset()), PATH)) {
@@ -162,14 +186,16 @@ class PomHelperTest {
         }
     }
 
-    @Test
-    void testGetProjectVersion() throws XMLStreamException, IOException, TransformerException {
-        testGetProjectVersion(
-                "<project><modelVersion>4.0.0</modelVersion><parent/><version>projectVersion</version></project>",
-                "projectVersion");
-        testGetProjectVersion("<project><modelVersion>4.0.0</modelVersion><parent/><version/></project>", "");
+    static Stream<Arguments> testSetProjectParentVersionArguments() {
+        return Stream.of(
+                Arguments.of(
+                        "<project><modelVersion>4.0.0</modelVersion><parent><version>parentVersion</version></parent><version>projectVersion</version></project>",
+                        true),
+                Arguments.of("<project><modelVersion>4.0.0</modelVersion><parent/><version/></project>", false));
     }
 
+    @ParameterizedTest
+    @MethodSource("testSetProjectParentVersionArguments")
     void testSetProjectParentVersion(String pom, boolean expectedValue)
             throws XMLStreamException, IOException, TransformerException {
         try (MutableXMLStreamReader reader = new MutableXMLStreamReader(toInputStream(pom, defaultCharset()), PATH)) {
@@ -178,11 +204,70 @@ class PomHelperTest {
     }
 
     @Test
-    void testSetProjectParentVersion() throws XMLStreamException, IOException, TransformerException {
-        testSetProjectParentVersion(
-                "<project><modelVersion>4.0.0</modelVersion><parent><version>parentVersion</version></parent><version>projectVersion</version></project>",
-                true);
-        testSetProjectParentVersion("<project><modelVersion>4.0.0</modelVersion><parent/><version/></project>", false);
+    void testSetDependencyVersion()
+            throws XMLStreamException, IOException, TransformerException, XmlPullParserException {
+        URL url = getClass().getResource("PomHelperTest.implicitProperties.pom.xml");
+        assert url != null;
+        File file = new File(url.getPath());
+        String input = PomHelper.readXml(file).getLeft();
+        Model model = new MavenXpp3Reader().read(new StringReader(input));
+        try (MutableXMLStreamReader pom = new MutableXMLStreamReader(file.toPath())) {
+            assertThat(
+                    PomHelper.setDependencyVersion(
+                            pom, "propertyAValue", "artifactA", "version", "newVersion", model, log),
+                    is(true));
+            Model newModel = new MavenXpp3Reader().read(new StringReader(pom.getSource()));
+            assertThat(
+                    newModel.getDependencies(),
+                    hasItem(allOf(
+                            hasProperty("groupId", is("${propertyA}")),
+                            hasProperty("artifactId", is("artifactA")),
+                            hasProperty("version", is("newVersion")))));
+        }
+    }
+
+    @Test
+    void testSetDependencyVersionDepMan()
+            throws XMLStreamException, IOException, TransformerException, XmlPullParserException {
+        URL url = getClass().getResource("PomHelperTest.implicitProperties.pom.xml");
+        assert url != null;
+        File file = new File(url.getPath());
+        String input = PomHelper.readXml(file).getLeft();
+        Model model = new MavenXpp3Reader().read(new StringReader(input));
+        try (MutableXMLStreamReader pom = new MutableXMLStreamReader(file.toPath())) {
+            assertThat(
+                    PomHelper.setDependencyVersion(pom, "groupB", "artifactB", "versionB", "newVersion", model, log),
+                    is(true));
+            Model newModel = new MavenXpp3Reader().read(new StringReader(pom.getSource()));
+            assertThat(
+                    newModel.getDependencyManagement().getDependencies(),
+                    hasItem(allOf(
+                            hasProperty("groupId", is("groupB")),
+                            hasProperty("artifactId", is("artifactB")),
+                            hasProperty("version", is("newVersion")))));
+        }
+    }
+
+    @Test
+    void testSetDependencyVersionProfile()
+            throws XMLStreamException, IOException, TransformerException, XmlPullParserException {
+        URL url = getClass().getResource("PomHelperTest.implicitProperties.pom.xml");
+        assert url != null;
+        File file = new File(url.getPath());
+        String input = PomHelper.readXml(file).getLeft();
+        Model model = new MavenXpp3Reader().read(new StringReader(input));
+        try (MutableXMLStreamReader pom = new MutableXMLStreamReader(file.toPath())) {
+            assertThat(
+                    PomHelper.setDependencyVersion(pom, "groupC", "artifactC", "versionC", "newVersion", model, log),
+                    is(true));
+            Model newModel = new MavenXpp3Reader().read(new StringReader(pom.getSource()));
+            assertThat(
+                    newModel.getProfiles().get(0).getDependencies(),
+                    hasItem(allOf(
+                            hasProperty("groupId", is("groupC")),
+                            hasProperty("artifactId", is("artifactC")),
+                            hasProperty("version", is("newVersion")))));
+        }
     }
 
     @Test
