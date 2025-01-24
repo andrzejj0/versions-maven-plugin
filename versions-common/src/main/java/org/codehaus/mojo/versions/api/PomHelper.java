@@ -51,6 +51,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -58,7 +59,6 @@ import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.commons.lang3.tuple.Triple;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.execution.MavenSession;
@@ -89,11 +89,15 @@ import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluatio
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.codehaus.stax2.XMLInputFactory2;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.util.Optional.ofNullable;
 import static org.codehaus.mojo.versions.api.PomHelper.Marks.CHILD_START;
+import static org.codehaus.mojo.versions.api.PomHelper.Marks.END;
 import static org.codehaus.mojo.versions.api.PomHelper.Marks.END_ELEMENT;
 import static org.codehaus.mojo.versions.api.PomHelper.Marks.PARENT_START;
+import static org.codehaus.mojo.versions.api.PomHelper.Marks.START;
 
 public class PomHelper {
     public static final String APACHE_MAVEN_PLUGINS_GROUPID = "org.apache.maven.plugins";
@@ -102,12 +106,6 @@ public class PomHelper {
             "/project/parent/groupId", "/project/parent/artifactId",
             "/project/parent/version", "/project/groupId",
             "/project/artifactId", "/project/version"));
-
-    private static final Pattern PATTERN_PROJECT_PROPERTIES = Pattern.compile("/project/properties");
-
-    private static final Pattern PATTERN_PROJECT_PROFILE = Pattern.compile("/project/profiles/profile");
-
-    private static final Pattern PATTERN_PROJECT_PROFILE_ID = Pattern.compile("/project/profiles/profile/id");
 
     private static final Pattern PATTERN_PROJECT_VERSION = Pattern.compile("/project/version");
 
@@ -129,6 +127,8 @@ public class PomHelper {
     private static final Pattern PATTERN_PROJECT_PLUGIN_VERSION = Pattern.compile("/project" + "(/profiles/profile)?"
             + "((/build(/pluginManagement)?)|(/reporting))/plugins/plugin"
             + "((/groupId)|(/artifactId)|(/version))");
+
+    private static final Logger LOG = LoggerFactory.getLogger(PomHelper.class);
 
     private final ArtifactFactory artifactFactory;
 
@@ -211,63 +211,60 @@ public class PomHelper {
      * @throws XMLStreamException if somethinh went wrong.
      */
     public static boolean setPropertyVersion(
-            final MutableXMLStreamReader pom, final String profileId, final String property, final String value)
-            throws XMLStreamException {
-        Deque<String> stack = new ArrayDeque<>();
-        String path = "";
-        final Pattern propertyRegex;
-        final Pattern matchScopeRegex;
-        final Pattern projectProfileId;
-        boolean inMatchScope = false;
-        boolean madeReplacement = false;
-        if (profileId == null) {
-            propertyRegex = Pattern.compile("/project/properties/" + RegexUtils.quote(property));
-            matchScopeRegex = PATTERN_PROJECT_PROPERTIES;
-            projectProfileId = null;
-        } else {
-            propertyRegex = Pattern.compile("/project/profiles/profile/properties/" + RegexUtils.quote(property));
-            matchScopeRegex = PATTERN_PROJECT_PROFILE;
-            projectProfileId = PATTERN_PROJECT_PROFILE_ID;
+            MutableXMLStreamReader pom, String profileId, String property, String value) throws XMLStreamException {
+        class PropertyVersionInternal {
+            final Pattern propertyRegex = Pattern.compile(
+                    (profileId == null ? "/project/properties/" : "/project/profiles/profile/properties/")
+                            + RegexUtils.quote(property));
+            final Pattern matchScopeRegex = profileId == null
+                    ? Pattern.compile("/project/properties")
+                    : Pattern.compile("/project/profiles/profile");
+            final Pattern profileIdRegex = profileId == null ? null : Pattern.compile("/project/profiles/profile/id");
+
+            boolean setPropertyVersion(String path, boolean inMatchScope) throws XMLStreamException {
+                boolean replaced = false;
+                while (!replaced && pom.hasNext()) {
+                    pom.next();
+                    if (pom.isStartElement()) {
+                        String elementPath = path + "/" + pom.getLocalName();
+                        if (propertyRegex.matcher(elementPath).matches()) {
+                            pom.mark(0);
+                        } else if (matchScopeRegex.matcher(elementPath).matches()) {
+                            // we're in a new match scope -> reset any previous partial matches
+                            inMatchScope = profileId == null;
+                            pom.clearMark(0);
+                            pom.clearMark(1);
+                        } else if (profileId != null
+                                && profileIdRegex.matcher(elementPath).matches()) {
+                            inMatchScope =
+                                    profileId.trim().equals(pom.getElementText().trim());
+                        }
+
+                        // getElementText could've pushed the pointer to END_ELEMENT
+                        if (!pom.isEndElement()) {
+                            // inMatchScope will not change in the child element
+                            replaced = setPropertyVersion(elementPath, inMatchScope);
+                        }
+                    } else if (pom.isEndElement()) {
+                        if (propertyRegex.matcher(path).matches()) {
+                            pom.mark(1);
+                        } else if (matchScopeRegex.matcher(path).matches()) {
+                            if (inMatchScope && pom.hasMark(0) && pom.hasMark(1)) {
+                                pom.replaceBetween(0, 1, value);
+                                replaced = true;
+                            }
+                            pom.clearMark(0);
+                            pom.clearMark(1);
+                        }
+                        return replaced;
+                    }
+                }
+                return replaced;
+            }
         }
 
         pom.rewind();
-        while (pom.hasNext()) {
-            pom.next();
-            if (pom.isStartElement()) {
-                stack.push(path);
-                path = path + "/" + pom.getLocalName();
-
-                if (propertyRegex.matcher(path).matches()) {
-                    pom.mark(0);
-                } else if (matchScopeRegex.matcher(path).matches()) {
-                    // we're in a new match scope
-                    // reset any previous partial matches
-                    inMatchScope = profileId == null;
-                    pom.clearMark(0);
-                    pom.clearMark(1);
-                } else if (profileId != null && projectProfileId.matcher(path).matches()) {
-                    String candidateId = pom.getElementText();
-
-                    inMatchScope = profileId.trim().equals(candidateId.trim());
-                }
-            }
-            // for empty elements, pom can be both start- and end element
-            if (pom.isEndElement()) {
-                if (propertyRegex.matcher(path).matches()) {
-                    pom.mark(1);
-                } else if (matchScopeRegex.matcher(path).matches()) {
-                    if (inMatchScope && pom.hasMark(0) && pom.hasMark(1)) {
-                        pom.replaceBetween(0, 1, value);
-                        madeReplacement = true;
-                    }
-                    pom.clearMark(0);
-                    pom.clearMark(1);
-                    inMatchScope = false;
-                }
-                path = stack.pop();
-            }
-        }
-        return madeReplacement;
+        return new PropertyVersionInternal().setPropertyVersion("", false);
     }
 
     /**
@@ -304,7 +301,9 @@ public class PomHelper {
     enum Marks {
         CHILD_START,
         PARENT_START,
-        END_ELEMENT
+        END_ELEMENT,
+        START,
+        END
     }
 
     /**
@@ -394,6 +393,33 @@ public class PomHelper {
         return new ElementValueInternal().process("");
     }
 
+    static <T> T executeOnPatternFound(
+            String path, final MutableXMLStreamReader pom, Pattern pattern, Supplier<T> onPatternFound)
+            throws XMLStreamException {
+        T result = null;
+        while (result == null && pom.hasNext()) {
+            pom.next();
+            if (pom.isStartElement()) {
+                String elementPath = path + "/" + pom.getLocalName();
+                if (pattern.matcher(elementPath).matches()) {
+                    pom.mark(START);
+                }
+                result = executeOnPatternFound(elementPath, pom, pattern, onPatternFound);
+            } else if (pom.isEndElement()) {
+                if (pattern.matcher(path).matches()) {
+                    pom.mark(END);
+                    if (pom.hasMark(START)) {
+                        return onPatternFound.get();
+                    }
+                    pom.clearMark(START);
+                    pom.clearMark(END);
+                }
+                break;
+            }
+        }
+        return result;
+    }
+
     /**
      * Retrieves the project version from the pom.
      *
@@ -403,34 +429,9 @@ public class PomHelper {
      * @throws XMLStreamException if something went wrong.
      */
     public static String getProjectVersion(final MutableXMLStreamReader pom) throws XMLStreamException {
-        Deque<String> stack = new ArrayDeque<>();
-        String path = "";
-
         pom.rewind();
-        while (pom.hasNext()) {
-            pom.next();
-            if (pom.isStartElement()) {
-                stack.push(path);
-                path = path + "/" + pom.getLocalName();
-
-                if (PATTERN_PROJECT_VERSION.matcher(path).matches()) {
-                    pom.mark(0);
-                }
-            }
-            // for empty elements, pom can be both start- and end element
-            if (pom.isEndElement()) {
-                if (PATTERN_PROJECT_VERSION.matcher(path).matches()) {
-                    pom.mark(1);
-                    if (pom.hasMark(0) && pom.hasMark(1)) {
-                        return pom.getBetween(0, 1).trim();
-                    }
-                    pom.clearMark(0);
-                    pom.clearMark(1);
-                }
-                path = stack.pop();
-            }
-        }
-        return null;
+        return executeOnPatternFound("", pom, PATTERN_PROJECT_VERSION, () -> pom.getBetween(START, END)
+                .trim());
     }
 
     /**
@@ -443,36 +444,12 @@ public class PomHelper {
      */
     public static boolean setProjectParentVersion(final MutableXMLStreamReader pom, final String value)
             throws XMLStreamException {
-        Deque<String> stack = new ArrayDeque<>();
-        String path = "";
-        boolean madeReplacement = false;
-
         pom.rewind();
-        while (pom.hasNext()) {
-            pom.next();
-            if (pom.isStartElement()) {
-                stack.push(path);
-                path = path + "/" + pom.getLocalName();
-
-                if (PATTERN_PROJECT_PARENT_VERSION.matcher(path).matches()) {
-                    pom.mark(0);
-                }
-            }
-            // for empty elements, pom can be both start- and end element
-            if (pom.isEndElement()) {
-                if (PATTERN_PROJECT_PARENT_VERSION.matcher(path).matches()) {
-                    pom.mark(1);
-                    if (pom.hasMark(0) && pom.hasMark(1)) {
-                        pom.replaceBetween(0, 1, value);
-                        madeReplacement = true;
-                    }
-                    pom.clearMark(0);
-                    pom.clearMark(1);
-                }
-                path = stack.pop();
-            }
-        }
-        return madeReplacement;
+        return ofNullable(executeOnPatternFound("", pom, PATTERN_PROJECT_PARENT_VERSION, () -> {
+                    pom.replaceBetween(START, END, value);
+                    return true;
+                }))
+                .orElse(false);
     }
 
     /**
@@ -575,36 +552,41 @@ public class PomHelper {
         return madeReplacement;
     }
 
-    private static Map<String, String> getImplicitProperties(MutableXMLStreamReader pom, Model model)
+    static Map<String, String> getImplicitProperties(MutableXMLStreamReader pom, Model model)
             throws XMLStreamException {
 
         Map<String, String> implicitProperties = model.getProperties().entrySet().stream()
                 .collect(Collectors.toMap(e -> (String) e.getKey(), e -> (String) e.getValue()));
 
-        String path = "";
         pom.rewind();
-        for (Deque<String> stack = new ArrayDeque<>(); pom.hasNext(); ) {
+        getImplicitProperties("", pom, implicitProperties);
+
+        List<Pair<String, String>> parentProperties = implicitProperties.entrySet().stream()
+                .filter(e -> e.getKey().contains(".parent"))
+                .map(e -> Pair.of(e.getKey().replace(".parent", ""), e.getValue()))
+                .collect(Collectors.toList());
+        parentProperties.forEach(p -> implicitProperties.putIfAbsent(p.getLeft(), p.getRight()));
+        return implicitProperties;
+    }
+
+    private static void getImplicitProperties(String path, MutableXMLStreamReader pom, Map<String, String> acc)
+            throws XMLStreamException {
+        while (pom.hasNext()) {
             pom.next();
             if (pom.isStartElement()) {
-                stack.push(path);
-                path = path + "/" + pom.getLocalName();
-
-                if (IMPLICIT_PATHS.contains(path)) {
+                String elementPath = path + "/" + pom.getLocalName();
+                if (IMPLICIT_PATHS.contains(elementPath)) {
                     final String elementText = pom.getElementText().trim();
-                    implicitProperties.put(path.substring(1).replace('/', '.'), elementText);
+                    acc.put(elementPath.substring(1).replace('/', '.'), elementText);
+                    // getElementText pushed the pointer to END_ELEMENT, we should NOT descend
+                } else {
+                    // only descend if state != END_ELEMENT at this point
+                    getImplicitProperties(elementPath, pom, acc);
                 }
-            }
-            if (pom.isEndElement()) {
-                path = stack.pop();
+            } else if (pom.isEndElement()) {
+                return;
             }
         }
-
-        implicitProperties.entrySet().stream()
-                .filter(e -> e.getKey().contains(".parent"))
-                .map(e -> Pair.of(e.getKey().substring(0, e.getKey().indexOf(".parent")), e.getValue()))
-                .forEach(p -> implicitProperties.putIfAbsent(p.getLeft(), p.getRight()));
-
-        return implicitProperties;
     }
 
     /**
