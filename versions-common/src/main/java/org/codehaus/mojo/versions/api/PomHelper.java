@@ -89,8 +89,6 @@ import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluatio
 import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluator;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.codehaus.stax2.XMLInputFactory2;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static java.util.Optional.ofNullable;
 import static org.codehaus.mojo.versions.api.PomHelper.Marks.CHILD_START;
@@ -127,8 +125,6 @@ public class PomHelper {
     private static final Pattern PATTERN_PROJECT_PLUGIN_VERSION = Pattern.compile("/project" + "(/profiles/profile)?"
             + "((/build(/pluginManagement)?)|(/reporting))/plugins/plugin"
             + "((/groupId)|(/artifactId)|(/version))");
-
-    private static final Logger LOG = LoggerFactory.getLogger(PomHelper.class);
 
     private final ArtifactFactory artifactFactory;
 

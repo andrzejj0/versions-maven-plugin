@@ -81,7 +81,6 @@ import static org.apache.maven.RepositoryUtils.toArtifact;
  * @since 1.0-alpha-3
  */
 public class DefaultVersionsHelper implements VersionsHelper {
-    private static final String CLASSPATH_PROTOCOL = "classpath";
 
     private static final int LOOKUP_PARALLEL_THREADS = 5;
 
