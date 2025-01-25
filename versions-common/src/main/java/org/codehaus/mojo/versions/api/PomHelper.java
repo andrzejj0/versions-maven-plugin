@@ -134,6 +134,14 @@ public class PomHelper {
 
     private final ExpressionEvaluator expressionEvaluator;
 
+    enum Marks {
+        CHILD_START,
+        PARENT_START,
+        END_ELEMENT,
+        START,
+        END
+    }
+
     /**
      * Creates a new instance
      */
@@ -296,14 +304,6 @@ public class PomHelper {
             MutableXMLStreamReader pom, String parentPath, String elementName, String value) throws XMLStreamException {
         pom.rewind();
         return setElementValue(pom, parentPath, elementName, value, true);
-    }
-
-    enum Marks {
-        CHILD_START,
-        PARENT_START,
-        END_ELEMENT,
-        START,
-        END
     }
 
     /**
