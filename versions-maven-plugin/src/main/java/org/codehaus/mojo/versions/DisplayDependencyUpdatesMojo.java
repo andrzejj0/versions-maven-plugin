@@ -21,6 +21,7 @@ package org.codehaus.mojo.versions;
 
 import javax.inject.Inject;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -38,10 +39,13 @@ import org.apache.maven.wagon.Wagon;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.Segment;
 import org.codehaus.mojo.versions.api.VersionRetrievalException;
-import org.codehaus.mojo.versions.api.recording.ChangeRecorder;
+import org.codehaus.mojo.versions.api.recording.VersionChangeRecorder;
+import org.codehaus.mojo.versions.api.recording.VersionChangeRecorderFactory;
 import org.codehaus.mojo.versions.filtering.WildcardMatcher;
 import org.codehaus.mojo.versions.internal.DependencyUpdatesLoggingHelper;
 import org.codehaus.mojo.versions.internal.DependencyUpdatesLoggingHelper.DependencyUpdatesResult;
+import org.codehaus.mojo.versions.model.DependencyChangeKind;
+import org.codehaus.mojo.versions.model.DependencyVersionChange;
 import org.codehaus.mojo.versions.rewriting.MutableXMLStreamReader;
 import org.codehaus.mojo.versions.utils.ArtifactFactory;
 import org.codehaus.mojo.versions.utils.DependencyComparator;
@@ -51,6 +55,10 @@ import org.eclipse.aether.RepositorySystem;
 
 import static java.util.Collections.emptySet;
 import static org.codehaus.mojo.versions.filtering.DependencyFilter.filterDependencies;
+import static org.codehaus.mojo.versions.model.DependencyChangeKind.DEPENDENCY_MANAGEMENT_UPDATE;
+import static org.codehaus.mojo.versions.model.DependencyChangeKind.DEPENDENCY_UPDATE;
+import static org.codehaus.mojo.versions.model.DependencyChangeKind.PLUGIN_MANAGEMENT_UPDATE;
+import static org.codehaus.mojo.versions.model.DependencyChangeKind.PLUGIN_UPDATE;
 import static org.codehaus.mojo.versions.utils.MavenProjectUtils.extractDependenciesFromDependencyManagement;
 import static org.codehaus.mojo.versions.utils.MavenProjectUtils.extractDependenciesFromPlugins;
 import static org.codehaus.mojo.versions.utils.MavenProjectUtils.extractPluginDependenciesFromPluginsInPluginManagement;
@@ -324,7 +332,7 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
      * @param artifactFactory  an {@link ArtifactFactory} instance
      * @param repositorySystem a {@link RepositorySystem} instance
      * @param wagonMap         a map of wagon providers per protocol
-     * @param changeRecorders a map of change recorders
+     * @param changeRecorderFactories a map of change recorder factories
      * @throws MojoExecutionException when things go wrong
      */
     @Inject
@@ -332,9 +340,9 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
             ArtifactFactory artifactFactory,
             RepositorySystem repositorySystem,
             Map<String, Wagon> wagonMap,
-            Map<String, ChangeRecorder> changeRecorders)
+            Map<String, VersionChangeRecorderFactory> changeRecorderFactories)
             throws MojoExecutionException {
-        super(artifactFactory, repositorySystem, wagonMap, changeRecorders);
+        super(artifactFactory, repositorySystem, wagonMap, changeRecorderFactories);
     }
 
     @Override
@@ -390,7 +398,7 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
     public void execute() throws MojoExecutionException, MojoFailureException {
         logInit();
         validateInput();
-
+        VersionChangeRecorder changeRecorder = getChangeRecorder();
         Set<Dependency> dependencyManagement;
         try {
             if (processDependencyManagement) {
@@ -408,7 +416,8 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
                                         dependencyManagement.stream().filter(d -> d.getVersion() != null),
                                         false,
                                         allowSnapshots),
-                        "Dependency Management");
+                        DEPENDENCY_MANAGEMENT_UPDATE,
+                        changeRecorder);
             } else {
                 dependencyManagement = emptySet();
             }
@@ -437,7 +446,8 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
                                                 .filter(d -> d.getVersion() != null),
                                         false,
                                         allowSnapshots),
-                        "Dependencies");
+                        DEPENDENCY_UPDATE,
+                        changeRecorder);
             }
             if (processPluginDependenciesInPluginManagement) {
                 logUpdates(
@@ -454,7 +464,8 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
                                                 .filter(d -> d.getVersion() != null),
                                         false,
                                         allowSnapshots),
-                        "pluginManagement of plugins");
+                        PLUGIN_MANAGEMENT_UPDATE,
+                        changeRecorder);
             }
             if (processPluginDependencies) {
                 logUpdates(
@@ -470,9 +481,11 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
                                                 .filter(d -> d.getVersion() != null),
                                         false,
                                         allowSnapshots),
-                        "Plugin Dependencies");
+                        PLUGIN_UPDATE,
+                        changeRecorder);
             }
-        } catch (VersionRetrievalException e) {
+            saveChangeRecorderResults();
+        } catch (VersionRetrievalException | IOException e) {
             throw new MojoExecutionException(e.getMessage(), e);
         }
     }
@@ -504,7 +517,10 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
         }
     }
 
-    private void logUpdates(Map<Dependency, ArtifactVersions> versionMap, String section) {
+    private void logUpdates(
+            Map<Dependency, ArtifactVersions> versionMap,
+            DependencyChangeKind changeKind,
+            VersionChangeRecorder changeRecorder) {
         Optional<Segment> unchangedSegment = SegmentUtils.determineUnchangedSegment(
                 allowMajorUpdates, allowMinorUpdates, allowIncrementalUpdates, getLog());
         DependencyUpdatesResult updates = DependencyUpdatesLoggingHelper.getDependencyUpdates(
@@ -512,8 +528,32 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
                 versionMap,
                 allowSnapshots,
                 unchangedSegment,
+                (dep, oldVersion, newVersion) -> new DependencyVersionChange()
+                        .withKind(changeKind)
+                        .withGroupId(dep.getGroupId())
+                        .withArtifactId(dep.getArtifactId())
+                        .withOldVersion(oldVersion)
+                        .withNewVersion(newVersion),
                 INFO_PAD_SIZE + getOutputLineWidthOffset(),
                 verbose);
+
+        String section;
+        switch (changeKind) {
+            case DEPENDENCY_UPDATE:
+                section = "Dependencies";
+                break;
+            case DEPENDENCY_MANAGEMENT_UPDATE:
+                section = "Dependency Management";
+                break;
+            case PLUGIN_UPDATE:
+                section = "Plugin Dependencies";
+                break;
+            case PLUGIN_MANAGEMENT_UPDATE:
+                section = "Plugin Management Dependencies";
+                break;
+            default:
+                throw new IllegalArgumentException("Unexpected section: " + changeKind);
+        }
 
         if (verbose) {
             if (updates.getUsingLatest().isEmpty()) {
@@ -538,6 +578,8 @@ public class DisplayDependencyUpdatesMojo extends AbstractVersionsDisplayMojo {
             updates.getWithUpdates().forEach(s -> logLine(false, s));
             logLine(false, "");
         }
+
+        updates.getVersionChanges().forEach(changeRecorder::recordChange);
     }
 
     /**

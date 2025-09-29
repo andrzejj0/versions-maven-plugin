@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.function.TriFunction;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.Restriction;
@@ -15,6 +16,7 @@ import org.codehaus.mojo.versions.DisplayDependencyUpdatesMojo;
 import org.codehaus.mojo.versions.DisplayExtensionUpdatesMojo;
 import org.codehaus.mojo.versions.api.ArtifactVersions;
 import org.codehaus.mojo.versions.api.Segment;
+import org.codehaus.mojo.versions.model.VersionChange;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 
 import static java.util.Optional.empty;
@@ -44,12 +46,13 @@ public class DependencyUpdatesLoggingHelper {
     /**
      * Compiles a {@link DependencyUpdatesResult} object containing dependency updates for the given dependency map
      * and the given unchanged segment.
-     * @param project a {@link MavenProject} object
-     * @param updates map of available versions per dependency
-     * @param allowSnapshots whether snapshots should be allowed as updates
+     *
+     * @param project          a {@link MavenProject} object
+     * @param updates          map of available versions per dependency
+     * @param allowSnapshots   whether snapshots should be allowed as updates
      * @param unchangedSegment the most major segment not allowed to be updated or {@code Optional.empty()} if
-     *                        all segments are allowed to be updated
-     * @param maxLineWith maximum line width
+     *                         all segments are allowed to be updated
+     * @param maxLineWith      maximum line width
      * @param displayManagedBy if {@code true}, will display information on the pom managing the given dependency
      *                         for dependencies not managed by the current project
      * @return a {@link DependencyUpdatesResult} object containing the result
@@ -59,10 +62,12 @@ public class DependencyUpdatesLoggingHelper {
             Map<Dependency, ArtifactVersions> updates,
             boolean allowSnapshots,
             Optional<Segment> unchangedSegment,
+            TriFunction<Dependency, String, String, ? extends VersionChange> versionChangeProvider,
             int maxLineWith,
             boolean displayManagedBy) {
         List<String> withUpdates = new ArrayList<>();
         List<String> usingCurrent = new ArrayList<>();
+        List<VersionChange> versionChanges = new ArrayList<>();
         for (Map.Entry<Dependency, ArtifactVersions> entry : updates.entrySet()) {
             Dependency dep = entry.getKey();
             ArtifactVersions versions = entry.getValue();
@@ -103,7 +108,12 @@ public class DependencyUpdatesLoggingHelper {
             }
             String right =
                     " " + latestVersion.map(v -> currentVersion + " -> " + v).orElse(currentVersion);
-            List<String> t = latestVersion.isPresent() ? withUpdates : usingCurrent;
+            List<String> t = latestVersion
+                    .map(v -> {
+                        versionChanges.add(versionChangeProvider.apply(dep, currentVersion, v.toString()));
+                        return withUpdates;
+                    })
+                    .orElse(usingCurrent);
             if (right.length() + left.length() + 3 > maxLineWith) {
                 t.add(left + "...");
                 t.add(StringUtils.leftPad(right, maxLineWith));
@@ -123,6 +133,11 @@ public class DependencyUpdatesLoggingHelper {
             public List<String> getWithUpdates() {
                 return withUpdates;
             }
+
+            @Override
+            public List<VersionChange> getVersionChanges() {
+                return versionChanges;
+            }
         };
     }
 
@@ -132,17 +147,25 @@ public class DependencyUpdatesLoggingHelper {
     public interface DependencyUpdatesResult {
 
         /**
-         * Returns the list of dependencies using the latest version available (i.e. no update available)
+         * Returns a list of dependencies using the latest version available (i.e. no update available)
          *
          * @return Dependencies using the latest version
          */
         List<String> getUsingLatest();
 
         /**
-         * Returns the list of dependencies with updates available (i.e. not using the latest version)
+         * Returns a list of dependencies with updates available (i.e. not using the latest version)
          *
          * @return Dependencies with updates available
          */
         List<String> getWithUpdates();
+
+        /**
+         * Returns a list of {@link VersionChange} describing all registered version changes in the
+         * {@link org.codehaus.mojo.versions.api.recording.VersionChangeRecorder} comprehension
+         *
+         * @return a list of {@link VersionChange} objects describing the changes
+         */
+        List<VersionChange> getVersionChanges();
     }
 }
