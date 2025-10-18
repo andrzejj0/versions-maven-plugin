@@ -185,7 +185,7 @@ public class LockSnapshotsMojo extends AbstractVersionsDependencyUpdaterMojo {
                 continue;
             }
 
-            if (!isIncluded(this.toArtifact(dep))) {
+            if (!isIncluded(artifactFactory.createArtifact(dep))) {
                 continue;
             }
 

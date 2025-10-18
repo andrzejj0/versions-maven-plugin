@@ -397,13 +397,7 @@ public class UseDepVersionMojo extends AbstractVersionsDependencyUpdaterMojo {
         // an additional pass is necessary to collect conflicts if processProperties is enabled
         if (processProperties) {
             dependencies.stream()
-                    .filter(dep -> {
-                        try {
-                            return !isIncluded(toArtifact(dep));
-                        } catch (MojoExecutionException e) {
-                            throw new RuntimeException(e);
-                        }
-                    })
+                    .filter(dep -> !isIncluded(artifactFactory.createArtifact(dep)))
                     .forEach(dep ->
                             // if a dependency that is _not_ to be changed is set using a property, register that
                             // property
@@ -435,7 +429,7 @@ public class UseDepVersionMojo extends AbstractVersionsDependencyUpdaterMojo {
                 continue;
             }
 
-            Artifact artifact = toArtifact(dep);
+            Artifact artifact = artifactFactory.createArtifact(dep);
             if (isIncluded(artifact)) {
                 if (dep.getVersion() == null) {
                     getLog().warn(String.format(

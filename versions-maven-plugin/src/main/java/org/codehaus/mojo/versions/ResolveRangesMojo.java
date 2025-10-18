@@ -298,7 +298,7 @@ public class ResolveRangesMojo extends AbstractVersionsDependencyUpdaterMojo {
             Matcher versionMatcher = matchRangeRegex.matcher(dep.getVersion());
 
             if (versionMatcher.find()) {
-                Artifact artifact = this.toArtifact(dep);
+                Artifact artifact = artifactFactory.createArtifact(dep);
 
                 if (artifact != null && isIncluded(artifact)) {
                     getLog().debug("Resolving version range for dependency: " + artifact);

@@ -175,7 +175,7 @@ public class ForceReleasesMojo extends AbstractVersionsDependencyUpdaterMojo {
             Matcher versionMatcher = SNAPSHOT_REGEX.matcher(dep.getVersion());
             if (versionMatcher.matches()) {
                 String releaseVersion = versionMatcher.group(1);
-                Artifact artifact = this.toArtifact(dep);
+                Artifact artifact = artifactFactory.createArtifact(dep);
                 if (!isIncluded(artifact)) {
                     continue;
                 }

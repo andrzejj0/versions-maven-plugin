@@ -27,7 +27,6 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.maven.artifact.Artifact;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.DependencyManagement;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -157,8 +156,7 @@ public class UseReactorMojo extends AbstractVersionsDependencyUpdaterMojo {
             throws XMLStreamException, MojoExecutionException, VersionRetrievalException {
 
         for (Dependency dep : dependencies) {
-            Artifact artifact = this.toArtifact(dep);
-            if (!isIncluded(artifact)) {
+            if (!isIncluded(artifactFactory.createArtifact(dep))) {
                 continue;
             }
 

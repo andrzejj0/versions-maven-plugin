@@ -282,7 +282,7 @@ public abstract class UseLatestVersionsMojoBase extends AbstractVersionsDependen
                                 getLog().debug("Ignoring dependency with property as version: " + toString(dep));
                             } else {
                                 try {
-                                    Artifact artifact = toArtifact(dep);
+                                    Artifact artifact = artifactFactory.createArtifact(dep);
                                     if (!isIncluded(artifact)) {
                                         return;
                                     } else if (getLog().isDebugEnabled()) {

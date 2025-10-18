@@ -23,7 +23,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
@@ -201,40 +200,13 @@ public abstract class AbstractVersionsDependencyUpdaterMojo extends AbstractVers
     }
 
     /**
-     * Try to find the dependency artifact that matches the given dependency.
-     *
-     * @param dependency Dependency
-     * @return Artifact
-     * @since 1.0-alpha-3
-     */
-    protected Optional<Artifact> findArtifact(Dependency dependency) {
-        return Optional.ofNullable(getProject().getDependencyArtifacts())
-                // no mutation, so parallelStream is safe
-                .flatMap(artifacts -> artifacts.parallelStream()
-                        .filter(artifact -> compare(artifact, dependency))
-                        .findAny());
-    }
-
-    /**
-     * Try to find the dependency artifact that matches the given dependency.
-     *
-     * @param dependency Dependency
-     * @return Artifact
-     * @throws MojoExecutionException Mojo execution exception
-     * @since 1.0-alpha-3
-     */
-    protected Artifact toArtifact(Dependency dependency) throws MojoExecutionException {
-        return findArtifact(dependency).orElse(artifactFactory.createArtifact(dependency));
-    }
-
-    /**
      * Try to find the artifact that matches the given parent model.
      * @param model Parent model
      * @return Artifact for the parent
      * @throws MojoExecutionException thrown if the dependency cannot be converted to an artifacted
      */
     protected Artifact toArtifact(Parent model) throws MojoExecutionException {
-        return this.toArtifact(DependencyBuilder.newBuilder()
+        return artifactFactory.createArtifact(DependencyBuilder.newBuilder()
                 .withGroupId(model.getGroupId())
                 .withArtifactId(model.getArtifactId())
                 .withVersion(model.getVersion())

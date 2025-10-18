@@ -310,7 +310,7 @@ public class CompareDependenciesMojo extends AbstractVersionsDependencyUpdaterMo
      */
     private MavenProject getRemoteMavenProject(String groupId, String artifactId, String version)
             throws MojoExecutionException, ArtifactResolutionException, ProjectBuildingException {
-        Artifact remoteArtifact = toArtifact(DependencyBuilder.newBuilder()
+        Artifact remoteArtifact = artifactFactory.createArtifact(DependencyBuilder.newBuilder()
                 .withGroupId(groupId)
                 .withArtifactId(artifactId)
                 .withVersion(version)
@@ -345,7 +345,7 @@ public class CompareDependenciesMojo extends AbstractVersionsDependencyUpdaterMo
             throws MojoExecutionException, XMLStreamException {
         List<String> updates = new ArrayList<>();
         for (Dependency dep : dependencies) {
-            Artifact artifact = this.toArtifact(dep);
+            Artifact artifact = artifactFactory.createArtifact(dep);
             if (!isIncluded(artifact)) {
                 continue;
             }
