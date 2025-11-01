@@ -14,8 +14,8 @@
 
   <dependencies>
     <dependency>
-      <groupId>javax.xml.bind</groupId>
-      <artifactId>jaxb-api</artifactId>
+      <groupId>jakarta.xml.bind</groupId>
+      <artifactId>jakarta.xml.bind-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -44,17 +44,35 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>jaxb2-maven-plugin</artifactId>
-        <version>${jaxb2MavenPlugin.version}</version>
+        <version>${jaxb2-maven-plugin.version}</version>
         <dependencies>
+          <!-- Override plugin dependencies to generate Jakarta code -->
+          <!--<dependency>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+            <version>${jakarta.xml.bind-api.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-xjc</artifactId>
+            <version>${jaxb-runtime.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+            <version>${jaxb-runtime.version}</version>
+          </dependency>-->
+
+          <!-- Jakarta‑compatible binding plugins -->
           <dependency>
             <groupId>org.jvnet.jaxb2_commons</groupId>
             <artifactId>jaxb2-fluent-api</artifactId>
-            <version>${jaxb2FluentApi.version}</version>
+            <version>${jaxb2-fluent-api.version}</version>
           </dependency>
           <dependency>
             <groupId>org.jvnet.jaxb2_commons</groupId>
             <artifactId>jaxb2-basics-annotate</artifactId>
-            <version>${jaxb2BasicsAnnotate.version}</version>
+            <version>${jaxb2-basics-annotate.version}</version>
           </dependency>
         </dependencies>
         <executions>

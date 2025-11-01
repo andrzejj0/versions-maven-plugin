@@ -1,15 +1,14 @@
 package org.codehaus.mojo.versions.recording.xml;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Marshaller;
 import org.codehaus.mojo.versions.model.ChangeRecorderLog;
 import org.codehaus.mojo.versions.model.ObjectFactory;
 import org.codehaus.mojo.versions.model.VersionsExecution;
