@@ -119,6 +119,14 @@ class AbstractVersionDetailsTest {
                 instance.restrictionForUnchangedSegment(version("0.9.0"), empty(), false)
                         .containsVersion(version("1.0.0")),
                 is(true));
+        assertThat(
+                instance.restrictionForUnchangedSegment(version("0.9.0"), empty(), false)
+                        .containsVersion(version("2.0.0")),
+                is(false));
+        assertThat(
+                instance.restrictionForUnchangedSegment(version("0.9.0"), empty(), false)
+                        .containsVersion(version("2.1.0")),
+                is(true));
     }
 
     @Test
