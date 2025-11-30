@@ -761,4 +761,57 @@ public class DisplayDependencyUpdatesMojoTest extends AbstractMojoTestCase {
             assertThat(output, not(hasItem(containsString("1.0.0"))));
         }
     }
+
+    @Test
+    public void testRanges() throws Exception {
+        try (CloseableTempFile tempFile = new CloseableTempFile("display-dependency-updates")) {
+            new DisplayDependencyUpdatesMojo(
+                    artifactFactory,
+                    mockAetherRepositorySystem(new HashMap<String, String[]>() {
+                        {
+                            put("default-dependency", new String[] {"0.0.1", "0.0.2", "1.0.0"});
+                        }
+                    }),
+                    null,
+                    null) {
+                {
+                    setProject(
+                            new MavenProject(new Model() {
+                                {
+                                    setGroupId("default-group");
+                                    setArtifactId("default-artifact");
+                                    setVersion("1.0.0-SNAPSHOT");
+
+                                    InputLocation fakeLocation = new InputLocation(-1, -1, new InputSource());
+                                    setDependencies(singletonList(DependencyBuilder.newBuilder()
+                                            .withGroupId("default-group")
+                                            .withArtifactId("default-dependency")
+                                            .withVersion("[0.0.2,1.0.0)")
+                                            .withLocation(
+                                                    DependencyBuilder.Location.ARTIFACT_ID.toString(), fakeLocation)
+                                            .withLocation(DependencyBuilder.Location.VERSION.toString(), fakeLocation)
+                                            .build()));
+                                }
+                            }) {
+                                {
+                                    setOriginalModel(getModel());
+                                }
+                            });
+                    allowMajorUpdates = true;
+                    processDependencies = true;
+                    processDependencyManagement = false;
+                    dependencyIncludes = singletonList(WildcardMatcher.WILDCARD);
+                    dependencyExcludes = emptyList();
+                    allowSnapshots = true;
+                    outputFile = tempFile.getPath().toFile();
+                    setPluginContext(new HashMap<>());
+
+                    session = mockMavenSession();
+                    mojoExecution = mock(MojoExecution.class);
+                }
+            }.execute();
+
+            assertThat(String.join("", Files.readAllLines(tempFile.getPath())), containsString("1.0.0"));
+        }
+    }
 }
