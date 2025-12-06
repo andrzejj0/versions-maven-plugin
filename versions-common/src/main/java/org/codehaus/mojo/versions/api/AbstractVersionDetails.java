@@ -171,28 +171,44 @@ public abstract class AbstractVersionDetails implements VersionDetails {
     }
 
     @Override
-    public List<Restriction> restrictionForUnchangedSegment(Optional<Segment> unchangedSegment, boolean allowDowngrade)
+    public List<Restriction> restrictionForUnchangedSegment(Optional<Segment> unchangedSegment, boolean allowSnapshots,
+                                                            boolean allowDowngrade)
             throws InvalidSegmentException {
-        /*
-         * TODO: this is still wrong: we can have both a restriction and a "selected version",
-         * which is a version that Maven decided to use because it falls within the restriction
-         * set in pom.xml.
-         *
-         * Question 1: Will an ArtifactVersions object contain a non-null currentVersion?
-         */
-        if (currentVersion != null) {
-            ArtifactVersion lowerBound = allowDowngrade
-                    ? getLowerBound(currentVersion, unchangedSegment)
-                        .map(ArtifactVersionService::getArtifactVersion)
-                        .orElse(null)
-                    : currentVersion;
-            ArtifactVersion upperBound = unchangedSegment
-                    .map(s -> (ArtifactVersion) new BoundArtifactVersion(
-                            currentVersion, s.isMajorTo(SUBINCREMENTAL) ? Segment.minorTo(s) : s))
-                    .orElse(null);
+        // if there is a version range defined, use it to retrieve the highest version within the range
+        // and use it as the actual version;
+        if (getCurrentVersionRange() == null) {
+            Optional<ArtifactVersion> actualVersion = Optional.ofNullable(getCurrentVersion());
+            Optional<ArtifactVersion> lowerBound = allowDowngrade
+                    ? getLowerBound(actualVersion.orElse(null), unchangedSegment)
+                    .map(ArtifactVersionService::getArtifactVersion)
+                    : actualVersion;
+            // if there is neither a currentVersion nor a versionRange, we can assume that there is also no version selected,
+            // so, there is no upper nor lower bound either
+            Optional<ArtifactVersion> upperBound = actualVersion
+                    .flatMap(actualVersionValue -> unchangedSegment
+                            .map(s -> (ArtifactVersion) new BoundArtifactVersion(
+                                    actualVersionValue, s.isMajorTo(SUBINCREMENTAL) ? Segment.minorTo(s) : s)));
             return Collections.singletonList(
-                    new Restriction(lowerBound, allowDowngrade, upperBound, allowDowngrade));
+                    new Restriction(lowerBound.orElse(null), allowDowngrade, upperBound.orElse(null),
+                            allowDowngrade));
         }
+
+        /*
+         * Algo:
+         * 1. Invert the whole VersionRange (it consists of a number of Restrictions)
+         * 2. If allowDowngrade == false, Drop the first Restriction, since we are looking for upgrades
+         * 3. For every restriction:
+         * 3.1. Optional<ArtifactVersion> lowerBound = allowDowngrade
+                ? getLowerBound(lower restriction boundary, unchangedSegment)
+                    .map(ArtifactVersionService::getArtifactVersion)
+                : actualVersion;
+         * 3.2. else: null
+         * 3.3. Optional<ArtifactVersion> upperBound = actualVersion
+                .flatMap(upper restriction boundary -> unchangedSegment
+                        .map(s -> (ArtifactVersion) new BoundArtifactVersion(
+                                upper restriction boundary, s.isMajorTo(SUBINCREMENTAL) ? Segment.minorTo(s) : s)));
+         *
+         */
 
         // TODO
         return null;
