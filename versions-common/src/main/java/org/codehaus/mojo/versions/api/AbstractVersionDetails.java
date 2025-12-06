@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeSet;
@@ -163,12 +164,40 @@ public abstract class AbstractVersionDetails implements VersionDetails {
                 lowerBound,
                 allowDowngrade
                         || selectedRestriction
-                                .map(Restriction::isUpperBoundInclusive)
-                                .map(b -> !b)
+                                .map(b -> !b.isUpperBoundInclusive())
                                 .orElse(false),
                 upperBound,
                 allowDowngrade);
     }
+
+    @Override
+    public List<Restriction> restrictionForUnchangedSegment(Optional<Segment> unchangedSegment, boolean allowDowngrade)
+            throws InvalidSegmentException {
+        /*
+         * TODO: this is still wrong: we can have both a restriction and a "selected version",
+         * which is a version that Maven decided to use because it falls within the restriction
+         * set in pom.xml.
+         *
+         * Question 1: Will an ArtifactVersions object contain a non-null currentVersion?
+         */
+        if (currentVersion != null) {
+            ArtifactVersion lowerBound = allowDowngrade
+                    ? getLowerBound(currentVersion, unchangedSegment)
+                        .map(ArtifactVersionService::getArtifactVersion)
+                        .orElse(null)
+                    : currentVersion;
+            ArtifactVersion upperBound = unchangedSegment
+                    .map(s -> (ArtifactVersion) new BoundArtifactVersion(
+                            currentVersion, s.isMajorTo(SUBINCREMENTAL) ? Segment.minorTo(s) : s))
+                    .orElse(null);
+            return Collections.singletonList(
+                    new Restriction(lowerBound, allowDowngrade, upperBound, allowDowngrade));
+        }
+
+        // TODO
+        return null;
+    }
+
 
     @Override
     public Restriction restrictionForIgnoreScope(ArtifactVersion lowerBound, Optional<Segment> ignored) {
@@ -278,26 +307,6 @@ public abstract class AbstractVersionDetails implements VersionDetails {
         Restriction lookupRestriction;
         if (!allowDowngrade
                 && Optional.ofNullable(currentVersion)
-                        .map(v -> v.compareTo(segmentRestriction.getLowerBound()) > 0)
-                        .orElse(false)) {
-            lookupRestriction = new Restriction(currentVersion, false, null, false);
-        } else {
-            lookupRestriction = segmentRestriction;
-        }
-        return Arrays.stream(getVersions(includeSnapshots))
-                .filter(candidate -> isVersionInRestriction(lookupRestriction, candidate))
-                .filter(candidate -> includeSnapshots || !ArtifactUtils.isSnapshot(candidate.toString()))
-                .max(Comparator.naturalOrder());
-    }
-
-    public Optional<ArtifactVersion> getNewestVersion(Optional<Segment> unchangedSegment,
-                                                      boolean includeSnapshots, boolean allowDowngrade)
-            throws InvalidSegmentException {
-        VersionRange segmentRestriction = restrictionForUnchangedSegment(
-                ArtifactVersionService.getArtifactVersion(actualVersion), unchangedSegment, allowDowngrade);
-        Restriction lookupRestriction;
-        if (!allowDowngrade
-                && Optional.ofNullable(currentVersion)
                 .map(v -> v.compareTo(segmentRestriction.getLowerBound()) > 0)
                 .orElse(false)) {
             lookupRestriction = new Restriction(currentVersion, false, null, false);
@@ -309,6 +318,29 @@ public abstract class AbstractVersionDetails implements VersionDetails {
                 .filter(candidate -> includeSnapshots || !ArtifactUtils.isSnapshot(candidate.toString()))
                 .max(Comparator.naturalOrder());
     }
+
+    /*
+     * TODO
+
+    public Optional<ArtifactVersion> getNewestVersion(
+            Optional<Segment> unchangedSegment, boolean includeSnapshots, boolean allowDowngrade)
+            throws InvalidSegmentException {
+        VersionRange segmentRestriction = versionRangeForUnchangedSegment(unchangedSegment, allowDowngrade);
+        Restriction lookupRestriction;
+        if (!allowDowngrade
+                && Optional.ofNullable(currentVersion)
+                        .map(v -> v.compareTo(segmentRestriction.getLowerBound()) > 0)
+                        .orElse(false)) {
+            lookupRestriction = new Restriction(currentVersion, false, null, false);
+        } else {
+            lookupRestriction = segmentRestriction;
+        }
+        return Arrays.stream(getVersions(includeSnapshots))
+                .filter(candidate -> isVersionInRestriction(lookupRestriction, candidate))
+                .filter(candidate -> includeSnapshots || !ArtifactUtils.isSnapshot(candidate.toString()))
+                .max(Comparator.naturalOrder());
+    }
+     */
 
     @Override
     public final ArtifactVersion[] getVersions(Restriction restriction, boolean includeSnapshots) {

@@ -19,8 +19,8 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
+import java.util.List;
 import java.util.Optional;
-
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.Restriction;
 import org.apache.maven.artifact.versioning.VersionRange;
@@ -306,12 +306,28 @@ public interface VersionDetails {
      * @return {@linkplain Restriction} object based on the arguments
      * @throws InvalidSegmentException if the requested segment is outside the bounds (less than 1 or greater than
      * the segment count)
+     * @deprecated {@link #restrictionForUnchangedSegment(Optional, boolean)} should be used instead
      */
+    @Deprecated
     Restriction restrictionForUnchangedSegment(
             ArtifactVersion lowerBound, Optional<Segment> unchangedSegment, boolean allowDowngrade)
             throws InvalidSegmentException;
-wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
-    
+
+    /**
+     * <p>Returns a list of {@link Restriction} for computing version <em>upgrades</em> (that is, available versions
+     * that are greater than the current version (if one exists), or that are greater and do not fall into
+     * the current version range) <u>within the all segments</u> minor/lesser to the provided {@code unchangedSegment}.</p>
+     * <p>If the provided segment is {@link Optional#empty()}, all possible updates are returned.</p>
+     *
+     * @param unchangedSegment segment, which should not be changed or {@link Optional#empty()} for no restriction
+     * @param allowDowngrade whether downgrades are allowed
+     * @return {@link List<Restriction>} object based on the arguments
+     * @throws InvalidSegmentException if the requested segment is outside the bounds (less than 1 or greater than
+     * the segment count)
+     */
+    List<Restriction> restrictionForUnchangedSegment(Optional<Segment> unchangedSegment, boolean allowDowngrade)
+            throws InvalidSegmentException;
+
     /**
      * Returns the {@link Restriction} objects for a segemnt scope which is to be <b>ignored</b>.
      *
