@@ -201,14 +201,22 @@ public abstract class AbstractVersionDetails implements VersionDetails {
             return Collections.emptyList();
         }
 
-        /*
-         * We shall produce restrictions that lie outside the current VersionRange restrictions.
-         *
-         * This means a union of restrictions so that the first target restriction is the upper bound of the
-         * first input restriction and the target upper bound is the source lower bound of the consecutive
-         * restriction, and so on. In other words, a union of "gaps" between the restrictions,
-         * ending with a "gap" lying on the right-hand side of the last restriction.
-         */
+        // We need to construct restrictions that represent the areas lying outside
+        // of the current VersionRange restrictions.
+        //
+        // In practice, this means building a union of "gap" intervals:
+        //   - The first target restriction starts at the upper bound of the first
+        //     source restriction, and its upper bound is the lower bound of the
+        //     next source restriction.
+        //   - Each subsequent target restriction follows the same pattern,
+        //     effectively capturing the spaces between consecutive source ranges.
+        //   - Finally, if the last source restriction does not extend to positive
+        //     infinity, we must add a trailing gap that begins at its upper bound
+        //     and extends to infinity (represented by a null upper bound).
+        //
+        // Processing stops once we reach a source restriction that already spans
+        // to infinity, since in that case no trailing gap is needed. Otherwise,
+        // the last constructed restriction will be open-ended to the right.
 
         // Sort for safety
         Stream<Restriction> sorted = rs.stream()
@@ -216,9 +224,11 @@ public abstract class AbstractVersionDetails implements VersionDetails {
                         Comparator.nullsFirst(Comparator.naturalOrder())));
 
         List<Restriction> result = new ArrayList<>(rs.size());
-        Restriction previous, current = null;
         Iterator<Restriction> i = sorted.iterator();
-        do {
+
+        boolean handledLastInterval = false;
+        for (Restriction previous, current = null; !handledLastInterval;
+             handledLastInterval = current == null || current.getUpperBound() == null) {
             previous = current;
             current = i.hasNext()
                     ? i.next()
@@ -243,13 +253,17 @@ public abstract class AbstractVersionDetails implements VersionDetails {
                                             : s))
                                     .orElse(currentLowerBound))
                     .orElse(null);
-            result.add(new Restriction(
-                    lowerBound, allowDowngrade
-                    || !previous.isUpperBoundInclusive(),
+            Restriction restriction = new Restriction(lowerBound, allowDowngrade
+                        || !previous.isUpperBoundInclusive(),
                     upperBound, upperBound != null
-                    && current != null && !current.isLowerBoundInclusive()));
+                        && current != null && !current.isLowerBoundInclusive());
+            // edge case: restriction such that it doesn't include anything
+            if (!(Objects.equals(restriction.getLowerBound(), restriction.getUpperBound())
+                && !restriction.isLowerBoundInclusive()
+                && !restriction.isUpperBoundInclusive())) {
+                result.add(restriction);
+            }
         }
-        while (current != null);
         return result;
     }
 

@@ -150,6 +150,15 @@ class AbstractVersionDetailsTest {
     }
 
     @Test
+    void testRestrictionListForUnchangedSegmentWithTwoConnectingRangesEmpty()
+            throws InvalidSegmentException, InvalidVersionSpecificationException {
+        instance.setCurrentVersionRange(VersionRange.createFromVersionSpec("(,1],[1,)"));
+        assertFalse(
+                instance.restrictionForUnchangedSegment(empty(), false).stream()
+                        .anyMatch(r -> r.containsVersion(version("1"))));
+    }
+
+    @Test
     void testRestrictionListForUnchangedSegmentWithTwoNotConnectingRangesEmpty()
             throws InvalidSegmentException, InvalidVersionSpecificationException {
         instance.setCurrentVersionRange(VersionRange.createFromVersionSpec("(0.0.1, 1.0.0),(1.0.0,2.0.0]"));
