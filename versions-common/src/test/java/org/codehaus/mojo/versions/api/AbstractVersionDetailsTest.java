@@ -159,7 +159,7 @@ class AbstractVersionDetailsTest {
     }
 
     @Test
-    void testRestrictionListForUnchangedSegmentWithTwoNotConnectingRangesEmpty()
+    void testRestrictionListForUnchangedSegmentWithTwoNotConnectingRanges()
             throws InvalidSegmentException, InvalidVersionSpecificationException {
         instance.setCurrentVersionRange(VersionRange.createFromVersionSpec("(0.0.1, 1.0.0),(1.0.0,2.0.0]"));
         assertFalse(
@@ -183,6 +183,34 @@ class AbstractVersionDetailsTest {
                         .anyMatch(r -> r.containsVersion(version("2.1.0"))));
         assertFalse(
                 instance.restrictionForUnchangedSegment(of(MINOR), false).stream()
+                        .anyMatch(r -> r.containsVersion(version("2.1.0"))));
+    }
+
+    @Test
+    void testRestrictionListForUnchangedSegmentWithTwoNotConnectingRangesAllowDowngrade()
+            throws InvalidSegmentException, InvalidVersionSpecificationException {
+        instance.setCurrentVersionRange(VersionRange.createFromVersionSpec("(0.0.2, 1.0.0),(1.0.0,2.0.0]"));
+        assertTrue(
+                instance.restrictionForUnchangedSegment(empty(), true).stream()
+                        .anyMatch(r -> r.containsVersion(version("0.0.1"))));
+        assertTrue(
+                instance.restrictionForUnchangedSegment(empty(), true).stream()
+                        .anyMatch(r -> r.containsVersion(version("1.0.0"))));
+
+        assertFalse(
+                instance.restrictionForUnchangedSegment(empty(), true).stream()
+                        .allMatch(r -> r.containsVersion(version("2.0.0"))));
+        assertTrue(
+                instance.restrictionForUnchangedSegment(empty(), true).stream()
+                        .anyMatch(r -> r.containsVersion(version("3.0.0"))));
+        assertFalse(
+                instance.restrictionForUnchangedSegment(of(MAJOR), true).stream()
+                        .anyMatch(r -> r.containsVersion(version("3.0.0"))));
+        assertTrue(
+                instance.restrictionForUnchangedSegment(of(MAJOR), true).stream()
+                        .anyMatch(r -> r.containsVersion(version("2.1.0"))));
+        assertFalse(
+                instance.restrictionForUnchangedSegment(of(MINOR), true).stream()
                         .anyMatch(r -> r.containsVersion(version("2.1.0"))));
     }
 
