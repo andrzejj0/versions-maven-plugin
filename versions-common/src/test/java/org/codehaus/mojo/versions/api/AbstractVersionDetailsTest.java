@@ -18,6 +18,7 @@ package org.codehaus.mojo.versions.api;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static org.codehaus.mojo.versions.api.Segment.MAJOR;
+import static org.codehaus.mojo.versions.api.Segment.MINOR;
 import static org.codehaus.mojo.versions.utils.ArtifactVersionUtils.version;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
@@ -135,32 +136,44 @@ class AbstractVersionDetailsTest {
 
     @Test
     void testRestrictionListNoRanges()
-            throws InvalidSegmentException, InvalidVersionSpecificationException {
+            throws InvalidSegmentException {
         instance.setCurrentVersion("0.9");
         assertTrue(
-                instance.restrictionForUnchangedSegment(empty(), false, false).stream()
+                instance.restrictionForUnchangedSegment(empty(), false).stream()
                         .anyMatch(r -> r.containsVersion(version("1.0.0"))));
         assertTrue(
-                instance.restrictionForUnchangedSegment(empty(), false, true).stream()
+                instance.restrictionForUnchangedSegment(empty(), true).stream()
                         .anyMatch(r -> r.containsVersion(version("0.0.1"))));
         assertFalse(
-                instance.restrictionForUnchangedSegment(Optional.of(MAJOR), false, false).stream()
+                instance.restrictionForUnchangedSegment(of(MAJOR), false).stream()
                         .allMatch(r -> r.containsVersion(version("1.0.0"))));
     }
 
     @Test
-    void testRestrictionListForUnchangedSegmentWithTwoNotConnectingRanges1()
+    void testRestrictionListForUnchangedSegmentWithTwoNotConnectingRangesEmpty()
             throws InvalidSegmentException, InvalidVersionSpecificationException {
         instance.setCurrentVersionRange(VersionRange.createFromVersionSpec("(0.0.1, 1.0.0),(1.0.0,2.0.0]"));
-        instance.setCurrentVersion("0.9");
-        assertTrue(
-                instance.restrictionForUnchangedSegment(empty(), false, false).stream()
-                                .anyMatch(r -> r.containsVersion(version("1.0.0"))));
         assertFalse(
-                instance.restrictionForUnchangedSegment(empty(), false, false).stream()
+                instance.restrictionForUnchangedSegment(empty(), false).stream()
+                        .anyMatch(r -> r.containsVersion(version("0.0.1"))));
+        assertTrue(
+                instance.restrictionForUnchangedSegment(empty(), false).stream()
+                                .anyMatch(r -> r.containsVersion(version("1.0.0"))));
+
+        assertFalse(
+                instance.restrictionForUnchangedSegment(empty(), false).stream()
                         .allMatch(r -> r.containsVersion(version("2.0.0"))));
         assertTrue(
-                instance.restrictionForUnchangedSegment(empty(), false, false).stream()
+                instance.restrictionForUnchangedSegment(empty(), false).stream()
+                        .anyMatch(r -> r.containsVersion(version("3.0.0"))));
+        assertFalse(
+                instance.restrictionForUnchangedSegment(of(MAJOR), false).stream()
+                        .anyMatch(r -> r.containsVersion(version("3.0.0"))));
+        assertTrue(
+                instance.restrictionForUnchangedSegment(of(MAJOR), false).stream()
+                        .anyMatch(r -> r.containsVersion(version("2.1.0"))));
+        assertFalse(
+                instance.restrictionForUnchangedSegment(of(MINOR), false).stream()
                         .anyMatch(r -> r.containsVersion(version("2.1.0"))));
     }
 

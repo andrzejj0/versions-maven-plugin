@@ -306,7 +306,7 @@ public interface VersionDetails {
      * @return {@linkplain Restriction} object based on the arguments
      * @throws InvalidSegmentException if the requested segment is outside the bounds (less than 1 or greater than
      * the segment count)
-     * @deprecated {@link #restrictionForUnchangedSegment(Optional, boolean, boolean)} should be used instead
+     * @deprecated {@link #restrictionForUnchangedSegment(Optional, boolean)} should be used instead
      */
     @Deprecated
     Restriction restrictionForUnchangedSegment(
@@ -320,14 +320,12 @@ public interface VersionDetails {
      * <p>If the provided segment is {@link Optional#empty()}, all possible updates are returned.</p>
      *
      * @param unchangedSegment segment, which should not be changed or {@link Optional#empty()} for no restriction
-     * @param allowSnapshots whether snapshots are allowed
      * @param allowDowngrade whether downgrades are allowed
      * @return {@link List<Restriction>} object based on the arguments
      * @throws InvalidSegmentException if the requested segment is outside the bounds (less than 1 or greater than
      * the segment count)
      */
-    List<Restriction> restrictionForUnchangedSegment(Optional<Segment> unchangedSegment, boolean allowSnapshots,
-                                                     boolean allowDowngrade)
+    List<Restriction> restrictionForUnchangedSegment(Optional<Segment> unchangedSegment, boolean allowDowngrade)
             throws InvalidSegmentException;
 
     /**

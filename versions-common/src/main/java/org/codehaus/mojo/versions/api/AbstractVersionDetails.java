@@ -20,12 +20,14 @@ package org.codehaus.mojo.versions.api;
  */
 
 import static java.util.Collections.reverseOrder;
+import static java.util.Collections.sort;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 import static org.codehaus.mojo.versions.api.Segment.MAJOR;
 import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -64,7 +66,6 @@ public abstract class AbstractVersionDetails implements VersionDetails {
      *
      * @param version the version string to check
      * @return true if the version is a pre-release version, false otherwise
-     *
      * @since 2.20.0
      */
     public static boolean isPreReleaseVersion(String version) {
@@ -91,11 +92,13 @@ public abstract class AbstractVersionDetails implements VersionDetails {
     /**
      * Creates a new, empty instance.
      */
-    protected AbstractVersionDetails() {}
+    protected AbstractVersionDetails() {
+    }
 
     /**
      * If a version is a version range consisting of one or more version ranges, returns the highest <u>lower</u>
      * bound. If a single version range is present, returns its value.
+     *
      * @param lowerBoundVersion actual version used
      * @return highest lower bound of the given version range or {@link #getCurrentVersion()} if there's no lower bound
      */
@@ -111,9 +114,10 @@ public abstract class AbstractVersionDetails implements VersionDetails {
      * If the artifact is bound by one or more version ranges, returns the restriction that constitutes
      * the version range containing the selected actual version.
      * If there are no version ranges, returns the provided version.
+     *
      * @param selectedVersion actual version used, may not be {@code null}
      * @return restriction containing the version range selected by the given version,
-     * or {@link Optional#empty()} if there are no ranges
+     *         or {@link Optional#empty()} if there are no ranges
      */
     protected Optional<Restriction> getSelectedRestriction(ArtifactVersion selectedVersion) {
         Objects.requireNonNull(selectedVersion);
@@ -153,8 +157,8 @@ public abstract class AbstractVersionDetails implements VersionDetails {
                 selectedRestriction.map(Restriction::getUpperBound).orElse(actualVersion);
         ArtifactVersion lowerBound = allowDowngrade
                 ? getLowerBound(selectedRestrictionUpperBound, unchangedSegment)
-                        .map(ArtifactVersionService::getArtifactVersion)
-                        .orElse(null)
+                .map(ArtifactVersionService::getArtifactVersion)
+                .orElse(null)
                 : selectedRestrictionUpperBound;
         ArtifactVersion upperBound = unchangedSegment
                 .map(s -> (ArtifactVersion) new BoundArtifactVersion(
@@ -164,56 +168,90 @@ public abstract class AbstractVersionDetails implements VersionDetails {
                 lowerBound,
                 allowDowngrade
                         || selectedRestriction
-                                .map(b -> !b.isUpperBoundInclusive())
-                                .orElse(false),
+                        .map(b -> !b.isUpperBoundInclusive())
+                        .orElse(false),
                 upperBound,
                 allowDowngrade);
     }
 
     @Override
-    public List<Restriction> restrictionForUnchangedSegment(Optional<Segment> unchangedSegment, boolean allowSnapshots,
+    public List<Restriction> restrictionForUnchangedSegment(Optional<Segment> unchangedSegment,
                                                             boolean allowDowngrade)
             throws InvalidSegmentException {
-        // if there is a version range defined, use it to retrieve the highest version within the range
-        // and use it as the actual version;
+        // No version range → fall back to the single-interval behavior
         if (getCurrentVersionRange() == null) {
             Optional<ArtifactVersion> actualVersion = Optional.ofNullable(getCurrentVersion());
             Optional<ArtifactVersion> lowerBound = allowDowngrade
                     ? getLowerBound(actualVersion.orElse(null), unchangedSegment)
                     .map(ArtifactVersionService::getArtifactVersion)
                     : actualVersion;
-            // if there is neither a currentVersion nor a versionRange, we can assume that there is also no version selected,
-            // so, there is no upper nor lower bound either
-            Optional<ArtifactVersion> upperBound = actualVersion
-                    .flatMap(actualVersionValue -> unchangedSegment
-                            .map(s -> (ArtifactVersion) new BoundArtifactVersion(
-                                    actualVersionValue, s.isMajorTo(SUBINCREMENTAL) ? Segment.minorTo(s) : s)));
-            return Collections.singletonList(
-                    new Restriction(lowerBound.orElse(null), allowDowngrade, upperBound.orElse(null),
-                            allowDowngrade));
+
+            Optional<ArtifactVersion> upperBound = actualVersion.flatMap(av ->
+                    unchangedSegment.map(s -> (ArtifactVersion) new BoundArtifactVersion(
+                            av, s.isMajorTo(SUBINCREMENTAL) ? Segment.minorTo(s) : s)));
+
+            return Collections.singletonList(new Restriction(
+                    lowerBound.orElse(null), allowDowngrade,
+                    upperBound.orElse(null), allowDowngrade));
+        }
+
+        List<Restriction> rs = getCurrentVersionRange().getRestrictions();
+        if (rs.isEmpty()) {
+            // No restrictions means the range is "everything" → there are no "outside gaps".
+            return Collections.emptyList();
         }
 
         /*
-         * Algo:
-         * 1. Invert the whole VersionRange (it consists of a number of Restrictions)
-         * 2. If allowDowngrade == false, Drop the first Restriction, since we are looking for upgrades
-         * 3. For every restriction:
-         * 3.1. Optional<ArtifactVersion> lowerBound = allowDowngrade
-                ? getLowerBound(lower restriction boundary, unchangedSegment)
-                    .map(ArtifactVersionService::getArtifactVersion)
-                : actualVersion;
-         * 3.2. else: null
-         * 3.3. Optional<ArtifactVersion> upperBound = actualVersion
-                .flatMap(upper restriction boundary -> unchangedSegment
-                        .map(s -> (ArtifactVersion) new BoundArtifactVersion(
-                                upper restriction boundary, s.isMajorTo(SUBINCREMENTAL) ? Segment.minorTo(s) : s)));
+         * We shall produce restrictions that lie outside the current VersionRange restrictions.
          *
+         * This means a union of restrictions so that the first target restriction is the upper bound of the
+         * first input restriction and the target upper bound is the source lower bound of the consecutive
+         * restriction, and so on. In other words, a union of "gaps" between the restrictions,
+         * ending with a "gap" lying on the right-hand side of the last restriction.
          */
 
-        // TODO
-        return null;
-    }
+        // Sort for safety
+        Stream<Restriction> sorted = rs.stream()
+                .sorted(Comparator.comparing(Restriction::getLowerBound,
+                        Comparator.nullsFirst(Comparator.naturalOrder())));
 
+        List<Restriction> result = new ArrayList<>(rs.size());
+        Restriction previous, current = null;
+        Iterator<Restriction> i = sorted.iterator();
+        do {
+            previous = current;
+            current = i.hasNext()
+                    ? i.next()
+                    : null;
+            if (previous == null) {
+                // skip the initial interval
+                continue;
+            }
+            ArtifactVersion lowerBound = !allowDowngrade
+                    ? previous.getUpperBound()
+                    : getLowerBound(previous.getUpperBound(), unchangedSegment)
+                    .map(ArtifactVersionService::getArtifactVersion)
+                    .orElse(null);
+            ArtifactVersion currentLowerBound = Optional.ofNullable(current)
+                    .map(Restriction::getLowerBound)
+                    .orElse(null);
+            ArtifactVersion upperBound = Optional.ofNullable(previous.getUpperBound())
+                    .map(upperBoundValue ->
+                            unchangedSegment.map(s -> (ArtifactVersion) new BoundArtifactVersion(
+                                            upperBoundValue, s.isMajorTo(SUBINCREMENTAL)
+                                            ? Segment.minorTo(s)
+                                            : s))
+                                    .orElse(currentLowerBound))
+                    .orElse(null);
+            result.add(new Restriction(
+                    lowerBound, allowDowngrade
+                    || !previous.isUpperBoundInclusive(),
+                    upperBound, upperBound != null
+                    && current != null && !current.isLowerBoundInclusive()));
+        }
+        while (current != null);
+        return result;
+    }
 
     @Override
     public Restriction restrictionForIgnoreScope(ArtifactVersion lowerBound, Optional<Segment> ignored) {
@@ -302,8 +340,8 @@ public abstract class AbstractVersionDetails implements VersionDetails {
         ArtifactVersion currentVersion = ArtifactVersionService.getArtifactVersion(versionString);
         ArtifactVersion lowerBound = allowDowngrade
                 ? getLowerBound(currentVersion, unchangedSegment)
-                        .map(ArtifactVersionService::getArtifactVersion)
-                        .orElse(null)
+                .map(ArtifactVersionService::getArtifactVersion)
+                .orElse(null)
                 : currentVersion;
         ArtifactVersion upperBound = unchangedSegment
                 .map(s -> (ArtifactVersion)
@@ -428,11 +466,12 @@ public abstract class AbstractVersionDetails implements VersionDetails {
      * and the lowest unchanged segment index (0-based); -1 means that the whole version string can be changed,
      * implying that there is also no string designation of the lower bound version.
      *
-     * @param version {@link ArtifactVersion} object specifying the version for which the lower bound is being computed
+     * @param version          {@link ArtifactVersion} object specifying the version for which the lower bound is being
+     *                         computed
      * @param unchangedSegment first segment not to be changed; empty() means anything can change
      * @return {@link Optional} string containing the lowest artifact version with the given segment held
      * @throws InvalidSegmentException if the requested segment is outside of the bounds (less than 1 or greater than
-     * the segment count)
+     *                                 the segment count)
      */
     protected Optional<String> getLowerBound(ArtifactVersion version, Optional<Segment> unchangedSegment)
             throws InvalidSegmentException {
@@ -468,8 +507,9 @@ public abstract class AbstractVersionDetails implements VersionDetails {
      * Checks if the candidate version is in the range of the restriction.
      * a custom comparator is/can be used to have milestones and rcs before final releases,
      * which is not yet possible with {@link Restriction#containsVersion(ArtifactVersion)}.
+     *
      * @param restriction the range to check against.
-     * @param candidate the version to check.
+     * @param candidate   the version to check.
      * @return true if the candidate version is within the range of the restriction parameter.
      */
     public boolean isVersionInRestriction(Restriction restriction, ArtifactVersion candidate) {
@@ -488,7 +528,8 @@ public abstract class AbstractVersionDetails implements VersionDetails {
     /**
      * Returns the latest version newer than the specified current version, and within the specified update scope,
      * or {@code null} if no such version exists.
-     * @param updateScope the scope of updates to include.
+     *
+     * @param updateScope      the scope of updates to include.
      * @param includeSnapshots whether snapshots should be included
      * @return the newest version after currentVersion within the specified update scope,
      *         or <code>null</code> if no version is available.
@@ -501,7 +542,8 @@ public abstract class AbstractVersionDetails implements VersionDetails {
 
     /**
      * Returns all versions newer than the specified current version, and within the specified update scope.
-     * @param updateScope the scope of updates to include.
+     *
+     * @param updateScope      the scope of updates to include.
      * @param includeSnapshots whether snapshots should be included
      * @return all versions after currentVersion within the specified update scope.
      */
@@ -540,7 +582,8 @@ public abstract class AbstractVersionDetails implements VersionDetails {
 
     /**
      * Returns all versions newer than the specified current version, and within the specified update scope.
-     * @param updateScope the scope of updates to include.
+     *
+     * @param updateScope      the scope of updates to include.
      * @param includeSnapshots whether snapshots should be included
      * @return all versions after currentVersion within the specified update scope.
      */
