@@ -1,16 +1,13 @@
 package org.codehaus.mojo.versions.internal;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
-import org.apache.maven.artifact.versioning.Restriction;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
@@ -109,52 +106,32 @@ public class DependencyUpdatesLoggingHelper {
             ArtifactVersions versions = RuleServiceUtils.filterByRuleService(
                     dep.getGroupId(), dep.getArtifactId(), entry.getValue(), ruleService, log);
 
-            String left = "  " + ArtifactUtils.versionlessKey(versions.getArtifact()) + " ";
-            String currentVersion;
-            Optional<ArtifactVersion> latestVersion;
-            if (versions.getCurrentVersion() != null) {
-                currentVersion = versions.getCurrentVersion()
-                        + (!displayManagedBy || dependencyVersionLocalToProject(dep)
-                                ? ""
-                                : " (managed by "
-                                        + dep.getLocation(VERSION.toString())
-                                                .getSource()
-                                                .getModelId() + ")");
-                try {
-                    latestVersion = versions.getNewestVersion(unchangedSegment, allowSnapshots, false);
-                } catch (InvalidSegmentException e) {
-                    latestVersion = empty();
-                }
-            } else {
-                currentVersion = versions.getArtifact().getVersionRange().toString();
-                ArtifactVersion actualVersion =
-                        versions.getNewestVersion(versions.getArtifact().getVersionRange(), allowSnapshots);
-                try {
-                    List<Restriction> segmentRestrictions =
-                            versions.restrictionForUnchangedSegment(unchangedSegment, false);
-                    latestVersion = segmentRestrictions.stream()
-                            .map(segmentRestriction -> new Restriction(
-                                    actualVersion,
-                                    false,
-                                    segmentRestriction.getUpperBound(),
-                                    segmentRestriction.isUpperBoundInclusive()))
-                            .map(restriction -> versions.getNewestVersion(restriction, allowSnapshots))
-                            .filter(Objects::nonNull)
-                            .max(Comparator.naturalOrder());
-                } catch (InvalidSegmentException e) {
-                    throw new RuntimeException(e);
-                }
+            Optional<ArtifactVersion> newestVersion;
+            try {
+                newestVersion = versions.getNewestVersion(unchangedSegment, allowSnapshots, false);
+            } catch (InvalidSegmentException e) {
+                newestVersion = empty();
             }
 
+            String currentVersion = Optional.ofNullable(versions.getCurrentVersion())
+                    .map(v -> v
+                            + (!displayManagedBy || dependencyVersionLocalToProject(dep)
+                                    ? ""
+                                    : " (managed by "
+                                            + dep.getLocation(VERSION.toString())
+                                                    .getSource()
+                                                    .getModelId() + ")"))
+                    .orElse(versions.getArtifact().getVersionRange().toString());
+            String left = "  " + ArtifactUtils.versionlessKey(versions.getArtifact()) + " ";
             String right =
-                    " " + latestVersion.map(v -> currentVersion + " -> " + v).orElse(currentVersion);
-            List<String> t = latestVersion.isPresent() ? withUpdates : usingCurrent;
+                    " " + newestVersion.map(v -> currentVersion + " -> " + v).orElse(currentVersion);
+            List<String> updatesPointer = newestVersion.map(v -> withUpdates).orElse(usingCurrent);
             if (right.length() + left.length() + 3 > maxLineWidth) {
-                t.add(left + "...");
-                t.add(StringUtils.leftPad(right, maxLineWidth));
+                updatesPointer.add(left + "...");
+                updatesPointer.add(StringUtils.leftPad(right, maxLineWidth));
 
             } else {
-                t.add(StringUtils.rightPad(left, maxLineWidth - right.length(), ".") + right);
+                updatesPointer.add(StringUtils.rightPad(left, maxLineWidth - right.length(), ".") + right);
             }
         }
 
