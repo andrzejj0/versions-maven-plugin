@@ -19,6 +19,13 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
+import static java.util.Collections.reverseOrder;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
+import static org.codehaus.mojo.versions.api.Segment.MAJOR;
+import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,7 +38,6 @@ import java.util.TreeSet;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
@@ -41,13 +47,6 @@ import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
 import org.codehaus.mojo.versions.ordering.DefaultSegmentCounter;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.utils.ArtifactVersionService;
-
-import static java.util.Collections.reverseOrder;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
-import static org.codehaus.mojo.versions.api.Segment.MAJOR;
-import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 
 /**
  * Base class for {@link org.codehaus.mojo.versions.api.VersionDetails}.
@@ -383,29 +382,6 @@ public abstract class AbstractVersionDetails implements VersionDetails {
                 .map(Pair::getValue)
                 .max(Comparator.naturalOrder());
     }
-
-    /*
-     * TODO
-
-    public Optional<ArtifactVersion> getNewestVersion(
-            Optional<Segment> unchangedSegment, boolean includeSnapshots, boolean allowDowngrade)
-            throws InvalidSegmentException {
-        VersionRange segmentRestriction = versionRangeForUnchangedSegment(unchangedSegment, allowDowngrade);
-        Restriction lookupRestriction;
-        if (!allowDowngrade
-                && Optional.ofNullable(currentVersion)
-                        .map(v -> v.compareTo(segmentRestriction.getLowerBound()) > 0)
-                        .orElse(false)) {
-            lookupRestriction = new Restriction(currentVersion, false, null, false);
-        } else {
-            lookupRestriction = segmentRestriction;
-        }
-        return Arrays.stream(getVersions(includeSnapshots))
-                .filter(candidate -> isVersionInRestriction(lookupRestriction, candidate))
-                .filter(candidate -> includeSnapshots || !ArtifactUtils.isSnapshot(candidate.toString()))
-                .max(Comparator.naturalOrder());
-    }
-     */
 
     @Override
     public final ArtifactVersion[] getVersions(Restriction restriction, boolean includeSnapshots) {
