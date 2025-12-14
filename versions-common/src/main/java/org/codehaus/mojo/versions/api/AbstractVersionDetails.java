@@ -19,14 +19,6 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
-import static java.util.Collections.reverseOrder;
-import static java.util.Collections.sort;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
-import static org.codehaus.mojo.versions.api.Segment.MAJOR;
-import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -39,6 +31,8 @@ import java.util.TreeSet;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.Restriction;
@@ -47,6 +41,13 @@ import org.codehaus.mojo.versions.ordering.BoundArtifactVersion;
 import org.codehaus.mojo.versions.ordering.DefaultSegmentCounter;
 import org.codehaus.mojo.versions.ordering.InvalidSegmentException;
 import org.codehaus.mojo.versions.utils.ArtifactVersionService;
+
+import static java.util.Collections.reverseOrder;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
+import static org.codehaus.mojo.versions.api.Segment.MAJOR;
+import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 
 /**
  * Base class for {@link org.codehaus.mojo.versions.api.VersionDetails}.
@@ -92,8 +93,7 @@ public abstract class AbstractVersionDetails implements VersionDetails {
     /**
      * Creates a new, empty instance.
      */
-    protected AbstractVersionDetails() {
-    }
+    protected AbstractVersionDetails() {}
 
     /**
      * If a version is a version range consisting of one or more version ranges, returns the highest <u>lower</u>
@@ -157,8 +157,8 @@ public abstract class AbstractVersionDetails implements VersionDetails {
                 selectedRestriction.map(Restriction::getUpperBound).orElse(actualVersion);
         ArtifactVersion lowerBound = allowDowngrade
                 ? getLowerBound(selectedRestrictionUpperBound, unchangedSegment)
-                .map(ArtifactVersionService::getArtifactVersion)
-                .orElse(null)
+                        .map(ArtifactVersionService::getArtifactVersion)
+                        .orElse(null)
                 : selectedRestrictionUpperBound;
         ArtifactVersion upperBound = unchangedSegment
                 .map(s -> (ArtifactVersion) new BoundArtifactVersion(
@@ -168,27 +168,23 @@ public abstract class AbstractVersionDetails implements VersionDetails {
                 lowerBound,
                 allowDowngrade
                         || selectedRestriction
-                        .map(b -> !b.isUpperBoundInclusive())
-                        .orElse(false),
+                                .map(b -> !b.isUpperBoundInclusive())
+                                .orElse(false),
                 upperBound,
                 allowDowngrade);
     }
 
     @Override
-    public List<Restriction> restrictionForUnchangedSegment(Optional<Segment> unchangedSegment,
-                                                            boolean allowDowngrade)
+    public List<Restriction> restrictionForUnchangedSegment(Optional<Segment> unchangedSegment, boolean allowDowngrade)
             throws InvalidSegmentException {
-        // No version range → fall back to the single-interval behavior
-        if (getCurrentVersionRange() == null) {
-            Optional<ArtifactVersion> actualVersion = Optional.ofNullable(getCurrentVersion());
+        // Current version present → fall back to the single-interval behavior
+        if (currentVersion != null) {
             Optional<ArtifactVersion> lowerBound = allowDowngrade
-                    ? getLowerBound(actualVersion.orElse(null), unchangedSegment)
-                    .map(ArtifactVersionService::getArtifactVersion)
-                    : actualVersion;
+                    ? getLowerBound(currentVersion, unchangedSegment).map(ArtifactVersionService::getArtifactVersion)
+                    : Optional.of(currentVersion);
 
-            Optional<ArtifactVersion> upperBound = actualVersion.flatMap(av ->
-                    unchangedSegment.map(s -> (ArtifactVersion) new BoundArtifactVersion(
-                            av, s.isMajorTo(SUBINCREMENTAL) ? Segment.minorTo(s) : s)));
+            Optional<ArtifactVersion> upperBound = unchangedSegment.map(s -> (ArtifactVersion)
+                    new BoundArtifactVersion(currentVersion, s.isMajorTo(SUBINCREMENTAL) ? Segment.minorTo(s) : s));
 
             return Collections.singletonList(new Restriction(
                     lowerBound.orElse(null), allowDowngrade,
@@ -202,7 +198,7 @@ public abstract class AbstractVersionDetails implements VersionDetails {
         }
 
         // We need to construct restrictions that represent the areas lying outside
-        // of the current VersionRange restrictions.
+        // the current VersionRange restrictions.
         //
         // In practice, this means building a union of "gap" intervals:
         //   - The first target restriction starts at the upper bound of the first
@@ -220,19 +216,18 @@ public abstract class AbstractVersionDetails implements VersionDetails {
 
         // Sort for safety
         Stream<Restriction> sorted = rs.stream()
-                .sorted(Comparator.comparing(Restriction::getLowerBound,
-                        Comparator.nullsFirst(Comparator.naturalOrder())));
+                .sorted(Comparator.comparing(
+                        Restriction::getLowerBound, Comparator.nullsFirst(Comparator.naturalOrder())));
 
         List<Restriction> result = new ArrayList<>(rs.size());
         Iterator<Restriction> i = sorted.iterator();
 
         boolean handledLastInterval = false;
-        for (Restriction previous, current = null; !handledLastInterval;
-             handledLastInterval = current == null || current.getUpperBound() == null) {
+        for (Restriction previous, current = null;
+                !handledLastInterval;
+                handledLastInterval = current == null || current.getUpperBound() == null) {
             previous = current;
-            current = i.hasNext()
-                    ? i.next()
-                    : null;
+            current = i.hasNext() ? i.next() : null;
             if (previous == null) {
                 // skip the initial interval
                 continue;
@@ -240,27 +235,25 @@ public abstract class AbstractVersionDetails implements VersionDetails {
             ArtifactVersion lowerBound = !allowDowngrade
                     ? previous.getUpperBound()
                     : getLowerBound(previous.getUpperBound(), unchangedSegment)
-                    .map(ArtifactVersionService::getArtifactVersion)
-                    .orElse(null);
-            ArtifactVersion currentLowerBound = Optional.ofNullable(current)
-                    .map(Restriction::getLowerBound)
-                    .orElse(null);
+                            .map(ArtifactVersionService::getArtifactVersion)
+                            .orElse(null);
+            ArtifactVersion currentLowerBound =
+                    Optional.ofNullable(current).map(Restriction::getLowerBound).orElse(null);
             ArtifactVersion upperBound = Optional.ofNullable(previous.getUpperBound())
-                    .map(upperBoundValue ->
-                            unchangedSegment.map(s -> (ArtifactVersion) new BoundArtifactVersion(
-                                            upperBoundValue, s.isMajorTo(SUBINCREMENTAL)
-                                            ? Segment.minorTo(s)
-                                            : s))
-                                    .orElse(currentLowerBound))
+                    .map(upperBoundValue -> unchangedSegment
+                            .map(s -> (ArtifactVersion) new BoundArtifactVersion(
+                                    upperBoundValue, s.isMajorTo(SUBINCREMENTAL) ? Segment.minorTo(s) : s))
+                            .orElse(currentLowerBound))
                     .orElse(null);
-            Restriction restriction = new Restriction(lowerBound, allowDowngrade
-                        || !previous.isUpperBoundInclusive(),
-                    upperBound, upperBound != null
-                        && current != null && !current.isLowerBoundInclusive());
+            Restriction restriction = new Restriction(
+                    lowerBound,
+                    allowDowngrade || !previous.isUpperBoundInclusive(),
+                    upperBound,
+                    upperBound != null && current != null && !current.isLowerBoundInclusive());
             // edge case: restriction such that it doesn't include anything
             if (!(Objects.equals(restriction.getLowerBound(), restriction.getUpperBound())
-                && !restriction.isLowerBoundInclusive()
-                && !restriction.isUpperBoundInclusive())) {
+                    && !restriction.isLowerBoundInclusive()
+                    && !restriction.isUpperBoundInclusive())) {
                 result.add(restriction);
             }
         }
@@ -354,8 +347,8 @@ public abstract class AbstractVersionDetails implements VersionDetails {
         ArtifactVersion currentVersion = ArtifactVersionService.getArtifactVersion(versionString);
         ArtifactVersion lowerBound = allowDowngrade
                 ? getLowerBound(currentVersion, unchangedSegment)
-                .map(ArtifactVersionService::getArtifactVersion)
-                .orElse(null)
+                        .map(ArtifactVersionService::getArtifactVersion)
+                        .orElse(null)
                 : currentVersion;
         ArtifactVersion upperBound = unchangedSegment
                 .map(s -> (ArtifactVersion)
@@ -368,22 +361,26 @@ public abstract class AbstractVersionDetails implements VersionDetails {
 
     @Override
     public Optional<ArtifactVersion> getNewestVersion(
-            String actualVersion, Optional<Segment> unchangedSegment, boolean includeSnapshots, boolean allowDowngrade)
+            String ignored, Optional<Segment> unchangedSegment, boolean includeSnapshots, boolean allowDowngrade)
             throws InvalidSegmentException {
-        Restriction segmentRestriction = restrictionForUnchangedSegment(
-                ArtifactVersionService.getArtifactVersion(actualVersion), unchangedSegment, allowDowngrade);
-        Restriction lookupRestriction;
-        if (!allowDowngrade
-                && Optional.ofNullable(currentVersion)
-                .map(v -> v.compareTo(segmentRestriction.getLowerBound()) > 0)
-                .orElse(false)) {
-            lookupRestriction = new Restriction(currentVersion, false, null, false);
-        } else {
-            lookupRestriction = segmentRestriction;
-        }
-        return Arrays.stream(getVersions(includeSnapshots))
-                .filter(candidate -> isVersionInRestriction(lookupRestriction, candidate))
-                .filter(candidate -> includeSnapshots || !ArtifactUtils.isSnapshot(candidate.toString()))
+        List<Restriction> segmentRestrictions = restrictionForUnchangedSegment(unchangedSegment, allowDowngrade);
+        return segmentRestrictions.stream()
+                .map(segmentRestriction -> {
+                    if (!allowDowngrade
+                            && Optional.ofNullable(currentVersion)
+                                    .map(v -> v.compareTo(segmentRestriction.getLowerBound()) > 0)
+                                    .orElse(false)) {
+                        return new Restriction(currentVersion, false, null, false);
+                    } else {
+                        return segmentRestriction;
+                    }
+                })
+                .flatMap(lookupRestriction ->
+                        Arrays.stream(getVersions(includeSnapshots)).map(v -> Pair.of(lookupRestriction, v)))
+                .filter(pair -> isVersionInRestriction(pair.getKey(), pair.getValue()))
+                .filter(pair -> includeSnapshots
+                        || !ArtifactUtils.isSnapshot(pair.getValue().toString()))
+                .map(Pair::getValue)
                 .max(Comparator.naturalOrder());
     }
 

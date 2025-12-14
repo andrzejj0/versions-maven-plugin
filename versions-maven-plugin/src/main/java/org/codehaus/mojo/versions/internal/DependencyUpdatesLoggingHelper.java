@@ -1,8 +1,10 @@
 package org.codehaus.mojo.versions.internal;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
@@ -127,20 +129,21 @@ public class DependencyUpdatesLoggingHelper {
                 currentVersion = versions.getArtifact().getVersionRange().toString();
                 ArtifactVersion actualVersion =
                         versions.getNewestVersion(versions.getArtifact().getVersionRange(), allowSnapshots);
-                Restriction newVersionRestriction;
                 try {
-                    Restriction segmentRestriction =
-                            versions.restrictionForUnchangedSegment(actualVersion, unchangedSegment, false);
-                    newVersionRestriction = new Restriction(
-                            actualVersion,
-                            false,
-                            segmentRestriction.getUpperBound(),
-                            segmentRestriction.isUpperBoundInclusive());
+                    List<Restriction> segmentRestrictions =
+                            versions.restrictionForUnchangedSegment(unchangedSegment, false);
+                    latestVersion = segmentRestrictions.stream()
+                            .map(segmentRestriction -> new Restriction(
+                                    actualVersion,
+                                    false,
+                                    segmentRestriction.getUpperBound(),
+                                    segmentRestriction.isUpperBoundInclusive()))
+                            .map(restriction -> versions.getNewestVersion(restriction, allowSnapshots))
+                            .filter(Objects::nonNull)
+                            .max(Comparator.naturalOrder());
                 } catch (InvalidSegmentException e) {
                     throw new RuntimeException(e);
                 }
-                latestVersion = Optional.of(newVersionRestriction)
-                        .map(restriction -> versions.getNewestVersion(restriction, allowSnapshots));
             }
 
             String right =

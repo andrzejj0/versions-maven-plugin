@@ -21,6 +21,7 @@ package org.codehaus.mojo.versions.api;
 
 import java.util.List;
 import java.util.Optional;
+
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.Restriction;
 import org.apache.maven.artifact.versioning.VersionRange;
