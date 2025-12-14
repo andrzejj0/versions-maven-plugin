@@ -361,7 +361,7 @@ public abstract class AbstractVersionDetails implements VersionDetails {
 
     @Override
     public Optional<ArtifactVersion> getNewestVersion(
-            String ignored, Optional<Segment> unchangedSegment, boolean includeSnapshots, boolean allowDowngrade)
+            Optional<Segment> unchangedSegment, boolean includeSnapshots, boolean allowDowngrade)
             throws InvalidSegmentException {
         List<Restriction> segmentRestrictions = restrictionForUnchangedSegment(unchangedSegment, allowDowngrade);
         return segmentRestrictions.stream()

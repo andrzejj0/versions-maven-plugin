@@ -45,6 +45,7 @@ import static org.codehaus.mojo.versions.api.Segment.MINOR;
 import static org.codehaus.mojo.versions.api.Segment.SUBINCREMENTAL;
 import static org.codehaus.mojo.versions.utils.ArtifactVersionUtils.version;
 import static org.codehaus.mojo.versions.utils.ArtifactVersionUtils.versions;
+import static org.codehaus.mojo.versions.utils.hamcrest.OptionalMatcher.contains;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.arrayContaining;
@@ -267,22 +268,17 @@ class ArtifactVersionsTest {
     @Test
     void testGetNewestVersionWithLesserSegment() throws InvalidSegmentException {
         ArtifactVersions instance = createInstance(versions("1.0.0-1"));
-        assertThat(instance.getNewestVersion("1.0.0", of(MAJOR), false, false).get(), hasToString("1.0.0-1"));
-        assertThat(instance.getNewestVersion("1.0.0", of(MINOR), false, false).get(), hasToString("1.0.0-1"));
-        assertThat(
-                instance.getNewestVersion("1.0.0", of(INCREMENTAL), false, false)
-                        .get(),
-                hasToString("1.0.0-1"));
+        assertThat(instance.getNewestVersion(of(MAJOR), false, false), contains(hasToString("1.0.0-1")));
+        assertThat(instance.getNewestVersion(of(MINOR), false, false), contains(hasToString("1.0.0-1")));
+        assertThat(instance.getNewestVersion(of(INCREMENTAL), false, false), contains(hasToString("1.0.0-1")));
     }
 
     @Test
     void testGetNewestVersionWithLesserSegmentWithSnapshots() throws InvalidSegmentException {
         ArtifactVersions instance = createInstance(versions("1.0.0-1-SNAPSHOT"));
-        assertThat(instance.getNewestVersion("1.0.0", of(MAJOR), true, false).get(), hasToString("1.0.0-1-SNAPSHOT"));
-        assertThat(instance.getNewestVersion("1.0.0", of(MINOR), true, false).get(), hasToString("1.0.0-1-SNAPSHOT"));
-        assertThat(
-                instance.getNewestVersion("1.0.0", of(INCREMENTAL), true, false).get(),
-                hasToString("1.0.0-1-SNAPSHOT"));
+        assertThat(instance.getNewestVersion(of(MAJOR), true, false), contains(hasToString("1.0.0-1-SNAPSHOT")));
+        assertThat(instance.getNewestVersion(of(MINOR), true, false), contains(hasToString("1.0.0-1-SNAPSHOT")));
+        assertThat(instance.getNewestVersion(of(INCREMENTAL), true, false), contains(hasToString("1.0.0-1-SNAPSHOT")));
     }
 
     @ParameterizedTest

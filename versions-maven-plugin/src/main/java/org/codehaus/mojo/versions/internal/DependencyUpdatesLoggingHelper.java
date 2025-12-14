@@ -121,7 +121,7 @@ public class DependencyUpdatesLoggingHelper {
                                                 .getSource()
                                                 .getModelId() + ")");
                 try {
-                    latestVersion = versions.getNewestVersion(currentVersion, unchangedSegment, allowSnapshots, false);
+                    latestVersion = versions.getNewestVersion(unchangedSegment, allowSnapshots, false);
                 } catch (InvalidSegmentException e) {
                     latestVersion = empty();
                 }

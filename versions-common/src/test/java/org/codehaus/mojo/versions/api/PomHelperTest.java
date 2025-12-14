@@ -19,8 +19,24 @@ package org.codehaus.mojo.versions.api;
  * under the License.
  */
 
-import javax.xml.stream.XMLStreamException;
-import javax.xml.transform.TransformerException;
+import static java.nio.charset.Charset.defaultCharset;
+import static org.apache.commons.io.IOUtils.toInputStream;
+import static org.codehaus.mojo.versions.utils.hamcrest.OptionalMatcher.contains;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.containsStringIgnoringCase;
+import static org.hamcrest.Matchers.hasEntry;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,7 +51,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
+import javax.xml.stream.XMLStreamException;
+import javax.xml.transform.TransformerException;
 import org.apache.commons.io.FileUtils;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.DefaultModelWriter;
@@ -55,24 +72,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import static java.nio.charset.Charset.defaultCharset;
-import static org.apache.commons.io.IOUtils.toInputStream;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.containsStringIgnoringCase;
-import static org.hamcrest.Matchers.hasEntry;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasProperty;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.core.Is.is;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
 
 /**
  * Tests the methods of {@link PomHelper}.
@@ -483,11 +482,11 @@ class PomHelperTest {
         assertThat(grandchild.getModel().getArtifactId(), is("grandchild"));
         ModelNode childB = rawModelTree.get(3);
         assertThat(childB.getModel().getArtifactId(), is("childB"));
-        assertThat(PomHelper.findProperty("a", grandchild).get(), is(childA));
-        assertThat(PomHelper.findProperty("a", childA).get(), is(childA));
-        assertThat(PomHelper.findProperty("a", grandparent).get(), is(grandparent));
-        assertThat(PomHelper.findProperty("a", childB).get(), is(grandparent));
-        assertThat(PomHelper.findProperty("b", childB).get(), is(childB));
+        assertThat(PomHelper.findProperty("a", grandchild), contains(childA));
+        assertThat(PomHelper.findProperty("a", childA), contains(childA));
+        assertThat(PomHelper.findProperty("a", grandparent), contains(grandparent));
+        assertThat(PomHelper.findProperty("a", childB), contains(grandparent));
+        assertThat(PomHelper.findProperty("b", childB), contains(childB));
     }
 
     @Test

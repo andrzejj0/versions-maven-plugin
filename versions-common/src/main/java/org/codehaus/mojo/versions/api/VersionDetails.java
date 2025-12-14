@@ -173,10 +173,9 @@ public interface VersionDetails {
     ArtifactVersion getNewestVersion(VersionRange versionRange, boolean includeSnapshots);
 
     /**
-     * Returns the latest version, newer than the given version, given the upper bound segment and whether snapshots
-     * should be included.
+     * Returns the latest version, newer than the current version (as indicated by {@link #getCurrentVersion()}
+     * and {@link #getCurrentVersionRange()}), given the upper bound segment and whether snapshots should be included.
      *
-     * @param versionString current version
      * @param unchangedSegment segment that may not be changed; empty() means no upper bound
      * @param includeSnapshots whether snapshot versions should be included
      * @param allowDowngrade whether to allow downgrading if the current version is a snapshots and snapshots
@@ -186,7 +185,7 @@ public interface VersionDetails {
      * the segment count)
      */
     Optional<ArtifactVersion> getNewestVersion(
-            String versionString, Optional<Segment> unchangedSegment, boolean includeSnapshots, boolean allowDowngrade)
+            Optional<Segment> unchangedSegment, boolean includeSnapshots, boolean allowDowngrade)
             throws InvalidSegmentException;
 
     /**
