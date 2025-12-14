@@ -15,7 +15,7 @@ import static org.hamcrest.core.IsEqual.equalTo;
  * to the provided inner matcher.
  * </p>
  *
- * <h3>Examples:</h3>
+ * <p>Examples:</p>
  * <pre>{@code
  * // Match Optional containing a specific value
  * assertThat(Optional.of("foo"), OptionalMatcher.contains("foo"));
